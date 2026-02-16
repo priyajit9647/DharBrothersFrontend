@@ -14,9 +14,9 @@ export default function AuthFooter() {
         sx={{ gap: 2, justifyContent: { xs: 'center', sm: 'space-between', textAlign: { xs: 'center', sm: 'inherit' } } }}
       >
         <Typography variant="subtitle2" color="secondary">
-          © Made with love by Team{' '}
-          <Link href="https://codedthemes.com/" target="_blank" underline="hover">
-            CodedThemes
+          © Developed by Saraf Tech Lab LLP{' '}
+          <Link href="https://saraftechlab.org/" target="_blank" underline="hover">
+            Saraf Tech Lab LLP
           </Link>
         </Typography>
 
@@ -25,21 +25,31 @@ export default function AuthFooter() {
             variant="subtitle2"
             color="secondary"
             component={Link}
-            href="https://mui.com/store/terms/"
+            href="https://dharbrothers.in/terms-and-condition"
             target="_blank"
             underline="hover"
           >
-            Terms and Conditions
+            Terms & Conditions
           </Typography>
           <Typography
             variant="subtitle2"
             color="secondary"
             component={Link}
-            href="https://mui.com/legal/privacy/"
+            href="https://dharbrothers.in/privacy-and-policy"
             target="_blank"
             underline="hover"
           >
             Privacy Policy
+          </Typography>
+          <Typography
+            variant="subtitle2"
+            color="secondary"
+            component={Link}
+            href="https://dharbrothers.in/refund-policy"
+            target="_blank"
+            underline="hover"
+          >
+            Refund Policy
           </Typography>
         </Stack>
       </Stack>

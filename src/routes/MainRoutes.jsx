@@ -4,16 +4,21 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 
-// render- Dashboard
+// render - Dashboard
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
 
-// render - color
-const Color = Loadable(lazy(() => import('pages/component-overview/color')));
-const Typography = Loadable(lazy(() => import('pages/component-overview/typography')));
-const Shadow = Loadable(lazy(() => import('pages/component-overview/shadows')));
+// render - BMS Operations
+const JobsBoard = Loadable(lazy(() => import('pages/operations/JobsBoard')));
+const MyJobs = Loadable(lazy(() => import('pages/operations/MyJobs')));
+const OrdersIntake = Loadable(lazy(() => import('pages/operations/Orders')));
+const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')));
 
-// render - sample page
-const SamplePage = Loadable(lazy(() => import('pages/extra-pages/sample-page')));
+// render - BMS Admin & Insights
+const ReportsOverview = Loadable(lazy(() => import('pages/reports/Overview')));
+const Branches = Loadable(lazy(() => import('pages/admin/Branches')));
+const Materials = Loadable(lazy(() => import('pages/admin/Materials')));
+const NotificationTemplates = Loadable(lazy(() => import('pages/admin/NotificationTemplates')));
+const SystemSettings = Loadable(lazy(() => import('pages/admin/Settings')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -34,21 +39,49 @@ const MainRoutes = {
         }
       ]
     },
+    // Operations
     {
-      path: 'typography',
-      element: <Typography />
+      path: 'jobs',
+      element: <JobsBoard />
     },
     {
-      path: 'color',
-      element: <Color />
+      path: 'my-jobs',
+      element: <MyJobs />
     },
     {
-      path: 'shadow',
-      element: <Shadow />
+      path: 'orders',
+      element: <OrdersIntake />
     },
     {
-      path: 'sample-page',
-      element: <SamplePage />
+      path: 'delivery',
+      element: <DeliveryDispatch />
+    },
+    // Reports & Insights
+    {
+      path: 'reports',
+      element: <ReportsOverview />
+    },
+    // Admin
+    {
+      path: 'admin',
+      children: [
+        {
+          path: 'branches',
+          element: <Branches />
+        },
+        {
+          path: 'materials',
+          element: <Materials />
+        },
+        {
+          path: 'notifications',
+          element: <NotificationTemplates />
+        },
+        {
+          path: 'settings',
+          element: <SystemSettings />
+        }
+      ]
     }
   ]
 };

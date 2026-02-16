@@ -1,50 +1,48 @@
 // assets
-import {
-  AppstoreAddOutlined,
-  AntDesignOutlined,
-  BarcodeOutlined,
-  BgColorsOutlined,
-  FontSizeOutlined,
-  LoadingOutlined
-} from '@ant-design/icons';
+import { ProjectOutlined, ScheduleOutlined, ShoppingCartOutlined, SendOutlined } from '@ant-design/icons';
 
 // icons
 const icons = {
-  FontSizeOutlined,
-  BgColorsOutlined,
-  BarcodeOutlined,
-  AntDesignOutlined,
-  LoadingOutlined,
-  AppstoreAddOutlined
+  ProjectOutlined,
+  ScheduleOutlined,
+  ShoppingCartOutlined,
+  SendOutlined
 };
 
-// ==============================|| MENU ITEMS - UTILITIES ||============================== //
+// ==============================|| MENU ITEMS - OPERATIONS (BMS) ||============================== //
 
 const utilities = {
-  id: 'utilities',
-  title: 'Utilities',
+  id: 'operations',
+  title: 'Operations',
   type: 'group',
   children: [
     {
-      id: 'util-typography',
-      title: 'Typography',
+      id: 'jobs-board',
+      title: 'Jobs Board',
       type: 'item',
-      url: '/typography',
-      icon: icons.FontSizeOutlined
+      url: '/jobs',
+      icon: icons.ProjectOutlined
     },
     {
-      id: 'util-color',
-      title: 'Color',
+      id: 'my-jobs',
+      title: 'My Jobs',
       type: 'item',
-      url: '/color',
-      icon: icons.BgColorsOutlined
+      url: '/my-jobs',
+      icon: icons.ScheduleOutlined
     },
     {
-      id: 'util-shadow',
-      title: 'Shadow',
+      id: 'orders-intake',
+      title: 'Orders & Intake',
       type: 'item',
-      url: '/shadow',
-      icon: icons.BarcodeOutlined
+      url: '/orders',
+      icon: icons.ShoppingCartOutlined
+    },
+    {
+      id: 'delivery-dispatch',
+      title: 'Delivery & Dispatch',
+      type: 'item',
+      url: '/delivery',
+      icon: icons.SendOutlined
     }
   ]
 };

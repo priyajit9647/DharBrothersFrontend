@@ -78,19 +78,22 @@ export default function DashboardDefault() {
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
       {/* row 1 */}
       <Grid sx={{ mb: -2.25 }} size={12}>
-        <Typography variant="h5">Dashboard</Typography>
+        <Typography variant="h5">Binding Operations Dashboard</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Overview of jobs, delays, material usage and delivery performance across branches.
+        </Typography>
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Total Page Views" count="4,42,236" percentage={59.3} extra="35,000" />
+        <AnalyticEcommerce title="Open Jobs" count="128" percentage={12.3} extra="+18 today" />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Total Users" count="78,250" percentage={70.5} extra="8,900" />
+        <AnalyticEcommerce title="Delayed Jobs" count="9" percentage={4.5} isLoss color="error" extra="SLA alerts" />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Total Order" count="18,800" percentage={27.4} isLoss color="warning" extra="1,943" />
+        <AnalyticEcommerce title="Jobs Completed" count="94" percentage={27.4} extra="Today" />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Total Sales" count="35,078" percentage={27.4} isLoss color="warning" extra="20,395" />
+        <AnalyticEcommerce title="Ready for Dispatch" count="23" percentage={8.1} extra="Across branches" />
       </Grid>
       <Grid sx={{ display: { sm: 'none', md: 'block', lg: 'none' } }} size={{ md: 8 }} />
       {/* row 2 */}
@@ -100,7 +103,7 @@ export default function DashboardDefault() {
       <Grid size={{ xs: 12, md: 5, lg: 4 }}>
         <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Grid>
-            <Typography variant="h5">Income Overview</Typography>
+            <Typography variant="h5">Throughput Overview</Typography>
           </Grid>
           <Grid />
         </Grid>
@@ -108,9 +111,9 @@ export default function DashboardDefault() {
           <Box sx={{ p: 3, pb: 0 }}>
             <Stack sx={{ gap: 2 }}>
               <Typography variant="h6" color="text.secondary">
-                This Week Statistics
+                Jobs processed this week
               </Typography>
-              <Typography variant="h3">$7,650</Typography>
+              <Typography variant="h3">642</Typography>
             </Stack>
           </Box>
           <MonthlyBarChart />

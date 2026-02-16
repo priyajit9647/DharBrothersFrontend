@@ -10,20 +10,15 @@ export default function Footer() {
       sx={{ gap: 1.5, alignItems: 'center', justifyContent: 'space-between', p: '24px 16px 0px', mt: 'auto' }}
     >
       <Typography variant="caption">
-        &copy; All rights reserved{' '}
-        <Link href="https://codedthemes.com/" target="_blank" underline="hover">
-          CodedThemes
+        &copy; {new Date().getFullYear()}{' '}
+        <Link href="https://dharbrothers.in/" target="_blank" underline="hover">
+          Dhar Brothers
         </Link>
+        <p>Developed by Silicon Gen X Global</p>
       </Typography>
       <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="https://codedthemes.com/about-us/" target="_blank" variant="caption" color="text.primary">
-          About us
-        </Link>
-        <Link href="https://mui.com/legal/privacy/" target="_blank" variant="caption" color="text.primary">
-          Privacy
-        </Link>
-        <Link href="https://mui.com/store/terms/" target="_blank" variant="caption" color="text.primary">
-          Terms
+        <Link href="https://google.com/" target="_blank" variant="caption" color="text.primary">
+          Place Order
         </Link>
       </Stack>
     </Stack>

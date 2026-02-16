@@ -1,34 +1,56 @@
 // assets
-import { ChromeOutlined, QuestionOutlined } from '@ant-design/icons';
+import { BarChartOutlined, ApartmentOutlined, DatabaseOutlined, BellOutlined, SettingOutlined } from '@ant-design/icons';
 
 // icons
 const icons = {
-  ChromeOutlined,
-  QuestionOutlined
+  BarChartOutlined,
+  ApartmentOutlined,
+  DatabaseOutlined,
+  BellOutlined,
+  SettingOutlined
 };
 
-// ==============================|| MENU ITEMS - SAMPLE PAGE & DOCUMENTATION ||============================== //
+// ==============================|| MENU ITEMS - ADMIN & INSIGHTS (BMS) ||============================== //
 
 const support = {
-  id: 'support',
-  title: 'Support',
+  id: 'admin-insights',
+  title: 'Admin & Insights',
   type: 'group',
   children: [
     {
-      id: 'sample-page',
-      title: 'Sample Page',
+      id: 'reports',
+      title: 'Reports & Insights',
       type: 'item',
-      url: '/sample-page',
-      icon: icons.ChromeOutlined
+      url: '/reports',
+      icon: icons.BarChartOutlined
     },
     {
-      id: 'documentation',
-      title: 'Documentation',
+      id: 'branches-teams',
+      title: 'Branches & Teams',
       type: 'item',
-      url: 'https://codedthemes.gitbook.io/mantis/',
-      icon: icons.QuestionOutlined,
-      external: true,
-      target: true
+      url: '/admin/branches',
+      icon: icons.ApartmentOutlined
+    },
+    {
+      id: 'materials-inventory',
+      title: 'Materials & Inventory',
+      type: 'item',
+      url: '/admin/materials',
+      icon: icons.DatabaseOutlined
+    },
+    {
+      id: 'notification-templates',
+      title: 'Notification Templates',
+      type: 'item',
+      url: '/admin/notifications',
+      icon: icons.BellOutlined
+    },
+    {
+      id: 'system-settings',
+      title: 'System Settings',
+      type: 'item',
+      url: '/admin/settings',
+      icon: icons.SettingOutlined
     }
   ]
 };
