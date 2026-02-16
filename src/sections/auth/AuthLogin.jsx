@@ -1,6 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 // material-ui
 import Button from '@mui/material/Button';
@@ -22,6 +22,9 @@ import { Formik } from 'formik';
 // project imports
 import IconButton from 'components/@extended/IconButton';
 import AnimateButton from 'components/@extended/AnimateButton';
+import { loginApi } from 'api/auth';
+import { useAuth } from 'hooks/useAuth';
+import { setAuthCookies } from 'utils/authTokens';
 
 // assets
 import EyeOutlined from '@ant-design/icons/EyeOutlined';
@@ -33,6 +36,8 @@ export default function AuthLogin({ isDemo = false }) {
   const [checked, setChecked] = React.useState(false);
 
   const [showPassword, setShowPassword] = React.useState(false);
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
@@ -56,9 +61,36 @@ export default function AuthLogin({ isDemo = false }) {
             .test('no-leading-trailing-whitespace', 'Password cannot start or end with spaces', (value) => value === value.trim())
             .max(10, 'Password must be less than 10 characters')
         })}
+        onSubmit={async (values, { setSubmitting, setStatus, setErrors }) => {
+          try {
+            setStatus({ success: null, error: null });
+
+            const data = await loginApi({ email: values.email, password: values.password });
+
+            // Persist tokens in cookies for subsequent API calls and refresh flow
+            setAuthCookies({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+
+            login({
+              accessToken: data.accessToken,
+              refreshToken: data.refreshToken,
+              user: {
+                email: values.email
+              }
+            });
+
+            setStatus({ success: true, error: null });
+            navigate('/dashboard/default', { replace: true });
+          } catch (error) {
+            const message = error?.message || 'Unable to login. Please try again.';
+            setStatus({ success: false, error: message });
+            setErrors({ submit: message });
+          } finally {
+            setSubmitting(false);
+          }
+        }}
       >
-        {({ errors, handleBlur, handleChange, touched, values }) => (
-          <form noValidate>
+        {({ errors, handleBlur, handleChange, touched, values, handleSubmit, isSubmitting }) => (
+          <form noValidate onSubmit={handleSubmit}>
             <Grid container spacing={3}>
               <Grid size={12}>
                 <Stack sx={{ gap: 1 }}>
@@ -134,9 +166,14 @@ export default function AuthLogin({ isDemo = false }) {
                   </Link>
                 </Stack>
               </Grid>
+              {errors.submit && (
+                <Grid size={12}>
+                  <FormHelperText error>{errors.submit}</FormHelperText>
+                </Grid>
+              )}
               <Grid size={12}>
                 <AnimateButton>
-                  <Button fullWidth size="large" variant="contained" color="primary">
+                  <Button fullWidth size="large" variant="contained" color="primary" type="submit" disabled={isSubmitting}>
                     Login
                   </Button>
                 </AnimateButton>

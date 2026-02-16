@@ -1,0 +1,19 @@
+import PropTypes from 'prop-types';
+import { Navigate, useLocation } from 'react-router-dom';
+
+import { useAuth } from 'hooks/useAuth';
+
+// ==============================|| ROUTE GUARD ||============================== //
+
+export default function RequireAuth({ children }) {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  return children;
+}
+
+RequireAuth.propTypes = { children: PropTypes.node };

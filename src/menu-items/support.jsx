@@ -46,11 +46,114 @@ const support = {
       icon: icons.BellOutlined
     },
     {
-      id: 'system-settings',
-      title: 'System Settings',
-      type: 'item',
-      url: '/admin/settings',
-      icon: icons.SettingOutlined
+      id: 'masters',
+      title: 'Masters',
+      type: 'collapse',
+      icon: icons.SettingOutlined,
+      children: [
+        {
+          id: 'spine-printing-option-master',
+          title: 'Spine Printing Options',
+          type: 'item',
+          url: '/admin/masters/spine-printing-options'
+        },
+        {
+          id: 'process-stage-master',
+          title: 'Process Stages',
+          type: 'item',
+          url: '/admin/masters/process-stages'
+        },
+        {
+          id: 'printing-type-master',
+          title: 'Printing Types',
+          type: 'item',
+          url: '/admin/masters/printing-types'
+        },
+        {
+          id: 'print-color-master',
+          title: 'Print Colors',
+          type: 'item',
+          url: '/admin/masters/print-colors'
+        },
+        {
+          id: 'paper-master',
+          title: 'Papers',
+          type: 'item',
+          url: '/admin/masters/papers'
+        },
+        {
+          id: 'paper-size-master',
+          title: 'Paper Sizes',
+          type: 'item',
+          url: '/admin/masters/paper-sizes'
+        },
+        {
+          id: 'page-type-master',
+          title: 'Page Types',
+          type: 'item',
+          url: '/admin/masters/page-types'
+        },
+        {
+          id: 'order-status-master',
+          title: 'Order Statuses',
+          type: 'item',
+          url: '/admin/masters/order-statuses'
+        },
+        {
+          id: 'document-type-master',
+          title: 'Document Types',
+          type: 'item',
+          url: '/admin/masters/document-types'
+        },
+        {
+          id: 'delivery-type-master',
+          title: 'Delivery Types',
+          type: 'item',
+          url: '/admin/masters/delivery-types'
+        },
+        {
+          id: 'cover-design-type-master',
+          title: 'Cover Design Types',
+          type: 'item',
+          url: '/admin/masters/cover-design-types'
+        },
+        {
+          id: 'content-position-master',
+          title: 'Content Positions',
+          type: 'item',
+          url: '/admin/masters/content-positions'
+        },
+        {
+          id: 'binding-type-master',
+          title: 'Binding Types',
+          type: 'item',
+          url: '/admin/masters/binding-types'
+        },
+        {
+          id: 'binding-cover-material-master',
+          title: 'Binding Cover Materials',
+          type: 'item',
+          url: '/admin/masters/binding-cover-materials'
+        },
+        {
+          id: 'printing-rate-master',
+          title: 'Printing Rates',
+          type: 'item',
+          url: '/admin/masters/printing-rates'
+        },
+        {
+          id: 'other-charge-master',
+          title: 'Other Charges',
+          type: 'item',
+          url: '/admin/masters/other-charges'
+        },
+        {
+          id: 'binding-rate-master',
+          title: 'Binding Rates',
+          type: 'item',
+          url: '/admin/masters/binding-rates'
+        }
+      ]
     }
   ]
 };
