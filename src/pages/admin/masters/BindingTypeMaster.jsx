@@ -10,7 +10,6 @@ export default function BindingTypeMaster() {
   const [rows, setRows] = useState([
     { id: 1, name: 'Hard Binding', code: 'HARD', description: 'Standard hard binding', active: true },
     { id: 2, name: 'Soft Binding', code: 'SOFT', description: 'Soft cover binding', active: true },
-    { id: 3, name: 'Synopsis', code: 'SYN', description: 'Synopsis binding', active: false }
   ]);
 
   const pagedRows = useMemo(() => {
@@ -44,7 +43,7 @@ export default function BindingTypeMaster() {
       <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
         <MasterList
           title="Binding Types"
-          description="Manage the list of available binding types, toggle their active status and edit existing records."
+          description="View the list of available binding types. Actions are disabled for this master."
           columns={[
             { id: 'name', label: 'Name' },
             { id: 'code', label: 'Code' },
@@ -59,9 +58,9 @@ export default function BindingTypeMaster() {
             setRowsPerPage(value);
             setPage(0);
           }}
-          onCreate={handleCreate}
-          onEdit={handleEdit}
-          onToggleActive={handleToggleActive}
+          showCreateButton={false}
+          showActiveColumn={false}
+          showActionsColumn={false}
         />
       </Grid>
     </Grid>

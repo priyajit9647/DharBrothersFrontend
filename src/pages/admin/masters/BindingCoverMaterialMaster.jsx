@@ -20,7 +20,6 @@ import { createBindingCoverMaterial, editBindingCoverMaterial, getBindingCoverMa
 const BINDING_TYPE_OPTIONS = [
   { value: 'HARD', label: 'Hard Binding' },
   { value: 'SOFT', label: 'Soft Binding' },
-  { value: 'SYN', label: 'Synopsis' }
 ];
 
 export default function BindingCoverMaterialMaster() {

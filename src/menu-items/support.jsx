@@ -52,12 +52,6 @@ const support = {
       icon: icons.SettingOutlined,
       children: [
         {
-          id: 'spine-printing-option-master',
-          title: 'Spine Printing Options',
-          type: 'item',
-          url: '/admin/masters/spine-printing-options'
-        },
-        {
           id: 'process-stage-master',
           title: 'Process Stages',
           type: 'item',
@@ -92,36 +86,6 @@ const support = {
           title: 'Page Types',
           type: 'item',
           url: '/admin/masters/page-types'
-        },
-        {
-          id: 'order-status-master',
-          title: 'Order Statuses',
-          type: 'item',
-          url: '/admin/masters/order-statuses'
-        },
-        {
-          id: 'document-type-master',
-          title: 'Document Types',
-          type: 'item',
-          url: '/admin/masters/document-types'
-        },
-        {
-          id: 'delivery-type-master',
-          title: 'Delivery Types',
-          type: 'item',
-          url: '/admin/masters/delivery-types'
-        },
-        {
-          id: 'cover-design-type-master',
-          title: 'Cover Design Types',
-          type: 'item',
-          url: '/admin/masters/cover-design-types'
-        },
-        {
-          id: 'content-position-master',
-          title: 'Content Positions',
-          type: 'item',
-          url: '/admin/masters/content-positions'
         },
         {
           id: 'binding-type-master',

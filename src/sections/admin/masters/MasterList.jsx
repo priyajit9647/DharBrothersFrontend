@@ -31,7 +31,10 @@ function MasterList({
   onCreate,
   onEdit,
   onToggleActive,
-  loading
+  loading,
+  showCreateButton,
+  showActiveColumn,
+  showActionsColumn
 }) {
   const handleChangePage = (event, newPage) => {
     if (onPageChange) {
@@ -49,13 +52,19 @@ function MasterList({
   const displayRows = rows || [];
   const count = typeof totalCount === 'number' ? totalCount : displayRows.length;
 
+  const hasActiveColumn = showActiveColumn !== false;
+  const hasActionsColumn = showActionsColumn !== false;
+  const extraColumns = (hasActiveColumn ? 1 : 0) + (hasActionsColumn ? 1 : 0);
+
   return (
     <MainCard
       title={title}
       secondary={
-        <Button variant="contained" size="small" onClick={onCreate} disabled={loading}>
-          Create
-        </Button>
+        showCreateButton !== false && onCreate ? (
+          <Button variant="contained" size="small" onClick={onCreate} disabled={loading}>
+            Create
+          </Button>
+        ) : null
       }
       sx={{ width: '100%' }}
       contentSX={{ p: 0 }}
@@ -86,14 +95,14 @@ function MasterList({
                   {column.label}
                 </TableCell>
               ))}
-              <TableCell align="center">Active</TableCell>
-              <TableCell align="center">Actions</TableCell>
+              {hasActiveColumn && <TableCell align="center">Active</TableCell>}
+              {hasActionsColumn && <TableCell align="center">Actions</TableCell>}
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={columns.length + 2} align="center">
+                <TableCell colSpan={columns.length + extraColumns} align="center">
                   <Typography variant="body2" color="text.secondary">
                     Loading...
                   </Typography>
@@ -101,7 +110,7 @@ function MasterList({
               </TableRow>
             ) : displayRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + 2} align="center">
+                <TableCell colSpan={columns.length + extraColumns} align="center">
                   <Typography variant="body2" color="text.secondary">
                     No records found.
                   </Typography>
@@ -115,26 +124,30 @@ function MasterList({
                       {column.render ? column.render(row) : row[column.id]}
                     </TableCell>
                   ))}
-                  <TableCell align="center">
-                    <Switch
-                      size="small"
-                      checked={!!row.active}
-                      onChange={(event) => onToggleActive && onToggleActive(row, event.target.checked)}
-                      color="primary"
-                    />
-                  </TableCell>
-                  <TableCell align="center">
-                    <Stack direction="row" justifyContent="center" spacing={0.5}>
-                      <IconButton
+                  {hasActiveColumn && (
+                    <TableCell align="center">
+                      <Switch
                         size="small"
+                        checked={!!row.active}
+                        onChange={(event) => onToggleActive && onToggleActive(row, event.target.checked)}
                         color="primary"
-                        onClick={() => onEdit && onEdit(row)}
-                        aria-label="Edit"
-                      >
-                        <EditTwoTone style={{ fontSize: 18 }} />
-                      </IconButton>
-                    </Stack>
-                  </TableCell>
+                      />
+                    </TableCell>
+                  )}
+                  {hasActionsColumn && (
+                    <TableCell align="center">
+                      <Stack direction="row" justifyContent="center" spacing={0.5}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => onEdit && onEdit(row)}
+                          aria-label="Edit"
+                        >
+                          <EditTwoTone style={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Stack>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -178,7 +191,10 @@ MasterList.propTypes = {
   onCreate: PropTypes.func,
   onEdit: PropTypes.func,
   onToggleActive: PropTypes.func,
-  loading: PropTypes.bool
+  loading: PropTypes.bool,
+  showCreateButton: PropTypes.bool,
+  showActiveColumn: PropTypes.bool,
+  showActionsColumn: PropTypes.bool
 };
 
 MasterList.defaultProps = {
@@ -192,7 +208,10 @@ MasterList.defaultProps = {
   onCreate: undefined,
   onEdit: undefined,
   onToggleActive: undefined,
-  loading: false
+  loading: false,
+  showCreateButton: true,
+  showActiveColumn: true,
+  showActionsColumn: true
 };
 
 export default MasterList;
