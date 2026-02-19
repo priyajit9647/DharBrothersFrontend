@@ -96,8 +96,9 @@ export async function authorizedFetch(path, options = {}) {
     }
   }
 
+  const isFormData = options.body instanceof FormData;
+
   const headers = {
-    'Content-Type': 'application/json',
     ...(options.headers || {}),
     ...(accessToken
       ? {
@@ -105,6 +106,15 @@ export async function authorizedFetch(path, options = {}) {
         }
       : {})
   };
+
+  // For JSON requests, ensure we send the appropriate Content-Type header.
+  // For FormData, let the browser set the multipart boundary automatically.
+  if (!isFormData) {
+    const hasContentTypeHeader = Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+    if (!hasContentTypeHeader) {
+      headers['Content-Type'] = 'application/json';
+    }
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
