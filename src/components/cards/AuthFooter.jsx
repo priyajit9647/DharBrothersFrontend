@@ -14,9 +14,9 @@ export default function AuthFooter() {
         sx={{ gap: 2, justifyContent: { xs: 'center', sm: 'space-between', textAlign: { xs: 'center', sm: 'inherit' } } }}
       >
         <Typography variant="subtitle2" color="secondary">
-          © Developed by Saraf Tech Lab LLP{' '}
+          © Developed by Siliconites Genx Global Limited{' '}
           <Link href="https://saraftechlab.org/" target="_blank" underline="hover">
-            Saraf Tech Lab LLP
+            Siliconites Genx Global Limited
           </Link>
         </Typography>
 

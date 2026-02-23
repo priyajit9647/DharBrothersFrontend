@@ -16,7 +16,7 @@ export default function NavCard() {
           Binding Management System
         </Typography>
         <Typography variant="caption" color="secondary" align="center">
-          Developed by Saraf Tech Lab LLP
+          Developed by Siliconites Genx Global Limited
         </Typography>
       </Stack>
     </MainCard>
