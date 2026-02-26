@@ -4,6 +4,8 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 import RequireAuth from './RequireAuth';
+import Email from '../pages/email';
+import Whatsapp from '../pages/whatsapp';
 
 // render - Dashboard
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));

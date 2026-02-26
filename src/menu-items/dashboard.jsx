@@ -1,12 +1,16 @@
 // assets
-import { DashboardOutlined } from '@ant-design/icons';
+import {
+  DashboardOutlined,
+  MailOutlined,
+  MessageOutlined
+} from '@ant-design/icons';
 
 // icons
 const icons = {
-  DashboardOutlined
+  DashboardOutlined,
+  MailOutlined,
+  MessageOutlined
 };
-
-// ==============================|| MENU ITEMS - DASHBOARD ||============================== //
 
 const dashboard = {
   id: 'group-dashboard',
@@ -20,8 +24,33 @@ const dashboard = {
       url: '/dashboard/default',
       icon: icons.DashboardOutlined,
       breadcrumbs: false
+    },
+
+    // 🔥 EMAIL MODULE
+    {
+      id: 'email',
+      title: 'Email',
+      type: 'item',
+      url: '/email',
+      icon: icons.MailOutlined,
+      breadcrumbs: false
+    },
+
+    // 🔥 WHATSAPP MODULE
+    {
+      id: 'whatsapp',
+      title: 'WhatsApp',
+      type: 'item',
+      url: '/whatsapp',
+      icon: icons.MessageOutlined,
+      breadcrumbs: false
     }
   ]
 };
 
 export default dashboard;
+
+
+// ==============================|| MENU ITEMS - DASHBOARD ||============================== //
+
+

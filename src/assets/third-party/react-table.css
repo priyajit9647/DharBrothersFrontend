@@ -1,17 +1,14 @@
-.cursor-pointer {
-  cursor: pointer;
-}
-
 .prevent-select {
-  -webkit-user-select: none; /* Safari */
-  -ms-user-select: none; /* IE 10 and IE 11 */
-  user-select: none; /* Standard syntax */
+  -ms-user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .sticky-header {
   margin: 0;
   position: sticky;
-  top: -1px;
+  top: 0;
   z-index: 1;
 }
 
@@ -21,15 +18,17 @@
   top: 0;
   height: 100%;
   width: 5px;
+  background: transparent;
   cursor: col-resize;
-  user-select: none;
+  user-selection: none;
   touch-action: none;
 }
 
 .resizer.isResizing {
+  background: #999;
   opacity: 1;
 }
 
-.MuiTableContainer-root {
-  border-radius: 0px !important;
+.multiTableContainer_root {
+  border-radius: 8px !important;
 }
