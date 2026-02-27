@@ -4,8 +4,6 @@ import { lazy } from 'react';
 import Loadable from 'components/Loadable';
 import DashboardLayout from 'layout/Dashboard';
 import RequireAuth from './RequireAuth';
-import Email from '../pages/email';
-import Whatsapp from '../pages/whatsapp';
 
 // render - Dashboard
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
@@ -15,9 +13,12 @@ const JobsBoard = Loadable(lazy(() => import('pages/operations/JobsBoard')));
 const MyJobs = Loadable(lazy(() => import('pages/operations/MyJobs')));
 const OrdersIntake = Loadable(lazy(() => import('pages/operations/Orders')));
 const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')));
+const Whatsapp = Loadable(lazy(() => import('pages/operations/Whatsapp')));
+const Email = Loadable(lazy(() => import('pages/operations/Email')));
 
 // render - BMS Admin & Insights
 const ReportsOverview = Loadable(lazy(() => import('pages/reports/Overview')));
+const NotificationReports = Loadable(lazy(() => import('pages/reports/NotificationReports')));
 const Branches = Loadable(lazy(() => import('pages/admin/Branches')));
 const Materials = Loadable(lazy(() => import('pages/admin/Materials')));
 const NotificationTemplates = Loadable(lazy(() => import('pages/admin/NotificationTemplates')));
@@ -67,6 +68,14 @@ const MainRoutes = {
       element: <MyJobs />
     },
     {
+      path: 'whatsapp',
+      element: <Whatsapp />
+    },
+    {
+      path: 'email',
+      element: <Email />
+    },
+    {
       path: 'orders',
       element: <OrdersIntake />
     },
@@ -77,7 +86,16 @@ const MainRoutes = {
     // Reports & Insights
     {
       path: 'reports',
-      element: <ReportsOverview />
+      children: [
+        {
+          path: '',
+          element: <ReportsOverview />
+        },
+        {
+          path: 'notifications',
+          element: <NotificationReports />
+        }
+      ]
     },
     // Admin
     {
