@@ -43,7 +43,8 @@ const utilities = {
       title: 'Email Inbox',
       type: 'item',
       url: '/email',
-      icon: icons.MailOutlined
+      icon: icons.MailOutlined,
+      breadcrumbs: false
     },
     {
       id: 'orders-intake',

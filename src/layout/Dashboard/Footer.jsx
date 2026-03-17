@@ -14,7 +14,7 @@ export default function Footer() {
         <Link href="https://dharbrothers.in/" target="_blank" underline="hover">
           Dhar Brothers
         </Link>
-        <p>Developed by Silicon Gen X Global</p>
+        	&nbsp; Developed by Silicon Gen X Global
       </Typography>
       <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="https://google.com/" target="_blank" variant="caption" color="text.primary">
