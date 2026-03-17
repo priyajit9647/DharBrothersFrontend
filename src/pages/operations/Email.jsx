@@ -6,17 +6,18 @@ import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import Avatar from '@mui/material/Avatar';
 
-import { SearchOutlined, SendOutlined } from '@ant-design/icons';
+import { SearchOutlined, SendOutlined, PaperClipOutlined } from '@ant-design/icons';
 
 import MainCard from 'components/MainCard';
 import Dot from 'components/@extended/Dot';
-import { fetchEmailThreads, fetchThreadMessages, replyToThread, markThreadRead } from 'api/emailApi';
+import { fetchEmailThreads, fetchThreadMessages, replyToThread, markThreadRead, fetchAttachmentBlob } from 'api/emailApi';
 
 function extractCustomerName(customerEmail) {
   if (!customerEmail) return 'Unknown customer';
@@ -177,6 +178,24 @@ export default function Email() {
 
   const cardHeight = zoom >= 1 ? 'calc(100vh - 200px)' : `calc((100vh - 200px) / ${zoom})`;
   const cardWidth = zoom >= 1 ? '100%' : `${100 / zoom}%`;
+
+  const handleDownloadAttachment = async (message, attachmentId, filename) => {
+    try {
+      const blob = await fetchAttachmentBlob(attachmentId);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || 'attachment';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      // Optionally we could surface a toast/snackbar; for now just log.
+      // eslint-disable-next-line no-console
+      console.error('Failed to download attachment', e);
+    }
+  };
 
   return (
     <Grid container sx={{ width: '100%', flexGrow: 1 }}>
@@ -418,6 +437,28 @@ export default function Email() {
                           >
                             {msg.body}
                           </Typography>
+
+                          {msg.attachments &&
+                            Object.keys(msg.attachments).length > 0 && (
+                              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                                <PaperClipOutlined style={{ fontSize: 16 }} />
+                                <Stack spacing={0.5}>
+                                  {Object.entries(msg.attachments).map(([attachmentId, filename]) => (
+                                    <Button
+                                      key={attachmentId}
+                                      size="small"
+                                      variant="text"
+                                      sx={{ justifyContent: 'flex-start', p: 0, minWidth: 0, textTransform: 'none' }}
+                                      onClick={() => handleDownloadAttachment(msg, attachmentId, filename)}
+                                    >
+                                      <Typography variant="body2" color="primary">
+                                        {filename}
+                                      </Typography>
+                                    </Button>
+                                  ))}
+                                </Stack>
+                              </Stack>
+                            )}
                         </Box>
                       </Box>
                     );

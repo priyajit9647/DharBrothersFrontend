@@ -1,4 +1,4 @@
-import { authorizedFetch } from './auth';
+import { authorizedFetch, authorizedFetchRaw } from './auth';
 
 // ==============================|| EMAIL / THREADS API CLIENT ||============================== //
 
@@ -48,5 +48,19 @@ export async function markThreadRead(threadId) {
 	return authorizedFetch(`/api/v1/admin/threads/${threadId}/readed`, {
 		method: 'PATCH'
 	});
+}
+
+// Download a specific attachment by its id
+// GET /api/v1/admin/threads/attachments/{attachmentId}/download
+export async function fetchAttachmentBlob(attachmentId) {
+	if (!attachmentId) {
+		throw new Error('Attachment id is required');
+	}
+
+	const response = await authorizedFetchRaw(`/api/v1/admin/threads/attachments/${attachmentId}/download`, {
+		method: 'GET'
+	});
+
+	return response.blob();
 }
 

@@ -136,3 +136,65 @@ export async function authorizedFetch(path, options = {}) {
   return data;
 }
 
+// Variant of authorizedFetch that returns the raw Response instead of parsing JSON.
+// Useful for downloading binary data like file attachments.
+export async function authorizedFetchRaw(path, options = {}) {
+  if (!API_BASE_URL) {
+    throw new Error('API base URL is not configured');
+  }
+
+  let accessToken = getAccessTokenFromCookies();
+  const refreshToken = getRefreshTokenFromCookies();
+
+  if (accessToken && isTokenExpired(accessToken)) {
+    if (!refreshToken) {
+      clearAuthCookies();
+      throw new Error('Session expired. Please login again.');
+    }
+
+    try {
+      const refreshed = await refreshTokenApi(refreshToken);
+      accessToken = refreshed.accessToken;
+    } catch (error) {
+      clearAuthCookies();
+      throw new Error('Session expired. Please login again.');
+    }
+  }
+
+  const isFormData = options.body instanceof FormData;
+
+  const headers = {
+    ...(options.headers || {}),
+    ...(accessToken
+      ? {
+          Authorization: `Bearer ${accessToken}`
+        }
+      : {})
+  };
+
+  if (!isFormData) {
+    const hasContentTypeHeader = Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+    if (!hasContentTypeHeader) {
+      headers['Content-Type'] = 'application/json';
+    }
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    let message = 'Request failed';
+    try {
+      const data = await response.json();
+      message = data?.message || data?.error || message;
+    } catch (e) {
+      // ignore JSON parse errors for non-JSON responses
+    }
+    throw new Error(message);
+  }
+
+  return response;
+}
+
