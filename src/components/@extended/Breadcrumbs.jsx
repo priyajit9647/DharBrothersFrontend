@@ -143,7 +143,7 @@ export default function Breadcrumbs({
             </Grid>
             {title && titleBottom && (
               <Grid sx={{ mt: card === false ? 0.25 : 1 }}>
-                <Typography variant="h2">{main.title}</Typography>
+                <Typography variant="h4">{main.title}</Typography>
               </Grid>
             )}
           </Grid>
@@ -218,13 +218,13 @@ export default function Breadcrumbs({
           >
             {title && !titleBottom && (
               <Grid>
-                <Typography variant="h2">{custom ? heading : item?.title}</Typography>
+                <Typography variant="h4">{custom ? heading : item?.title}</Typography>
               </Grid>
             )}
             <Grid>{tempContent}</Grid>
             {title && titleBottom && (
               <Grid sx={{ mt: card === false ? 0.25 : 1 }}>
-                <Typography variant="h2">{custom ? heading : item?.title}</Typography>
+                <Typography variant="h4">{custom ? heading : item?.title}</Typography>
               </Grid>
             )}
           </Grid>

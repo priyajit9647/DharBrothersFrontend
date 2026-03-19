@@ -1,12 +1,13 @@
 // assets
-import { ProjectOutlined, ScheduleOutlined, ShoppingCartOutlined, SendOutlined } from '@ant-design/icons';
+import { ProjectOutlined, ScheduleOutlined, ShoppingCartOutlined, SendOutlined, MailOutlined } from '@ant-design/icons';
 
 // icons
 const icons = {
   ProjectOutlined,
   ScheduleOutlined,
   ShoppingCartOutlined,
-  SendOutlined
+  SendOutlined,
+  MailOutlined
 };
 
 // ==============================|| MENU ITEMS - OPERATIONS (BMS) ||============================== //
@@ -29,6 +30,21 @@ const utilities = {
       type: 'item',
       url: '/my-jobs',
       icon: icons.ScheduleOutlined
+    },
+    {
+      id: 'whatsapp',
+      title: 'WhatsApp',
+      type: 'item',
+      url: '/whatsapp',
+      icon: icons.SendOutlined
+    },
+    {
+      id: 'email',
+      title: 'Email Inbox',
+      type: 'item',
+      url: '/email',
+      icon: icons.MailOutlined,
+      breadcrumbs: false
     },
     {
       id: 'orders-intake',

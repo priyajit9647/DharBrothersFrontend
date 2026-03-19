@@ -27,9 +27,16 @@ const support = {
     {
       id: 'branches-teams',
       title: 'Branches & Teams',
-      type: 'item',
-      url: '/admin/branches',
-      icon: icons.ApartmentOutlined
+      type: 'collapse',
+      icon: icons.ApartmentOutlined,
+      children: [
+        {
+          id: 'branches',
+          title: 'Branches',
+          type: 'item',
+          url: '/admin/branches'
+        }
+      ]
     },
     {
       id: 'materials-inventory',
@@ -45,12 +52,12 @@ const support = {
       url: '/admin/notifications',
       icon: icons.BellOutlined
     },
-    {
-      id: 'masters',
-      title: 'Masters',
-      type: 'collapse',
-      icon: icons.SettingOutlined,
-      children: [
+        {
+          id: 'masters',
+          title: 'Masters',
+          type: 'collapse',
+          icon: icons.SettingOutlined,
+          children: [
         {
           id: 'process-stage-master',
           title: 'Process Stages',

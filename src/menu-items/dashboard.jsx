@@ -1,12 +1,16 @@
 // assets
-import { DashboardOutlined } from '@ant-design/icons';
+import {
+  DashboardOutlined,
+  MailOutlined,
+  MessageOutlined
+} from '@ant-design/icons';
 
 // icons
 const icons = {
-  DashboardOutlined
+  DashboardOutlined,
+  MailOutlined,
+  MessageOutlined
 };
-
-// ==============================|| MENU ITEMS - DASHBOARD ||============================== //
 
 const dashboard = {
   id: 'group-dashboard',
@@ -25,3 +29,8 @@ const dashboard = {
 };
 
 export default dashboard;
+
+
+// ==============================|| MENU ITEMS - DASHBOARD ||============================== //
+
+
