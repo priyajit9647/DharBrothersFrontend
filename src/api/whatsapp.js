@@ -123,29 +123,5 @@ export function closeWhatsappConversation(phone, payload = {}) {
 	});
 }
 
-/**
- * Low-level helpers for webhook integration if needed from the UI.
- */
-export function verifyWhatsappWebhook(params = {}) {
-	const searchParams = new URLSearchParams();
-	Object.entries(params).forEach(([key, value]) => {
-		if (value !== undefined && value !== null && value !== '') {
-			searchParams.append(key, String(value));
-		}
-	});
-	const queryString = searchParams.toString();
-	const path = `/api/v1/whatsapp/webhook/verify${queryString ? `?${queryString}` : ''}`;
-	return authorizedFetch(path, { method: 'GET' });
-}
-
-export function receiveWhatsappWebhook(payload) {
-	if (!payload) {
-		throw new Error('payload is required to call WhatsApp webhook receive');
-	}
-
-	return authorizedFetch('/api/v1/whatsapp/webhook/receive', {
-		method: 'POST',
-		body: JSON.stringify(payload)
-	});
-}
+// Note: webhook verification and receive endpoints are handled server-side only.
 
