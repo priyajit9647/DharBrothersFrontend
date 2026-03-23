@@ -8,6 +8,10 @@ import Loadable from 'components/Loadable';
 const LoginPage = Loadable(lazy(() => import('pages/auth/Login')));
 const PlaceOrderPage = Loadable(lazy(() => import('pages/extra-pages/PlaceOrder')));
 
+// customer portal (public, OTP-based)
+const CustomerPortalEntryPage = Loadable(lazy(() => import('pages/customer/CustomerPortalEntry')));
+const CustomerPortalPage = Loadable(lazy(() => import('pages/customer/CustomerPortal')));
+
 // ==============================|| AUTH ROUTING ||============================== //
 
 const LoginRoutes = {
@@ -24,6 +28,14 @@ const LoginRoutes = {
     {
       path: 'order',
       element: <PlaceOrderPage />
+    },
+    {
+      path: 'customer',
+      element: <CustomerPortalEntryPage />
+    },
+    {
+      path: 'customer/portal',
+      element: <CustomerPortalPage />
     }
   ]
 };
