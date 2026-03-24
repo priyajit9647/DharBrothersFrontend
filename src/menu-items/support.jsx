@@ -35,6 +35,12 @@ const support = {
           title: 'Branches',
           type: 'item',
           url: '/admin/branches'
+        },
+        {
+          id: 'teams',
+          title: 'Teams',
+          type: 'item',
+          url: '/admin/teams'
         }
       ]
     },
