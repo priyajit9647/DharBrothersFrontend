@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
@@ -18,7 +19,13 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { SearchOutlined, SendOutlined, MoreOutlined } from '@ant-design/icons';
 
 import MainCard from 'components/MainCard';
-import { fetchWhatsappConversations, fetchWhatsappConversationById, sendWhatsappMessage } from 'api/whatsapp';
+import {
+  fetchWhatsappConversations,
+  fetchWhatsappConversationById,
+  sendWhatsappMessage,
+  disableAiForWhatsappConversation,
+  closeWhatsappConversation
+} from 'api/whatsapp';
 
 // ==============================|| BMS - WHATSAPP (WEB-STYLE VIEW) ||============================== //
 
@@ -31,6 +38,7 @@ export default function Whatsapp() {
   const [search, setSearch] = useState('');
   const [messageText, setMessageText] = useState('');
   const [error, setError] = useState('');
+  const [headerActionLoading, setHeaderActionLoading] = useState(false);
 
   const loadConversations = useCallback(
     async (searchValue = '') => {
@@ -116,12 +124,61 @@ export default function Whatsapp() {
     }
   };
 
+  const getConversationPhone = () => {
+    if (selectedConversation?.phone) return selectedConversation.phone;
+    return selectedConversationId;
+  };
+
+  const handleDisableAi = async () => {
+    const phone = getConversationPhone();
+    if (!phone) return;
+
+    try {
+      setHeaderActionLoading(true);
+      setError('');
+      await disableAiForWhatsappConversation(phone);
+      await loadConversationDetail(selectedConversationId);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to disable AI for WhatsApp conversation', err);
+      setError(err?.message || 'Failed to disable AI for this conversation');
+    } finally {
+      setHeaderActionLoading(false);
+    }
+  };
+
+  const handleCloseConversation = async () => {
+    const phone = getConversationPhone();
+    if (!phone) return;
+
+    try {
+      setHeaderActionLoading(true);
+      setError('');
+      await closeWhatsappConversation(phone);
+      await loadConversations(search);
+      setSelectedConversationId(null);
+      setSelectedConversation(null);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to close WhatsApp conversation', err);
+      setError(err?.message || 'Failed to close this conversation');
+    } finally {
+      setHeaderActionLoading(false);
+    }
+  };
+
   const formattedConversations = useMemo(() => {
     return conversations.map((conv) => {
       const id = conv.phone || conv.id || conv._id;
-      const customerName = conv.customerName || conv.name || conv.title || conv.phone || 'Customer';
-      const jobLabel = conv.jobId ? `Job #${conv.jobId}` : conv.orderId ? `Order #${conv.orderId}` : '';
-      const lastMessageTimeRaw = conv.lastMessageAt || conv.updatedAt || conv.createdAt;
+      const customerName = conv.phone || conv.customerName || conv.name || conv.title || 'Customer';
+      const jobLabel = conv.assignedAdmin
+        ? `Agent: ${conv.assignedAdmin}`
+        : conv.jobId
+          ? `Job #${conv.jobId}`
+          : conv.orderId
+            ? `Order #${conv.orderId}`
+            : '';
+      const lastMessageTimeRaw = conv.escalatedAt || conv.lastMessageAt || conv.updatedAt || conv.createdAt;
       let lastMessageTime = '';
       if (lastMessageTimeRaw) {
         const d = new Date(lastMessageTimeRaw);
@@ -131,12 +188,16 @@ export default function Whatsapp() {
       }
 
       const preview =
-        conv.lastMessageSnippet ||
-        conv.lastMessagePreview ||
-        conv.lastMessage?.body ||
-        conv.preview ||
-        conv.snippet ||
-        '';
+        typeof conv.aiEnabled === 'boolean'
+          ? conv.aiEnabled
+            ? 'AI enabled'
+            : 'AI disabled'
+          : conv.lastMessageSnippet ||
+            conv.lastMessagePreview ||
+            conv.lastMessage?.body ||
+            conv.preview ||
+            conv.snippet ||
+            '';
 
       return {
         raw: conv,
@@ -311,9 +372,26 @@ export default function Whatsapp() {
                       )}
                     </Box>
                   </Stack>
-                  <IconButton size="small">
-                    <MoreOutlined style={{ fontSize: 18 }} />
-                  </IconButton>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="warning"
+                      onClick={handleDisableAi}
+                      disabled={headerActionLoading}
+                    >
+                      Disable AI
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      onClick={handleCloseConversation}
+                      disabled={headerActionLoading}
+                    >
+                      Close
+                    </Button>
+                  </Stack>
                 </>
               ) : (
                 <Typography variant="body2" color="text.secondary">
@@ -340,9 +418,12 @@ export default function Whatsapp() {
                 <Stack spacing={1.5}>
                   {messages.map((msg) => {
                     const key = msg.id || msg._id || `${msg.sentAt}-${Math.random()}`;
-                    const isOutbound = msg.direction === 'outbound' || msg.from === 'business';
-                    const timeLabel = msg.sentAt
-                      ? new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    const direction = typeof msg.direction === 'string' ? msg.direction.toLowerCase() : '';
+                    const isOutbound = direction === 'outbound' || direction === 'out' || msg.from === 'business';
+
+                    const timestamp = msg.sentAt || msg.processedDate || msg.receivedDate;
+                    const timeLabel = timestamp
+                      ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                       : '';
 
                     return (
@@ -366,6 +447,7 @@ export default function Whatsapp() {
                               sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}
                             >
                               {timeLabel}
+                              {msg.aiGenerated ? ' · AI' : ''}
                             </Typography>
                           )}
                         </Box>
