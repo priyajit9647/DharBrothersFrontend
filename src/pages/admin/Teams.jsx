@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Dialog from '@mui/material/Dialog';
@@ -9,8 +9,14 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import { getBranches } from 'api/branch';
+import { createAdminUser, getUsersByBranch, toggleUserActive } from 'api/user';
 
 // ==============================|| BMS - TEAMS (ADMIN) ||============================== //
 
@@ -23,16 +29,84 @@ export default function Teams() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [rows, setRows] = useState([]);
 
+  const [branches, setBranches] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
   const [formValues, setFormValues] = useState({
     name: '',
+    firstName: '',
+    lastName: '',
     mobile: '',
-    email: ''
+    email: '',
+    password: ''
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [loading] = useState(false);
+
+  const loading = loadingBranches || loadingUsers;
+
+  // Load branches once and set default branch
+  useEffect(() => {
+    const loadBranches = async () => {
+      try {
+        setLoadingBranches(true);
+        setError('');
+        const data = await getBranches();
+        const items = Array.isArray(data) ? data : data?.items || data?.data || [];
+        setBranches(items);
+        if (!selectedBranchId && items.length > 0) {
+          setSelectedBranchId(String(items[0].id));
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load branches', err);
+        setError(err?.message || 'Failed to load branches');
+      } finally {
+        setLoadingBranches(false);
+      }
+    };
+
+    loadBranches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load users whenever selected branch changes
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!selectedBranchId) return;
+      try {
+        setLoadingUsers(true);
+        setError('');
+        const data = await getUsersByBranch(selectedBranchId);
+        const items = Array.isArray(data) ? data : data?.items || data?.data || [];
+        const normalized = items.map((item, index) => {
+          const fullName = `${item.firstName || ''} ${item.lastName || ''}`.trim();
+          return {
+            id: item.id ?? index + 1,
+            name: item.userName || fullName || 'User',
+            fullName: fullName || '-',
+            mobile: item.mobile || '',
+            email: item.email || '',
+            roleName: item.roleName || 'ADMIN',
+            active: item.active
+          };
+        });
+        setRows(normalized);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load users for branch', err);
+        setError(err?.message || 'Failed to load users for this branch');
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    loadUsers();
+  }, [selectedBranchId]);
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -42,7 +116,7 @@ export default function Teams() {
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ name: '', mobile: '', email: '' });
+    setFormValues({ name: '', firstName: '', lastName: '', mobile: '', email: '', password: '' });
     setError('');
     setDialogOpen(true);
   };
@@ -51,8 +125,11 @@ export default function Teams() {
     setEditingRow(row);
     setFormValues({
       name: row.name || '',
+      firstName: row.fullName?.split(' ')[0] || '',
+      lastName: row.fullName?.split(' ').slice(1).join(' ') || '',
       mobile: row.mobile || '',
-      email: row.email || ''
+      email: row.email || '',
+      password: ''
     });
     setError('');
     setDialogOpen(true);
@@ -73,53 +150,134 @@ export default function Teams() {
 
   const handleSave = async () => {
     const name = formValues.name.trim();
+    const firstName = formValues.firstName.trim();
+    const lastName = formValues.lastName.trim();
     const mobile = formValues.mobile.trim();
     const email = formValues.email.trim();
+    const password = formValues.password.trim();
 
-    if (!name) {
-      setError('User name is required');
+    if (!selectedBranchId) {
+      setError('Please select a branch');
+      return;
+    }
+
+    if (!name || !mobile || !email || !password) {
+      setError('User name, mobile, email and password are required');
       return;
     }
 
     setSaving(true);
     setError('');
-
-    // Local-only update for now; wire to real API when backend is ready.
-    setRows((prev) => {
+    try {
       if (editingRow && editingRow.id) {
-        return prev.map((item) =>
-          item.id === editingRow.id ? { ...item, name, mobile, email } : item
+        // For now, edits are applied locally in the grid only.
+        const updatedFullName = `${firstName || ''} ${lastName || ''}`.trim();
+        setRows((prev) =>
+          prev.map((item) =>
+            item.id === editingRow.id
+              ? {
+                  ...item,
+                  name,
+                  fullName: updatedFullName || item.fullName,
+                  mobile,
+                  email
+                }
+              : item
+          )
         );
+        setDialogOpen(false);
+      } else {
+        // Create a new admin-type user for the selected branch via API.
+        await createAdminUser({
+          userName: name,
+          firstName: firstName || name,
+          lastName,
+          email,
+          mobile,
+          whatsapp: mobile,
+          password,
+          branchId: selectedBranchId
+        });
+
+        // Reload users from API to include the new user.
+        const data = await getUsersByBranch(selectedBranchId);
+        const items = Array.isArray(data) ? data : data?.items || data?.data || [];
+        const normalized = items.map((item, index) => {
+          const fullName = `${item.firstName || ''} ${item.lastName || ''}`.trim();
+          return {
+            id: item.id ?? index + 1,
+            name: item.userName || fullName || 'User',
+            fullName: fullName || '-',
+            mobile: item.mobile || '',
+            email: item.email || '',
+            roleName: item.roleName || 'ADMIN',
+            active: item.active
+          };
+        });
+        setRows(normalized);
+
+        setDialogOpen(false);
       }
-
-      const nextId = prev.length > 0 ? Math.max(...prev.map((item) => item.id || 0)) + 1 : 1;
-      return [...prev, { id: nextId, name, mobile, email, active: true }];
-    });
-
-    setSaving(false);
-    setDialogOpen(false);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to create team user', err);
+      setError(err?.message || 'Failed to save team user');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggleActive = async (row, active) => {
+    // Optimistic UI update
     setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, active } : item)));
+
+    try {
+      await toggleUserActive(row.id, active);
+    } catch (err) {
+      // Revert on failure and show error
+      // eslint-disable-next-line no-console
+      console.error('Failed to toggle user active state', err);
+      setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, active: !active } : item)));
+      setError(err?.message || 'Failed to update user status');
+    }
   };
 
   return (
     <>
       <Grid container sx={{ width: '100%', flexGrow: 1 }}>
         <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
-          {error && !dialogOpen && (
-            <Typography variant="body2" color="error" sx={{ mb: 1 }}>
-              {error}
-            </Typography>
-          )}
+            <Stack spacing={1} sx={{ mb: 1 }}>
+              <FormControl size="small" sx={{ minWidth: 220 }} disabled={loadingBranches}>
+                <InputLabel id="teams-branch-select-label">Branch</InputLabel>
+                <Select
+                  labelId="teams-branch-select-label"
+                  label="Branch"
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                >
+                  {branches.map((branch) => (
+                    <MenuItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {error && !dialogOpen && (
+                <Typography variant="body2" color="error">
+                  {error}
+                </Typography>
+              )}
+            </Stack>
           <MasterList
             title="Branches & Teams"
             description="Configure branches, teams and role-based access for managers and staff."
             columns={[
               { id: 'name', label: 'User Name' },
+              { id: 'fullName', label: 'Full Name' },
               { id: 'mobile', label: 'Mobile No' },
-              { id: 'email', label: 'Email ID' }
+              { id: 'email', label: 'Email ID' },
+              { id: 'roleName', label: 'Role' }
             ]}
             rows={pagedRows}
             page={page}
@@ -149,6 +307,18 @@ export default function Teams() {
               fullWidth
             />
             <TextField
+              label="First Name"
+              value={formValues.firstName}
+              onChange={handleFormChange('firstName')}
+              fullWidth
+            />
+            <TextField
+              label="Last Name"
+              value={formValues.lastName}
+              onChange={handleFormChange('lastName')}
+              fullWidth
+            />
+            <TextField
               label="Mobile No"
               value={formValues.mobile}
               onChange={handleFormChange('mobile')}
@@ -158,6 +328,13 @@ export default function Teams() {
               label="Email ID"
               value={formValues.email}
               onChange={handleFormChange('email')}
+              fullWidth
+            />
+            <TextField
+              label="Password"
+              type="password"
+              value={formValues.password}
+              onChange={handleFormChange('password')}
               fullWidth
             />
             {error && (

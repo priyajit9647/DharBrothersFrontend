@@ -21,6 +21,7 @@ const ReportsOverview = Loadable(lazy(() => import('pages/reports/Overview')));
 const NotificationReports = Loadable(lazy(() => import('pages/reports/NotificationReports')));
 const Branches = Loadable(lazy(() => import('pages/admin/Branches')));
 const Teams = Loadable(lazy(() => import('pages/admin/Teams')));
+const AdminUsers = Loadable(lazy(() => import('pages/admin/AdminUsers')));
 const Materials = Loadable(lazy(() => import('pages/admin/Materials')));
 const NotificationTemplates = Loadable(lazy(() => import('pages/admin/NotificationTemplates')));
 const SystemSettings = Loadable(lazy(() => import('pages/admin/Settings')));
@@ -109,6 +110,10 @@ const MainRoutes = {
         {
           path: 'teams',
           element: <Teams />
+        },
+        {
+          path: 'users',
+          element: <AdminUsers />
         },
         {
           path: 'materials',
