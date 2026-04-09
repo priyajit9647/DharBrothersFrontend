@@ -44,6 +44,7 @@ export function isTokenExpired(token, offsetSeconds = 30) {
 
 const ACCESS_TOKEN_COOKIE = 'db_access_token';
 const REFRESH_TOKEN_COOKIE = 'db_refresh_token';
+const PERSIST_COOKIE = 'db_auth_persist';
 
 function setCookie(name, value, options = {}) {
   if (typeof document === 'undefined') return;
@@ -79,19 +80,39 @@ function getCookie(name) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-export function setAuthCookies({ accessToken, refreshToken }) {
+function getPersistFlagFromCookies() {
+  return getCookie(PERSIST_COOKIE) === '1';
+}
+
+export function setAuthCookies({ accessToken, refreshToken, rememberMe }) {
+  const persist = typeof rememberMe === 'boolean' ? rememberMe : getPersistFlagFromCookies();
+
+  const cookieOptions = persist
+    ? {
+        // 30 days persistence for "Keep me sign in" sessions
+        maxAge: 60 * 60 * 24 * 30
+      }
+    : {};
+
+  if (persist) {
+    setCookie(PERSIST_COOKIE, '1', cookieOptions);
+  } else {
+    deleteCookie(PERSIST_COOKIE);
+  }
+
   if (accessToken) {
-    setCookie(ACCESS_TOKEN_COOKIE, accessToken);
+    setCookie(ACCESS_TOKEN_COOKIE, accessToken, cookieOptions);
   }
 
   if (refreshToken) {
-    setCookie(REFRESH_TOKEN_COOKIE, refreshToken);
+    setCookie(REFRESH_TOKEN_COOKIE, refreshToken, cookieOptions);
   }
 }
 
 export function clearAuthCookies() {
   deleteCookie(ACCESS_TOKEN_COOKIE);
   deleteCookie(REFRESH_TOKEN_COOKIE);
+  deleteCookie(PERSIST_COOKIE);
 }
 
 export function getAccessTokenFromCookies() {

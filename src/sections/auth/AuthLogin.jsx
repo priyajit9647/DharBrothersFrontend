@@ -67,8 +67,13 @@ export default function AuthLogin({ isDemo = false }) {
 
             const data = await loginApi({ email: values.email, password: values.password });
 
-            // Persist tokens in cookies for subsequent API calls and refresh flow
-            setAuthCookies({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+            // Persist tokens in cookies; make them long-lived only when
+            // the user has chosen "Keep me sign in".
+            setAuthCookies({
+              accessToken: data.accessToken,
+              refreshToken: data.refreshToken,
+              rememberMe: checked
+            });
 
             login({
               accessToken: data.accessToken,

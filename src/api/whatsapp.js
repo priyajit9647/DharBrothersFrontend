@@ -11,6 +11,12 @@ export function fetchWhatsappConversations(params = {}) {
 	const searchParams = new URLSearchParams();
 
 	Object.entries(params).forEach(([key, value]) => {
+		// Backend no longer expects explicit paging query params here,
+		// so drop any page/pageSize values even if callers still send them.
+		if ((key === 'page' || key === 'pageSize')) {
+			return;
+		}
+
 		if (value !== undefined && value !== null && value !== '') {
 			searchParams.append(key, String(value));
 		}

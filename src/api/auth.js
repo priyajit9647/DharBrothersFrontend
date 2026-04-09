@@ -30,11 +30,6 @@ export async function loginApi({ email, password }) {
     throw new Error(message);
   }
 
-  // Store tokens in cookies for subsequent authorized API calls
-  if (data?.accessToken || data?.refreshToken) {
-    setAuthCookies({ accessToken: data.accessToken, refreshToken: data.refreshToken });
-  }
-
   return data;
 }
 
@@ -80,13 +75,10 @@ export async function authorizedFetch(path, options = {}) {
   let accessToken = getAccessTokenFromCookies();
   const refreshToken = getRefreshTokenFromCookies();
 
-  // If we have an access token and it is expired, attempt to refresh
-  if (accessToken && isTokenExpired(accessToken)) {
-    if (!refreshToken) {
-      clearAuthCookies();
-      throw new Error('Session expired. Please login again.');
-    }
-
+  // If there is no access token or it is expired, but a refresh
+  // token exists, attempt to obtain a new access token via the
+  // refresh token endpoint.
+  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
@@ -94,6 +86,10 @@ export async function authorizedFetch(path, options = {}) {
       clearAuthCookies();
       throw new Error('Session expired. Please login again.');
     }
+  } else if (accessToken && isTokenExpired(accessToken)) {
+    // Access token expired and there is no refresh token
+    clearAuthCookies();
+    throw new Error('Session expired. Please login again.');
   }
 
   const isFormData = options.body instanceof FormData;
@@ -146,12 +142,7 @@ export async function authorizedFetchRaw(path, options = {}) {
   let accessToken = getAccessTokenFromCookies();
   const refreshToken = getRefreshTokenFromCookies();
 
-  if (accessToken && isTokenExpired(accessToken)) {
-    if (!refreshToken) {
-      clearAuthCookies();
-      throw new Error('Session expired. Please login again.');
-    }
-
+  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
@@ -159,6 +150,9 @@ export async function authorizedFetchRaw(path, options = {}) {
       clearAuthCookies();
       throw new Error('Session expired. Please login again.');
     }
+  } else if (accessToken && isTokenExpired(accessToken)) {
+    clearAuthCookies();
+    throw new Error('Session expired. Please login again.');
   }
 
   const isFormData = options.body instanceof FormData;

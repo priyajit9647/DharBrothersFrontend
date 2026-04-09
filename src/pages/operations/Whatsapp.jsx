@@ -19,13 +19,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { SearchOutlined, SendOutlined, MoreOutlined } from '@ant-design/icons';
 
 import MainCard from 'components/MainCard';
-import {
-  fetchWhatsappConversations,
-  fetchWhatsappConversationById,
-  sendWhatsappMessage,
-  disableAiForWhatsappConversation,
-  closeWhatsappConversation
-} from 'api/whatsapp';
+import { fetchWhatsappConversations, fetchWhatsappConversationById, sendWhatsappMessage } from 'api/whatsapp';
 
 // ==============================|| BMS - WHATSAPP (WEB-STYLE VIEW) ||============================== //
 
@@ -38,7 +32,6 @@ export default function Whatsapp() {
   const [search, setSearch] = useState('');
   const [messageText, setMessageText] = useState('');
   const [error, setError] = useState('');
-  const [headerActionLoading, setHeaderActionLoading] = useState(false);
 
   const loadConversations = useCallback(
     async (searchValue = '') => {
@@ -47,16 +40,16 @@ export default function Whatsapp() {
         setError('');
 
         const data = await fetchWhatsappConversations({
-          search: searchValue || undefined,
-          page: 1,
-          pageSize: 50
+          search: searchValue || undefined
         });
 
         const items = Array.isArray(data) ? data : data?.items || data?.data || [];
         setConversations(items);
 
+        // Auto-select the first conversation when none is selected yet.
         if (!selectedConversationId && items.length > 0) {
-          const firstId = items[0].id || items[0]._id;
+          const first = items[0];
+          const firstId = first.phone || first.id || first._id;
           if (firstId) {
             setSelectedConversationId(firstId);
           }
@@ -121,49 +114,6 @@ export default function Whatsapp() {
       // eslint-disable-next-line no-console
       console.error('Failed to send WhatsApp message', err);
       setError(err?.message || 'Failed to send WhatsApp message');
-    }
-  };
-
-  const getConversationPhone = () => {
-    if (selectedConversation?.phone) return selectedConversation.phone;
-    return selectedConversationId;
-  };
-
-  const handleDisableAi = async () => {
-    const phone = getConversationPhone();
-    if (!phone) return;
-
-    try {
-      setHeaderActionLoading(true);
-      setError('');
-      await disableAiForWhatsappConversation(phone);
-      await loadConversationDetail(selectedConversationId);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to disable AI for WhatsApp conversation', err);
-      setError(err?.message || 'Failed to disable AI for this conversation');
-    } finally {
-      setHeaderActionLoading(false);
-    }
-  };
-
-  const handleCloseConversation = async () => {
-    const phone = getConversationPhone();
-    if (!phone) return;
-
-    try {
-      setHeaderActionLoading(true);
-      setError('');
-      await closeWhatsappConversation(phone);
-      await loadConversations(search);
-      setSelectedConversationId(null);
-      setSelectedConversation(null);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to close WhatsApp conversation', err);
-      setError(err?.message || 'Failed to close this conversation');
-    } finally {
-      setHeaderActionLoading(false);
     }
   };
 
@@ -372,26 +322,7 @@ export default function Whatsapp() {
                       )}
                     </Box>
                   </Stack>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="warning"
-                      onClick={handleDisableAi}
-                      disabled={headerActionLoading}
-                    >
-                      Disable AI
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      onClick={handleCloseConversation}
-                      disabled={headerActionLoading}
-                    >
-                      Close
-                    </Button>
-                  </Stack>
+                  {/* Header action buttons (Disable AI / Close) have been removed as per latest requirements. */}
                 </>
               ) : (
                 <Typography variant="body2" color="text.secondary">
