@@ -48,3 +48,11 @@ export async function toggleBindingRateActive(id, active) {
     method: 'PATCH'
   });
 }
+
+export async function getBindingRatesByType(bindingTypeCode) {
+  // eslint-disable-next-line no-console
+  console.log(`Calling GET /api/v1/master/billing/binding-rate/type/${bindingTypeCode}`);
+  return authorizedFetch(`/api/v1/master/billing/binding-rate/type/${encodeURIComponent(bindingTypeCode)}`, {
+    method: 'GET'
+  });
+}
