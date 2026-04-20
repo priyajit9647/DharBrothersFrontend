@@ -7,6 +7,7 @@ import Loadable from 'components/Loadable';
 // jwt auth
 const LoginPage = Loadable(lazy(() => import('pages/auth/Login')));
 const PlaceOrderPage = Loadable(lazy(() => import('pages/extra-pages/PlaceOrder')));
+const PricePage = Loadable(lazy(() => import('pages/extra-pages/Price')));
 
 // customer portal (public, OTP-based)
 const CustomerPortalEntryPage = Loadable(lazy(() => import('pages/customer/CustomerPortalEntry')));
@@ -28,6 +29,10 @@ const LoginRoutes = {
     {
       path: 'order',
       element: <PlaceOrderPage />
+    },
+    {
+      path: 'price',
+      element: <PricePage />
     },
     {
       path: 'customer',
