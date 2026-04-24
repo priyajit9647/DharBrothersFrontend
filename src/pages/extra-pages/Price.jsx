@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react';
-
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
@@ -8,48 +6,15 @@ import Typography from '@mui/material/Typography';
 import banner2 from 'assets/banner/banner2.jpg';
 
 import { HeaderNav, TopInfoBar, FooterSection, PriceSection } from './PlaceOrder';
-import { getBindingRates } from 'api/bindingRate';
-import { getPrintingRates } from 'api/printingRate';
 
 export default function Price() {
-  const [bindingRates, setBindingRates] = useState(null);
-  const [printingRates, setPrintingRates] = useState(null);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      try {
-        const [bindingData, printingData] = await Promise.all([getBindingRates(), getPrintingRates()]);
-        const list = Array.isArray(bindingData) ? bindingData : Array.isArray(bindingData?.data) ? bindingData.data : [];
-        const printingList = Array.isArray(printingData) ? printingData : Array.isArray(printingData?.data) ? printingData.data : [];
-        if (mounted) {
-          setBindingRates(list);
-          setPrintingRates(printingList);
-        }
-      } catch (e) {
-        // keep fallback from PriceSection; log error
-        // eslint-disable-next-line no-console
-        console.warn('Price: failed to load binding rates, using fallback', e.message || e);
-        if (mounted) setError(e.message || 'Failed to load binding rates');
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f8f7f2' }}>
       <TopInfoBar />
       <HeaderNav />
       <PriceHero />
 
-      <PriceSection bindingRates={bindingRates} printingRates={printingRates} />
+      <PriceSection />
 
       <FooterSection />
     </Box>

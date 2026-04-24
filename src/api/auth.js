@@ -33,6 +33,43 @@ export async function loginApi({ email, password }) {
   return data;
 }
 
+export async function publicFetch(path, options = {}) {
+  if (!API_BASE_URL) {
+    throw new Error('API base URL is not configured');
+  }
+
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    ...(options.headers || {})
+  };
+
+  if (!isFormData) {
+    const hasContentTypeHeader = Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+    if (!hasContentTypeHeader) {
+      headers['Content-Type'] = 'application/json';
+    }
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers
+  });
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || 'Request failed';
+    throw new Error(message);
+  }
+
+  return data;
+}
+
 export async function refreshTokenApi(refreshToken) {
   if (!API_BASE_URL) {
     throw new Error('API base URL is not configured');

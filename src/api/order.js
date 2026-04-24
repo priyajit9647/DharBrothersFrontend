@@ -14,10 +14,28 @@ async function parseJsonResponse(response) {
   }
 }
 
-export async function createOrder(payload) {
+export async function uploadTempOrderFiles(payload) {
   ensureApiBaseUrl();
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/orders/open/create-order`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/orders/open/upload-temp`, {
+    method: 'POST',
+    body: payload
+  });
+
+  const data = await parseJsonResponse(response);
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || 'Failed to upload order files';
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+export async function attachOrder(tempId, payload) {
+  ensureApiBaseUrl();
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/orders/open/attach-order/${tempId}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -28,27 +46,46 @@ export async function createOrder(payload) {
   const data = await parseJsonResponse(response);
 
   if (!response.ok) {
-    const message = data?.message || data?.error || 'Failed to create order';
+    const message = data?.message || data?.error || 'Failed to attach order';
     throw new Error(message);
   }
 
   return data;
 }
 
-export async function getOrderSummary(orderId) {
+export async function getOrderPageDetails(payload) {
   ensureApiBaseUrl();
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/orders/${encodeURIComponent(orderId)}/summary`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json'
-    }
+  const response = await fetch(`${API_BASE_URL}/api/v1/orders/open/get-page-details`, {
+    method: 'POST',
+    body: payload
   });
 
   const data = await parseJsonResponse(response);
 
   if (!response.ok) {
-    const message = data?.message || data?.error || 'Failed to load order summary';
+    const message = data?.message || data?.error || 'Failed to load page details';
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+export async function getOrderEstimation(payload) {
+  ensureApiBaseUrl();
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/orders/open/get-estimation`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await parseJsonResponse(response);
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || 'Failed to load order estimation';
     throw new Error(message);
   }
 

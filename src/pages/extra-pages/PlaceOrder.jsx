@@ -1,68 +1,678 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { CloudUploadOutlined, EditOutlined, EnvironmentOutlined, FacebookFilled, InfoCircleOutlined, InstagramOutlined, MailOutlined, PhoneOutlined, TwitterOutlined } from '@ant-design/icons';
+import { CloudUploadOutlined, DeleteOutlined, EditOutlined, EnvironmentOutlined, FacebookFilled, InfoCircleOutlined, InstagramOutlined, MailOutlined, PhoneOutlined, TwitterOutlined } from '@ant-design/icons';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
 import Grid from '@mui/material/Grid';
+import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
+import { Link as RouterLink } from 'react-router-dom';
 
-import { createOrder, getOrderSummary } from 'api/order';
+import { publicFetch } from 'api/auth';
+import { attachOrder, getOrderEstimation, getOrderPageDetails, uploadTempOrderFiles } from 'api/order';
 import Logo from 'components/logo';
 
 import banner2 from 'assets/banner/banner2.jpg';
 
-const steps = ['Upload Documents', 'Document Details', 'Hard Binding', 'Soft Binding', 'Order Summary'];
-const navItems = ['Home', 'About Us', 'What We Do', 'How We Work', 'Testimonial', 'Price', 'Faq', 'Contact Us'];
-const stepGroups = ['Upload File', 'Document Details', 'Hard Binding', 'Soft Binding', 'Order Summary'];
+const navItems = [
+  { label: 'Home', to: '/order' },
+  { label: 'About Us' },
+  { label: 'What We Do' },
+  { label: 'How We Work' },
+  { label: 'Testimonial' },
+  { label: 'Price', to: '/price' },
+  { label: 'Faq' },
+  { label: 'Contact Us' }
+];
 const socialIcons = [FacebookFilled, TwitterOutlined, InstagramOutlined];
 
-const stepTitles = {
-  1: 'Document Details',
-  2: 'Hard Binding',
-  3: 'Soft Binding',
-  4: 'Order Summary'
+const STEP_DEFINITIONS = {
+  upload: { label: 'Upload File', title: 'Upload Documents' },
+  details: { label: 'Document Details', title: 'Document Details' },
+  hard: { label: 'Hard Binding', title: 'Hard Binding' },
+  soft: { label: 'Soft Binding', title: 'Soft Binding' },
+  summary: { label: 'Order Summary', title: 'Order Summary' },
+  checkout: { label: 'Checkout', title: 'Checkout' }
 };
+
+const FALLBACK_PAGE_TYPES = [
+  { id: 'bw', code: 'BW', name: 'Black & White' },
+  { id: 'blank', code: 'BLANK', name: 'Blank' },
+  { id: 'color', code: 'COLOR', name: 'Color' }
+];
+
+async function getWebPageTypes() {
+  return publicFetch('/api/v1/web/master/page-types', {
+    method: 'GET'
+  });
+}
+
+async function getWebPapers() {
+  return publicFetch('/api/v1/web/master/papers', {
+    method: 'GET'
+  });
+}
+
+async function getWebPaperSizes() {
+  return publicFetch('/api/v1/web/master/papers-size', {
+    method: 'GET'
+  });
+}
+
+async function getWebPrintColors() {
+  return publicFetch('/api/v1/web/master/print-colors', {
+    method: 'GET'
+  });
+}
+
+async function getWebPrintingTypes() {
+  return publicFetch('/api/v1/web/master/printing-types', {
+    method: 'GET'
+  });
+}
+
+async function getWebBindingCoverMaterials() {
+  return publicFetch('/api/v1/web/master/binding-cover-material', {
+    method: 'GET'
+  });
+}
+
+function normalizePageTypeOptions(data) {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((item, index) => ({
+      id: item.id ?? item.pageTypeId ?? `${index + 1}`,
+      code: item.code ?? '',
+      name: item.name ?? item.label ?? ''
+    }))
+    .filter((item) => item.id !== undefined && item.id !== null && item.name);
+}
+
+function normalizeMasterOptions(data, { labelKeys = ['name', 'displayName'], valueKeys = ['id', 'code', 'name'] } = {}) {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((item, index) => {
+      const label = labelKeys.map((key) => item?.[key]).find(Boolean);
+      const value = valueKeys.map((key) => item?.[key]).find(Boolean) ?? `${index + 1}`;
+
+      return {
+        label: String(label || value),
+        value: String(value),
+        code: String(item?.code || ''),
+        name: String(item?.name || item?.displayName || '')
+      };
+    })
+    .filter((item) => item.label && item.value);
+}
+
+const INITIAL_CHECKOUT_FORM = {
+  mobile: '',
+  firstName: '',
+  lastName: '',
+  customerEmail: '',
+  whatsapp: '',
+  customerAddress: '',
+  customerCity: '',
+  pincode: '',
+  landmark: '',
+  gst: '',
+  universityName: '',
+  apartment: '',
+  country: 'India',
+  state: 'West Bengal',
+  shippingMode: 'delivery',
+  shippingSameAsBilling: true,
+  shippingAddress: '',
+  shippingApartment: '',
+  shippingCountry: 'India',
+  shippingCity: '',
+  shippingState: 'West Bengal',
+  shippingPincode: ''
+};
+
+function buildCustomerPayloadFromForm(checkoutForm) {
+  return {
+    firstName: checkoutForm.firstName || '',
+    lastName: checkoutForm.lastName || '',
+    customerEmail: checkoutForm.customerEmail || '',
+    mobile: checkoutForm.mobile || '',
+    whatsapp: checkoutForm.whatsapp || checkoutForm.mobile || '',
+    customerAddress: checkoutForm.customerAddress || '',
+    customerCity: checkoutForm.customerCity || '',
+    pincode: checkoutForm.pincode || '',
+    landmark: checkoutForm.landmark || ''
+  };
+}
+
+function buildCreateOrderCustomerPayload(checkoutForm) {
+  const customerPayload = buildCustomerPayloadFromForm(checkoutForm);
+
+  return {
+    firstName: customerPayload.firstName,
+    lastName: customerPayload.lastName,
+    email: customerPayload.customerEmail,
+    customerEmail: customerPayload.customerEmail,
+    mobile: customerPayload.mobile,
+    whatsapp: customerPayload.whatsapp,
+    address: customerPayload.customerAddress,
+    customerAddress: customerPayload.customerAddress,
+    city: customerPayload.customerCity,
+    customerCity: customerPayload.customerCity,
+    pincode: customerPayload.pincode,
+    landmark: customerPayload.landmark
+  };
+}
+
+function normalizeBindingCoverMaterials(data, bindingType) {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .filter((item) => item?.active !== false && `${item?.bindingType || ''}`.toUpperCase() === bindingType)
+    .map((item, index) => {
+      const code = String(item?.code || item?.name || `Cover ${index + 1}`);
+      const name = String(item?.name || item?.code || `Cover ${index + 1}`);
+
+      return {
+        id: String(item?.id ?? code ?? index + 1),
+        code,
+        name,
+        design: item?.design ? `data:image/*;base64,${item.design}` : ''
+      };
+    });
+}
+
+function matchesPageType(pageType, values) {
+  const name = `${pageType?.name || ''}`.toLowerCase();
+  const code = `${pageType?.code || ''}`.toLowerCase();
+
+  return values.some((value) => name.includes(value) || code.includes(value));
+}
+
+function isColourPageType(pageType) {
+  return matchesPageType(pageType, ['color', 'colour']);
+}
+
+function isBwPageType(pageType) {
+  return matchesPageType(pageType, ['black', 'white', 'bw', 'b/w']);
+}
+
+function getDefaultPageTypeId(pageTypes) {
+  const bwPageType = pageTypes.find((item) => isBwPageType(item));
+  return String((bwPageType || pageTypes[0] || FALLBACK_PAGE_TYPES[0]).id);
+}
+
+function buildPageRows(pageTypes, count = 1) {
+  const defaultPageTypeId = getDefaultPageTypeId(pageTypes);
+
+  return Array.from({ length: count }, (_, index) => ({
+    pageNumber: index + 1,
+    pageTypeId: defaultPageTypeId
+  }));
+}
+
+function sanitizePageRows(rows, pageTypes) {
+  const validIds = new Set(pageTypes.map((item) => String(item.id)));
+  const defaultPageTypeId = getDefaultPageTypeId(pageTypes);
+
+  if (!rows.length) {
+    return buildPageRows(pageTypes, 1);
+  }
+
+  return rows.map((row, index) => ({
+    pageNumber: index + 1,
+    pageTypeId: validIds.has(String(row.pageTypeId)) ? String(row.pageTypeId) : defaultPageTypeId
+  }));
+}
+
+function normalizePageDetails(pageDetails, pageTypes) {
+  const pageMap = pageDetails?.pageAndPageTypeIdMap;
+  const normalizedEntries = pageMap && typeof pageMap === 'object' ? Object.entries(pageMap) : [];
+
+  if (!normalizedEntries.length) {
+    return buildPageRows(pageTypes, Math.max(Number(pageDetails?.totalPages) || 1, 1));
+  }
+
+  return sanitizePageRows(
+    normalizedEntries
+      .map(([pageNumber, pageTypeId]) => ({
+        pageNumber: Number(pageNumber),
+        pageTypeId: String(pageTypeId)
+      }))
+      .filter((row) => Number.isFinite(row.pageNumber) && row.pageNumber > 0)
+      .sort((first, second) => first.pageNumber - second.pageNumber),
+    pageTypes
+  );
+}
 
 export default function PlaceOrder() {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [thesisDocument, setThesisDocument] = useState(null);
+  const [synopsisDocument, setSynopsisDocument] = useState(null);
+  const [uploadError, setUploadError] = useState('');
   const [submitMessage, setSubmitMessage] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
   const [orderSummary, setOrderSummary] = useState(null);
+  const [pageTypeOptions, setPageTypeOptions] = useState([]);
+  const [pageTypesLoading, setPageTypesLoading] = useState(false);
+  const [pageTypesError, setPageTypesError] = useState('');
+  const [pageRows, setPageRows] = useState([]);
+  const [pageEditorOpen, setPageEditorOpen] = useState(false);
+  const [pageDetailsLoading, setPageDetailsLoading] = useState(false);
+  const [selectedBindings, setSelectedBindings] = useState({ hard: false, soft: false });
+  const [checkoutForm, setCheckoutForm] = useState(INITIAL_CHECKOUT_FORM);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [bindingSelectionError, setBindingSelectionError] = useState('');
+  const [bindingMasterOptions, setBindingMasterOptions] = useState({
+    paperSizes: [],
+    papers: [],
+    printColors: [],
+    printingTypes: []
+  });
+  const [hardBindingCoverMaterials, setHardBindingCoverMaterials] = useState([]);
+  const [softBindingCoverMaterials, setSoftBindingCoverMaterials] = useState([]);
+  const [bindingMasterError, setBindingMasterError] = useState('');
+  const [hardBindingConfig, setHardBindingConfig] = useState(() => createBindingConfiguration());
+  const [softBindingConfig, setSoftBindingConfig] = useState(() => createBindingConfiguration());
 
+  const activeStepKeys = useMemo(() => {
+    const bindingSteps = [];
+
+    if (selectedBindings.hard) {
+      bindingSteps.push('hard');
+    }
+
+    if (selectedBindings.soft) {
+      bindingSteps.push('soft');
+    }
+
+    return ['upload', 'details', ...bindingSteps, 'summary', 'checkout'];
+  }, [selectedBindings]);
+  const currentStepKey = activeStepKeys[activeStep] || 'upload';
+  const stepLabels = useMemo(() => activeStepKeys.map((key) => STEP_DEFINITIONS[key].label), [activeStepKeys]);
   const stepGroupIndex = activeStep;
-  const currentTitle = useMemo(() => stepTitles[activeStep] || 'Upload Documents', [activeStep]);
+  const pageTypeMap = useMemo(() => new Map(pageTypeOptions.map((item) => [String(item.id), item])), [pageTypeOptions]);
+  const pageStats = useMemo(() => {
+    const totalPages = pageRows.length;
+    const colourPages = pageRows.filter((row) => isColourPageType(pageTypeMap.get(String(row.pageTypeId)))).length;
+    const bwPages = pageRows.filter((row) => isBwPageType(pageTypeMap.get(String(row.pageTypeId)))).length;
+
+    return [
+      { label: 'Total page', value: totalPages },
+      { label: 'Color page', value: colourPages },
+      { label: 'BW page', value: bwPages }
+    ];
+  }, [pageRows, pageTypeMap]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadPageTypeOptions = async () => {
+      setPageTypesLoading(true);
+      setPageTypesError('');
+
+      try {
+        const data = await getWebPageTypes();
+        const normalized = normalizePageTypeOptions(data);
+
+        if (!ignore) {
+          setPageTypeOptions(normalized.length ? normalized : FALLBACK_PAGE_TYPES);
+          if (!normalized.length) {
+            setPageTypesError('No page types were returned by the server. Showing fallback options.');
+          }
+        }
+      } catch (error) {
+        if (!ignore) {
+          setPageTypeOptions(FALLBACK_PAGE_TYPES);
+          setPageTypesError(error.message || 'Failed to load page types. Showing fallback options.');
+        }
+      } finally {
+        if (!ignore) {
+          setPageTypesLoading(false);
+        }
+      }
+    };
+
+    loadPageTypeOptions();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadBindingMasterOptions = async () => {
+      setBindingMasterError('');
+
+      try {
+        const [paperSizes, papers, printColors, printingTypes, bindingCoverMaterials] = await Promise.all([
+          getWebPaperSizes(),
+          getWebPapers(),
+          getWebPrintColors(),
+          getWebPrintingTypes(),
+          getWebBindingCoverMaterials()
+        ]);
+
+        if (!ignore) {
+          setBindingMasterOptions({
+            paperSizes: normalizeMasterOptions(paperSizes, { labelKeys: ['displayName', 'name', 'code'], valueKeys: ['id', 'code', 'displayName'] }),
+            papers: normalizeMasterOptions(papers, { labelKeys: ['name', 'code'], valueKeys: ['id', 'code', 'name'] }),
+            printColors: normalizeMasterOptions(printColors, { labelKeys: ['name', 'code'], valueKeys: ['id', 'code', 'name'] }),
+            printingTypes: normalizeMasterOptions(printingTypes, { labelKeys: ['name', 'code'], valueKeys: ['id', 'code', 'name'] })
+          });
+          setHardBindingCoverMaterials(normalizeBindingCoverMaterials(bindingCoverMaterials, 'HARD'));
+          setSoftBindingCoverMaterials(normalizeBindingCoverMaterials(bindingCoverMaterials, 'SOFT'));
+        }
+      } catch (error) {
+        if (!ignore) {
+          setHardBindingCoverMaterials([]);
+          setSoftBindingCoverMaterials([]);
+          setBindingMasterError(error.message || 'Failed to load binding dropdown data.');
+        }
+      }
+    };
+
+    loadBindingMasterOptions();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!thesisDocument) {
+      setPageRows([]);
+      setPageEditorOpen(false);
+      return;
+    }
+
+    if (!pageTypeOptions.length) {
+      return;
+    }
+
+    setPageRows((prev) => sanitizePageRows(prev, pageTypeOptions));
+  }, [thesisDocument, pageTypeOptions]);
+
+  useEffect(() => {
+    setActiveStep((prev) => Math.min(prev, activeStepKeys.length - 1));
+  }, [activeStepKeys]);
+
+  const buildTempUploadFormData = () => {
+    const payload = new FormData();
+
+    if (thesisDocument) {
+      payload.append('thesisDocument', thesisDocument);
+    }
+
+    if (synopsisDocument) {
+      payload.append('synopsisDocument', synopsisDocument);
+    }
+
+    if (selectedBindings.hard && hardBindingConfig.coverDesignFile) {
+      payload.append('coverPageDesignFileHard', hardBindingConfig.coverDesignFile);
+    }
+
+    if (selectedBindings.soft && softBindingConfig.coverDesignFile) {
+      payload.append('coverPageDesignFileSoft', softBindingConfig.coverDesignFile);
+    }
+
+    return payload;
+  };
+
+  const buildBindingEstimationPayload = (bindingConfig) => ({
+    hardBindingCoverMaterialId: bindingConfig.selectedCover ? Number(bindingConfig.selectedCover) : null,
+    coverPageDesign: bindingConfig.coverDesignMode === 'same',
+    spinePrintingRequired: bindingConfig.spinePrinting === 'required',
+    topContentArea: bindingConfig.spinePrinting === 'required' ? bindingConfig.spineContent.top || '' : '',
+    middleContentArea: bindingConfig.spinePrinting === 'required' ? bindingConfig.spineContent.middle || '' : '',
+    bottomContentArea: bindingConfig.spinePrinting === 'required' ? bindingConfig.spineContent.bottom || '' : '',
+    bindingList: bindingConfig.printDetails.map((detail) => ({
+      paperSizeId: detail.paperSize ? Number(detail.paperSize) : null,
+      noOfCopies: Number(detail.copies || 0),
+      paperId: detail.paper ? Number(detail.paper) : null,
+      printColourId: detail.printingColour ? Number(detail.printingColour) : null,
+      printingTypeId: detail.printingType ? Number(detail.printingType) : null,
+      additionalInformation: detail.additionalInformation || '',
+      a4Pockets: Number(detail.a4Pockets || 0),
+      cdPockets: Number(detail.cdPockets || 0)
+    }))
+  });
+
+  const buildOrderEstimationPayload = () => {
+    const payload = {
+      totalPages: Number(pageStats[0].value || 0),
+      colourPages: Number(pageStats[1].value || 0),
+      bwpages: Number(pageStats[2].value || 0),
+      pageAndPageTypeIdMap: pageRows.reduce((accumulator, row) => {
+        accumulator[row.pageNumber] = Number(row.pageTypeId);
+        return accumulator;
+      }, {}),
+      ...buildCustomerPayloadFromForm(checkoutForm)
+    };
+
+    if (selectedBindings.hard) {
+      payload.hardBinding = buildBindingEstimationPayload(hardBindingConfig);
+    }
+
+    if (selectedBindings.soft) {
+      payload.softBinding = buildBindingEstimationPayload(softBindingConfig);
+    }
+
+    return payload;
+  };
+
+  const buildCreateOrderPayload = () => ({
+    ...buildOrderEstimationPayload(),
+    customer: buildCreateOrderCustomerPayload(checkoutForm)
+  });
+
+  const shouldLoadEstimationBeforeNext = () => {
+    if (currentStepKey === 'hard') {
+      return !selectedBindings.soft;
+    }
+
+    if (currentStepKey === 'soft') {
+      return true;
+    }
+
+    return false;
+  };
 
   const handleNext = () => {
-    setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
+    setActiveStep((prev) => Math.min(prev + 1, activeStepKeys.length - 1));
   };
 
   const handleBack = () => {
     setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const loadOrderSummary = async (orderId) => {
-    if (!orderId) {
-      setSummaryError('Order created, but orderId is missing in response.');
+  const handleFileChange = (fieldName, file) => {
+    if (file && file.type !== 'application/pdf') {
+      setUploadError('Please upload PDF files only.');
+
+      if (fieldName === 'thesisDocument') {
+        setThesisDocument(null);
+      } else {
+        setSynopsisDocument(null);
+      }
+
       return;
     }
 
-    setSummaryLoading(true);
-    setSummaryError('');
+    setUploadError('');
+
+    if (fieldName === 'thesisDocument') {
+      setThesisDocument(file || null);
+      setSubmitError('');
+      setPageRows([]);
+      return;
+    }
+
+    setSynopsisDocument(file || null);
+  };
+
+  const handleCheckoutFieldChange = (field, value) => {
+    setCheckoutForm((prev) => {
+      const next = { ...prev, [field]: value };
+
+      if (field === 'mobile' && !prev.whatsapp) {
+        next.whatsapp = value;
+      }
+
+      if (field === 'shippingSameAsBilling' && value) {
+        next.shippingAddress = prev.customerAddress;
+        next.shippingCity = prev.customerCity;
+        next.shippingPincode = prev.pincode;
+        next.shippingCountry = prev.country;
+        next.shippingState = prev.state;
+      }
+
+      if (prev.shippingSameAsBilling) {
+        if (field === 'customerAddress') {
+          next.shippingAddress = value;
+        }
+
+        if (field === 'customerCity') {
+          next.shippingCity = value;
+        }
+
+        if (field === 'pincode') {
+          next.shippingPincode = value;
+        }
+
+        if (field === 'country') {
+          next.shippingCountry = value;
+        }
+
+        if (field === 'state') {
+          next.shippingState = value;
+        }
+      }
+
+      return next;
+    });
+    setCheckoutError('');
+  };
+
+  const validateCheckoutForm = () => {
+    if (!checkoutForm.mobile.trim()) {
+      setCheckoutError('Please enter phone number.');
+      return false;
+    }
+
+    if (!checkoutForm.firstName.trim() || !checkoutForm.lastName.trim()) {
+      setCheckoutError('Please enter first name and last name.');
+      return false;
+    }
+
+    if (!checkoutForm.customerAddress.trim() || !checkoutForm.customerCity.trim() || !checkoutForm.pincode.trim()) {
+      setCheckoutError('Please complete the billing address.');
+      return false;
+    }
+
+    if (checkoutForm.shippingMode === 'delivery' && !checkoutForm.shippingSameAsBilling) {
+      if (!checkoutForm.shippingAddress.trim() || !checkoutForm.shippingCity.trim() || !checkoutForm.shippingPincode.trim()) {
+        setCheckoutError('Please complete the shipping address.');
+        return false;
+      }
+    }
+
+    setCheckoutError('');
+    return true;
+  };
+
+  const handleToggleBinding = (bindingKey) => {
+    setSelectedBindings((prev) => {
+      const next = { ...prev, [bindingKey]: !prev[bindingKey] };
+
+      if (next.hard || next.soft) {
+        setBindingSelectionError('');
+      }
+
+      return next;
+    });
+  };
+
+  const handleOpenPageEditor = () => {
+    if (!thesisDocument) {
+      return;
+    }
+
+    setPageEditorOpen(true);
+  };
+
+  const handleClosePageEditor = () => {
+    setPageEditorOpen(false);
+  };
+
+  const handlePageTypeChange = (pageNumber, pageTypeId) => {
+    setPageRows((prev) => prev.map((row) => (row.pageNumber === pageNumber ? { ...row, pageTypeId: String(pageTypeId) } : row)));
+  };
+
+  const handleLoadPageDetails = async () => {
+    if (!thesisDocument) {
+      setUploadError('Please upload the thesis document.');
+      return false;
+    }
+
+    setUploadError('');
+    setSubmitError('');
+    setPageDetailsLoading(true);
 
     try {
-      const summary = await getOrderSummary(orderId);
+      const payload = new FormData();
+      payload.append('thesisDocument', thesisDocument);
+
+      if (synopsisDocument) {
+        payload.append('synopsisDocument', synopsisDocument);
+      }
+
+      const pageDetails = await getOrderPageDetails(payload);
+      const resolvedPageTypes = pageTypeOptions.length ? pageTypeOptions : FALLBACK_PAGE_TYPES;
+      setPageRows(normalizePageDetails(pageDetails, resolvedPageTypes));
+      return true;
+    } catch (error) {
+      setSubmitError(error.message || 'Failed to load page details.');
+      return false;
+    } finally {
+      setPageDetailsLoading(false);
+    }
+  };
+
+  const loadOrderEstimation = async () => {
+    setSummaryLoading(true);
+    setSummaryError('');
+    setOrderSummary(null);
+
+    try {
+      const summary = await getOrderEstimation(buildOrderEstimationPayload());
       setOrderSummary(summary);
+      return true;
     } catch (error) {
       setSummaryError(error.message || 'Failed to load order summary.');
+      return false;
     } finally {
       setSummaryLoading(false);
     }
@@ -72,26 +682,35 @@ export default function PlaceOrder() {
     setSubmitError('');
     setSubmitMessage('');
     setSummaryError('');
+
+    if (!thesisDocument) {
+      setUploadError('Please upload the thesis document.');
+      setActiveStep(0);
+      return;
+    }
+
+    if (!pageRows.length) {
+      setSubmitError('Please configure thesis document pages before placing the order.');
+      setActiveStep(1);
+      return;
+    }
+
+    if (!validateCheckoutForm()) {
+      return;
+    }
+
     setIsSubmittingOrder(true);
 
     try {
-      const payload = {
-        thesisDocument: 'string',
-        synopsisDocument: 'string',
-        totalPages: 1073741824,
-        colourPages: 1073741824,
-        pageAndPageTypeIdMap: {
-          additionalProp1: 9007199254740991,
-          additionalProp2: 9007199254740991,
-          additionalProp3: 9007199254740991
-        }
-      };
+      const uploadResponse = await uploadTempOrderFiles(buildTempUploadFormData());
+      const tempId = Number(uploadResponse?.reason);
 
-      const created = await createOrder(payload);
+      if (!Number.isFinite(tempId) || tempId <= 0) {
+        throw new Error('Invalid temp order id received from upload-temp API.');
+      }
+
+      await attachOrder(tempId, buildCreateOrderPayload());
       setSubmitMessage('Order created successfully.');
-
-      const orderId = created?.orderId ?? created?.id ?? created?.data?.orderId ?? created?.data?.id;
-      await loadOrderSummary(orderId);
     } catch (error) {
       setSubmitError(error.message || 'Failed to create order.');
     } finally {
@@ -100,9 +719,30 @@ export default function PlaceOrder() {
   };
 
   const handlePrimaryAction = async () => {
-    if (activeStep === steps.length - 1) {
+    if (currentStepKey === 'checkout') {
       await handlePlaceOrder();
       return;
+    }
+
+    if (currentStepKey === 'upload') {
+      const loaded = await handleLoadPageDetails();
+
+      if (!loaded) {
+        return;
+      }
+    }
+
+    if (currentStepKey === 'details' && !selectedBindings.hard && !selectedBindings.soft) {
+      setBindingSelectionError('Please select at least one binding type.');
+      return;
+    }
+
+    if (shouldLoadEstimationBeforeNext()) {
+      const loaded = await loadOrderEstimation();
+
+      if (!loaded) {
+        return;
+      }
     }
 
     handleNext();
@@ -127,15 +767,56 @@ export default function PlaceOrder() {
             }}
           >
             <Box sx={{ px: { xs: 2, md: 6 }, pt: { xs: 3, md: 4 } }}>
-              <ProgressHeader activeIndex={stepGroupIndex} />
+              <ProgressHeader activeIndex={stepGroupIndex} stepLabels={stepLabels} />
             </Box>
 
             <Box sx={{ px: { xs: 2, md: 6 }, pt: { xs: 1, md: 2 }, pb: { xs: 3, md: 4 } }}>
-              {activeStep === 0 && <UploadStep />}
-              {activeStep === 1 && <DocumentDetailsStep />}
-              {activeStep === 2 && <HardBindingStep />}
-              {activeStep === 3 && <SoftBindingStep />}
-              {activeStep === 4 && <OrderSummaryStep summary={orderSummary} loading={summaryLoading} error={summaryError} />}
+              {currentStepKey === 'upload' && (
+                <UploadStep
+                  thesisDocument={thesisDocument}
+                  synopsisDocument={synopsisDocument}
+                  uploadError={uploadError}
+                  onFileChange={handleFileChange}
+                />
+              )}
+              {currentStepKey === 'details' && (
+                <DocumentDetailsStep
+                  thesisDocument={thesisDocument}
+                  pageStats={pageStats}
+                  pageTypesError={pageTypesError}
+                  onEditPageDetails={handleOpenPageEditor}
+                  selectedBindings={selectedBindings}
+                  bindingSelectionError={bindingSelectionError}
+                  onToggleBinding={handleToggleBinding}
+                />
+              )}
+              {currentStepKey === 'hard' && (
+                <HardBindingStep
+                  masterOptions={bindingMasterOptions}
+                  masterError={bindingMasterError}
+                  coverMaterials={hardBindingCoverMaterials}
+                  bindingConfig={hardBindingConfig}
+                  onBindingConfigChange={setHardBindingConfig}
+                />
+              )}
+              {currentStepKey === 'soft' && (
+                <SoftBindingStep
+                  masterOptions={bindingMasterOptions}
+                  masterError={bindingMasterError}
+                  coverMaterials={softBindingCoverMaterials}
+                  bindingConfig={softBindingConfig}
+                  onBindingConfigChange={setSoftBindingConfig}
+                />
+              )}
+              {currentStepKey === 'summary' && <OrderSummaryStep summary={orderSummary} loading={summaryLoading} error={summaryError} />}
+              {currentStepKey === 'checkout' && (
+                <CheckoutStep
+                  summary={orderSummary}
+                  checkoutForm={checkoutForm}
+                  checkoutError={checkoutError}
+                  onFieldChange={handleCheckoutFieldChange}
+                />
+              )}
 
               <Box
                 sx={{
@@ -166,7 +847,7 @@ export default function PlaceOrder() {
                   <Button
                     onClick={handlePrimaryAction}
                     variant="contained"
-                    disabled={isSubmittingOrder}
+                    disabled={isSubmittingOrder || pageDetailsLoading}
                     sx={{
                       minWidth: 110,
                       borderRadius: 0,
@@ -179,7 +860,15 @@ export default function PlaceOrder() {
                       }
                     }}
                   >
-                    {activeStep === steps.length - 1 ? (isSubmittingOrder ? 'Submitting...' : 'Confirm Order') : 'Next'}
+                    {currentStepKey === 'checkout'
+                      ? isSubmittingOrder
+                        ? 'Submitting...'
+                        : 'Place Order'
+                      : currentStepKey === 'summary'
+                        ? 'Proceed to Checkout'
+                      : currentStepKey === 'upload' && pageDetailsLoading
+                        ? 'Loading...'
+                        : 'Next'}
                   </Button>
                 </Box>
               </Box>
@@ -199,8 +888,15 @@ export default function PlaceOrder() {
           </Paper>
         </Container>
       </Box>
-
-      <PriceSection />
+      <PageEditorDialog
+        open={pageEditorOpen}
+        loading={pageTypesLoading}
+        error={pageTypesError}
+        pageRows={pageRows}
+        pageTypes={pageTypeOptions}
+        onClose={handleClosePageEditor}
+        onPageTypeChange={handlePageTypeChange}
+      />
 
       <FooterSection />
     </Box>
@@ -690,21 +1386,31 @@ export function HeaderNav() {
           >
             {navItems.map((item) => (
               <Typography
-                key={item}
+                key={item.label}
+                component={item.to ? RouterLink : 'span'}
+                to={item.to}
                 sx={{
                   fontSize: '0.76rem',
                   fontWeight: 500,
                   color: 'text.primary',
-                  cursor: 'default',
-                  whiteSpace: 'nowrap'
+                  cursor: item.to ? 'pointer' : 'default',
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                  '&:hover': item.to
+                    ? {
+                        color: 'info.main'
+                      }
+                    : undefined
                 }}
               >
-                {item}
+                {item.label}
               </Typography>
             ))}
 
             <Button
               variant="contained"
+              component={RouterLink}
+              to="/order"
               sx={{
                 ml: { md: 1 },
                 px: 3,
@@ -751,7 +1457,7 @@ function HeroBanner() {
   );
 }
 
-function ProgressHeader({ activeIndex }) {
+function ProgressHeader({ activeIndex, stepLabels }) {
   const theme = useTheme();
 
   return (
@@ -768,7 +1474,7 @@ function ProgressHeader({ activeIndex }) {
           }}
         />
         <Stack direction="row" justifyContent="space-between" alignItems="center">
-          {stepGroups.map((label, index) => {
+          {stepLabels.map((label, index) => {
             const isActive = index <= activeIndex;
 
             return (
@@ -799,7 +1505,7 @@ function ProgressHeader({ activeIndex }) {
   );
 }
 
-function UploadStep() {
+function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChange }) {
   return (
     <Box>
       <Paper
@@ -813,10 +1519,21 @@ function UploadStep() {
       >
         <Grid container>
           <Grid item xs={12} md={6}>
-            <UploadCard title="UPLOAD THESIS DOCUMENT" showError />
+            <UploadCard
+              title="UPLOAD THESIS DOCUMENT"
+              fieldName="thesisDocument"
+              file={thesisDocument}
+              onFileChange={onFileChange}
+              errorMessage={uploadError}
+            />
           </Grid>
           <Grid item xs={12} md={6} sx={{ borderLeft: { md: '1px solid' }, borderColor: 'divider' }}>
-            <UploadCard title="UPLOAD SYNOPSIS DOCUMENT (Optional)" />
+            <UploadCard
+              title="UPLOAD SYNOPSIS DOCUMENT (Optional)"
+              fieldName="synopsisDocument"
+              file={synopsisDocument}
+              onFileChange={onFileChange}
+            />
           </Grid>
         </Grid>
       </Paper>
@@ -844,8 +1561,17 @@ function UploadStep() {
   );
 }
 
-function UploadCard({ title, showError = false }) {
+function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '' }) {
   const theme = useTheme();
+
+  const handleInputChange = (event) => {
+    const selectedFile = event.target.files?.[0] || null;
+    onFileChange(fieldName, selectedFile);
+    event.target.value = '';
+  };
+
+  const isThesisUpload = fieldName === 'thesisDocument';
+  const helperError = isThesisUpload ? errorMessage : '';
 
   return (
     <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 3, md: 5 }, textAlign: 'center' }}>
@@ -854,6 +1580,7 @@ function UploadCard({ title, showError = false }) {
       </Typography>
 
       <Box
+        component="label"
         sx={{
           width: '100%',
           maxWidth: 300,
@@ -866,9 +1593,11 @@ function UploadCard({ title, showError = false }) {
           justifyContent: 'center',
           px: 2,
           py: 3.5,
-          bgcolor: 'common.white'
+          bgcolor: 'common.white',
+          cursor: 'pointer'
         }}
       >
+        <input type="file" accept="application/pdf,.pdf" hidden onChange={handleInputChange} />
         <Box
           sx={{
             width: 42,
@@ -886,13 +1615,13 @@ function UploadCard({ title, showError = false }) {
 
         <Typography sx={{ fontSize: '0.83rem', letterSpacing: 0.5 }}>DROP YOUR FILE HERE</Typography>
         <Typography color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-          or click to select
+          {file ? file.name : 'or click to select'}
         </Typography>
       </Box>
 
       <Box sx={{ mt: 2.5 }}>
-        {showError && (
-          <Typography sx={{ fontSize: '0.84rem', color: 'error.main', mb: 0.5 }}>*Please upload a pdf.</Typography>
+        {helperError && (
+          <Typography sx={{ fontSize: '0.84rem', color: 'error.main', mb: 0.5 }}>{helperError}</Typography>
         )}
         <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>Maximum size allowed is 512MB.</Typography>
         <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>Supported formats are: pdf</Typography>
@@ -902,15 +1631,16 @@ function UploadCard({ title, showError = false }) {
   );
 }
 
-function DocumentDetailsStep() {
+function DocumentDetailsStep({
+  thesisDocument,
+  pageStats,
+  pageTypesError,
+  onEditPageDetails,
+  selectedBindings,
+  bindingSelectionError,
+  onToggleBinding
+}) {
   const theme = useTheme();
-  const [bindingType, setBindingType] = useState('hard');
-
-  const pageStats = [
-    { label: 'Total page', value: 1 },
-    { label: 'Color page', value: 0 },
-    { label: 'BW page', value: 1 }
-  ];
 
   return (
     <Box>
@@ -948,7 +1678,10 @@ function DocumentDetailsStep() {
               THESIS FILE NAME :
             </Typography>
 
+            <Typography sx={{ fontSize: '0.92rem', color: 'text.secondary', flex: 1 }}>{thesisDocument?.name || 'No thesis file selected'}</Typography>
+
             <Button
+              onClick={onEditPageDetails}
               variant="contained"
               sx={{
                 px: 3,
@@ -969,28 +1702,37 @@ function DocumentDetailsStep() {
             </Button>
           </Box>
 
-          <Box sx={{ borderRadius: 0, overflow: 'hidden' }}>
+          {pageTypesError ? (
+            <Typography sx={{ mb: 2, fontSize: '0.82rem', color: 'warning.dark' }}>{pageTypesError}</Typography>
+          ) : null}
+
+          <Grid container spacing={1.5}>
             {pageStats.map((item, index) => (
               <Grid
                 key={item.label}
-                container
+                item
+                xs={12}
+                sm={4}
                 sx={{
-                  px: { xs: 1.75, md: 2.5 },
-                  py: 1.15,
-                  bgcolor: index % 2 === 0 ? alpha(theme.palette.info.main, 0.06) : 'transparent',
-                  borderBottom: index === pageStats.length - 1 ? 'none' : '1px solid',
-                  borderColor: 'divider'
+                  display: 'flex'
                 }}
               >
-                <Grid item xs={10}>
-                  <Typography sx={{ fontSize: '0.84rem', color: 'text.primary' }}>{item.label}</Typography>
-                </Grid>
-                <Grid item xs={2} sx={{ textAlign: 'right' }}>
-                  <Typography sx={{ fontSize: '0.84rem', color: 'text.primary' }}>{item.value}</Typography>
-                </Grid>
+                <Box
+                  sx={{
+                    width: '100%',
+                    px: { xs: 2, md: 2.5 },
+                    py: 2,
+                    bgcolor: index % 2 === 0 ? alpha(theme.palette.info.main, 0.06) : alpha(theme.palette.info.main, 0.02),
+                    border: '1px solid',
+                    borderColor: alpha(theme.palette.info.main, 0.12)
+                  }}
+                >
+                  <Typography sx={{ mb: 1, fontSize: '0.82rem', color: 'text.secondary' }}>{item.label}</Typography>
+                  <Typography sx={{ fontSize: '1.15rem', fontWeight: 600, color: 'text.primary' }}>{item.value}</Typography>
+                </Box>
               </Grid>
             ))}
-          </Box>
+          </Grid>
         </Box>
       </Paper>
 
@@ -1000,20 +1742,95 @@ function DocumentDetailsStep() {
           <Grid item xs={12} md={6}>
             <BindingOptionCard
               label="Hard Binding"
-              active={bindingType === 'hard'}
-              onClick={() => setBindingType('hard')}
+              active={selectedBindings.hard}
+              onClick={() => onToggleBinding('hard')}
             />
           </Grid>
           <Grid item xs={12} md={6}>
             <BindingOptionCard
               label="Soft Binding"
-              active={bindingType === 'soft'}
-              onClick={() => setBindingType('soft')}
+              active={selectedBindings.soft}
+              onClick={() => onToggleBinding('soft')}
             />
           </Grid>
         </Grid>
+        {bindingSelectionError ? (
+          <Typography sx={{ mt: 1.5, fontSize: '0.84rem', color: 'error.main' }}>{bindingSelectionError}</Typography>
+        ) : (
+          <Typography sx={{ mt: 1.5, fontSize: '0.82rem', color: 'text.secondary' }}>
+            Select at least one binding type. Choose both to configure both hard and soft binding pages.
+          </Typography>
+        )}
       </Box>
     </Box>
+  );
+}
+
+function PageEditorDialog({ open, loading, error, pageRows, pageTypes, onClose, onPageTypeChange }) {
+  const theme = useTheme();
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ pb: 1.25, fontWeight: 600 }}>Thesis Document Pages</DialogTitle>
+      <DialogContent dividers>
+        <Grid container sx={{ mb: 1.5, borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>
+          <Grid item xs={4}>
+            <Typography sx={{ fontSize: '0.88rem', fontWeight: 600 }}>Page Number</Typography>
+          </Grid>
+          <Grid item xs={8}>
+            <Typography sx={{ fontSize: '0.88rem', fontWeight: 600 }}>Page Type</Typography>
+          </Grid>
+        </Grid>
+
+        {loading ? (
+          <Typography sx={{ py: 2, fontSize: '0.9rem', color: 'text.secondary' }}>Loading page types...</Typography>
+        ) : null}
+
+        {!loading && pageRows.length
+          ? pageRows.map((row) => (
+              <Grid container spacing={1.5} alignItems="center" key={row.pageNumber} sx={{ mb: 1.5 }}>
+                <Grid item xs={4}>
+                  <Typography sx={{ fontSize: '0.95rem', color: 'text.primary' }}>{row.pageNumber}</Typography>
+                </Grid>
+                <Grid item xs={8}>
+                  <TextField
+                    select
+                    fullWidth
+                    size="small"
+                    value={String(row.pageTypeId)}
+                    onChange={(event) => onPageTypeChange(row.pageNumber, event.target.value)}
+                  >
+                    {pageTypes.map((option) => (
+                      <MenuItem key={option.id} value={String(option.id)}>
+                        {option.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              </Grid>
+            ))
+          : null}
+
+        {error ? (
+          <Typography sx={{ mt: 1, fontSize: '0.82rem', color: 'warning.dark' }}>{error}</Typography>
+        ) : null}
+
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          justifyContent="flex-end"
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
+          sx={{ mt: 2.5 }}
+        >
+          <Typography sx={{ maxWidth: 360, fontSize: '0.88rem', color: 'text.secondary' }}>
+            Change page types from the dropdown. Updates are applied immediately to the thesis page totals.
+          </Typography>
+          <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 0 }}>
+            Close
+          </Button>
+        </Stack>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1061,584 +1878,459 @@ function BindingOptionCard({ label, active, onClick }) {
   );
 }
 
-function HardBindingStep() {
-  const theme = useTheme();
-  const [selectedCover, setSelectedCover] = useState('DBL-603');
-  const [spinePrinting, setSpinePrinting] = useState('not-required');
+function MasterSelectField({ label, value, onChange, options, placeholder = 'Select' }) {
+  return (
+    <>
+      <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+      <TextField select size="small" fullWidth value={value} onChange={onChange} SelectProps={{ displayEmpty: true }}>
+        <MenuItem value="">{placeholder}</MenuItem>
+        {options.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </TextField>
+    </>
+  );
+}
 
-  const coverOptions = [
-    'DBL-603',
-    'DBL-607',
-    'DBL-605',
-    'DBL-608',
-    'DBL-609',
-    'DBL-610',
-    'DBL-611',
-    'DBL-612',
-    'DBL-613',
-    'DBL-614',
-    'DBL-615',
-    'DBL-616',
-    'DBL-617',
-    'DBL-618',
-    'DBL-619',
-    'DBL-620'
-  ];
+let bindingPrintDetailId = 0;
 
+function createBindingPrintDetail() {
+  bindingPrintDetailId += 1;
+
+  return {
+    id: `binding-print-detail-${bindingPrintDetailId}`,
+    paperSize: '',
+    copies: 0,
+    paper: '',
+    printingColour: '',
+    printingType: '',
+    a4Pockets: 0,
+    cdPockets: 0,
+    additionalInformation: ''
+  };
+}
+
+function createBindingConfiguration() {
+  return {
+    printDetails: [createBindingPrintDetail()],
+    selectedCover: '',
+    spinePrinting: 'not-required',
+    coverDesignMode: 'same',
+    coverDesignFile: null,
+    spineContent: {
+      top: '',
+      middle: '',
+      bottom: ''
+    }
+  };
+}
+
+function QuantityField({ label, value, onDecrease, onIncrease, onChange }) {
   return (
     <Box>
-      {/* Hard Print Details */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: 0,
-          border: '1px solid',
-          borderColor: 'divider',
-          mb: 4
-        }}
-      >
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 2.5 }, pb: { xs: 2.5, md: 3 } }}>
-          <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, mb: 2 }}>Hard Print Details</Typography>
-
-          {/* Header strip */}
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              px: 2,
-              py: 1,
-              mb: 1.5,
-              bgcolor: alpha(theme.palette.info.main, 0.06)
-            }}
-          >
-            <Typography sx={{ fontSize: '0.82rem' }}>Papers Size :</Typography>
-            <Typography sx={{ fontSize: '0.82rem' }}>No Of Copies :</Typography>
-          </Box>
-
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Papers Size</Typography>
-              <TextField size="small" fullWidth placeholder="A4 - Full" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>No. Of Copies</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  -
-                </Button>
-                <TextField
-                  size="small"
-                  sx={{ maxWidth: 80, '& .MuiInputBase-input': { textAlign: 'center' } }}
-                  defaultValue={0}
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  +
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Papers</Typography>
-              <TextField size="small" fullWidth placeholder="Art Card" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Printing Colour</Typography>
-              <TextField size="small" fullWidth placeholder="Select" />
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Printing Type</Typography>
-              <TextField size="small" fullWidth placeholder="Select" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>A4 Pockets</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  -
-                </Button>
-                <TextField
-                  size="small"
-                  sx={{ maxWidth: 80, '& .MuiInputBase-input': { textAlign: 'center' } }}
-                  defaultValue={0}
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  +
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>CD Pockets</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  -
-                </Button>
-                <TextField
-                  size="small"
-                  sx={{ maxWidth: 80, '& .MuiInputBase-input': { textAlign: 'center' } }}
-                  defaultValue={0}
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  +
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Additional Information</Typography>
-          <TextField fullWidth multiline minRows={2} size="small" sx={{ mb: 2.5 }} />
-
-          <Box
-            sx={{
-              mt: 1,
-              pt: 1.5,
-              borderTop: '1px dashed',
-              borderColor: alpha(theme.palette.secondary.main, 0.2),
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <Typography sx={{ fontSize: '0.8rem' }}>Papers Size :</Typography>
-            <Typography sx={{ fontSize: '0.8rem' }}>No Of Copies :</Typography>
-          </Box>
-
-          <Box sx={{ mt: 1.5 }}>
-            <Button
-              variant="contained"
-              sx={{
-                borderRadius: 0,
-                px: 3,
-                py: 0.75,
-                bgcolor: theme.palette.warning.lighter,
-                color: theme.palette.text.primary,
-                boxShadow: 'none',
-                '&:hover': {
-                  bgcolor: theme.palette.warning.light,
-                  boxShadow: 'none'
-                }
-              }}
-            >
-              + Create New
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Hard Binding Details */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: 0,
-          border: '1px solid',
-          borderColor: 'divider'
-        }}
-      >
-        <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 2.5 } }}>
-          <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, mb: 2 }}>Hard Binding Details</Typography>
-
-          <Typography sx={{ fontSize: '0.8rem', mb: 1.5 }}>Colour of Covering Materials (Block)</Typography>
-
-          <Grid container spacing={1.5} sx={{ mb: 2 }}>
-            {coverOptions.map((code) => {
-              const isActive = code === selectedCover;
-
-              return (
-                <Grid key={code} item xs={6} sm={4} md={3}>
-                  <Box
-                    onClick={() => setSelectedCover(code)}
-                    sx={{
-                      cursor: 'pointer',
-                      border: '1px solid',
-                      borderColor: isActive ? theme.palette.info.main : 'divider',
-                      bgcolor: 'common.white',
-                      p: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 0.75
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: '100%',
-                        pt: '135%',
-                        position: 'relative',
-                        bgcolor: isActive ? alpha(theme.palette.info.main, 0.3) : alpha(theme.palette.secondary.main, 0.08)
-                      }}
-                    />
-                    <Typography sx={{ fontSize: '0.75rem' }}>{code}</Typography>
-                  </Box>
-                </Grid>
-              );
-            })}
-          </Grid>
-
-          <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.75 }}>Cover Page Charges</Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  variant="contained"
-                  sx={{
-                    borderRadius: 0,
-                    bgcolor: theme.palette.warning.lighter,
-                    color: theme.palette.text.primary,
-                    boxShadow: 'none',
-                    px: 2.5,
-                    py: 0.8,
-                    '&:hover': {
-                      bgcolor: theme.palette.warning.light,
-                      boxShadow: 'none'
-                    }
-                  }}
-                >
-                  Same as Thesis Cover
-                </Button>
-                <Button
-                  variant="outlined"
-                  sx={{
-                    borderRadius: 0,
-                    px: 2.5,
-                    py: 0.8,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4),
-                    color: 'text.primary'
-                  }}
-                >
-                  Upload New Design
-                </Button>
-              </Stack>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.75 }}>Spine Printing Details</Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  variant={spinePrinting === 'required' ? 'contained' : 'outlined'}
-                  onClick={() => setSpinePrinting('required')}
-                  sx={{
-                    borderRadius: 0,
-                    px: 2.5,
-                    py: 0.8,
-                    bgcolor: spinePrinting === 'required' ? theme.palette.info.main : 'common.white',
-                    color: spinePrinting === 'required' ? 'common.white' : 'text.primary',
-                    borderColor: alpha(theme.palette.info.main, 0.6),
-                    boxShadow: 'none',
-                    '&:hover': {
-                      bgcolor:
-                        spinePrinting === 'required' ? theme.palette.info.dark : alpha(theme.palette.info.main, 0.06),
-                      boxShadow: 'none'
-                    }
-                  }}
-                >
-                  Spine Printing Required
-                </Button>
-                <Button
-                  variant={spinePrinting === 'not-required' ? 'contained' : 'outlined'}
-                  onClick={() => setSpinePrinting('not-required')}
-                  sx={{
-                    borderRadius: 0,
-                    px: 2.5,
-                    py: 0.8,
-                    bgcolor: spinePrinting === 'not-required' ? theme.palette.warning.lighter : 'common.white',
-                    color: 'text.primary',
-                    borderColor: alpha(theme.palette.secondary.main, 0.4),
-                    boxShadow: 'none',
-                    '&:hover': {
-                      bgcolor:
-                        spinePrinting === 'not-required'
-                          ? theme.palette.warning.light
-                          : alpha(theme.palette.warning.light, 0.1),
-                      boxShadow: 'none'
-                    }
-                  }}
-                >
-                  Spine Printing Not Required
-                </Button>
-              </Stack>
-            </Grid>
-          </Grid>
-        </Box>
-      </Paper>
+      <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>{label}</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={onDecrease}
+          sx={{
+            minWidth: 32,
+            borderRadius: 0,
+            borderColor: (theme) => alpha(theme.palette.secondary.main, 0.4)
+          }}
+        >
+          -
+        </Button>
+        <TextField
+          size="small"
+          value={value}
+          onChange={onChange}
+          sx={{ flex: 1, minWidth: 0, '& .MuiInputBase-input': { textAlign: 'center' } }}
+        />
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={onIncrease}
+          sx={{
+            minWidth: 32,
+            borderRadius: 0,
+            borderColor: (theme) => alpha(theme.palette.secondary.main, 0.4)
+          }}
+        >
+          +
+        </Button>
+      </Box>
     </Box>
   );
 }
 
-function SoftBindingStep() {
+function BindingPrintDetailsCard({
+  title,
+  detail,
+  masterOptions,
+  masterError,
+  showA4Pockets,
+  showCdPockets,
+  a4PocketsLabel,
+  cdPocketsLabel,
+  onDetailChange,
+  onQuantityAdjust,
+  onAddNew,
+  canDelete,
+  onDelete
+}) {
   const theme = useTheme();
-  const [selectedCover, setSelectedCover] = useState('DBL-603');
-  const [spinePrinting, setSpinePrinting] = useState('not-required');
 
-  const coverOptions = [
-    'DBL-603',
-    'DBL-607',
-    'DBL-605',
-    'DBL-608',
-    'DBL-609',
-    'DBL-610',
-    'DBL-611',
-    'DBL-612',
-    'DBL-613',
-    'DBL-614',
-    'DBL-615',
-    'DBL-616',
-    'DBL-617',
-    'DBL-618',
-    'DBL-619',
-    'DBL-620'
-  ];
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        borderRadius: 0,
+        border: '1px solid',
+        borderColor: 'divider',
+        mb: 4
+      }}
+    >
+      <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 2.5 }, pb: { xs: 2.5, md: 3 } }}>
+        <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, mb: 2 }}>{title}</Typography>
+
+        {masterError ? (
+          <Typography sx={{ mb: 1.5, fontSize: '0.82rem', color: 'warning.dark' }}>{masterError}</Typography>
+        ) : null}
+
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              lg: 'repeat(4, minmax(0, 1fr))'
+            },
+            gap: 1.5,
+            alignItems: 'start',
+            mb: 2
+          }}
+        >
+          <Box>
+            <MasterSelectField
+              label="Papers Size"
+              value={detail.paperSize}
+              onChange={(event) => onDetailChange(detail.id, 'paperSize', event.target.value)}
+              options={masterOptions.paperSizes}
+              placeholder="Select paper size"
+            />
+          </Box>
+          <Box>
+            <QuantityField
+              label="No. Of Copies"
+              value={detail.copies}
+              onDecrease={() => onQuantityAdjust(detail.id, 'copies', -1)}
+              onIncrease={() => onQuantityAdjust(detail.id, 'copies', 1)}
+              onChange={(event) => onDetailChange(detail.id, 'copies', event.target.value)}
+            />
+          </Box>
+          <Box>
+            <MasterSelectField
+              label="Papers"
+              value={detail.paper}
+              onChange={(event) => onDetailChange(detail.id, 'paper', event.target.value)}
+              options={masterOptions.papers}
+              placeholder="Select paper"
+            />
+          </Box>
+          <Box>
+            <MasterSelectField
+              label="Printing Colour"
+              value={detail.printingColour}
+              onChange={(event) => onDetailChange(detail.id, 'printingColour', event.target.value)}
+              options={masterOptions.printColors}
+              placeholder="Select printing colour"
+            />
+          </Box>
+          <Box>
+            <MasterSelectField
+              label="Printing Type"
+              value={detail.printingType}
+              onChange={(event) => onDetailChange(detail.id, 'printingType', event.target.value)}
+              options={masterOptions.printingTypes}
+              placeholder="Select printing type"
+            />
+          </Box>
+          {showA4Pockets ? (
+            <Box>
+              <QuantityField
+                label={a4PocketsLabel}
+                value={detail.a4Pockets}
+                onDecrease={() => onQuantityAdjust(detail.id, 'a4Pockets', -1)}
+                onIncrease={() => onQuantityAdjust(detail.id, 'a4Pockets', 1)}
+                onChange={(event) => onDetailChange(detail.id, 'a4Pockets', event.target.value)}
+              />
+            </Box>
+          ) : null}
+
+        {showCdPockets ? (
+          <Box>
+              <QuantityField
+                label={cdPocketsLabel}
+                value={detail.cdPockets}
+                onDecrease={() => onQuantityAdjust(detail.id, 'cdPockets', -1)}
+                onIncrease={() => onQuantityAdjust(detail.id, 'cdPockets', 1)}
+                onChange={(event) => onDetailChange(detail.id, 'cdPockets', event.target.value)}
+              />
+          </Box>
+        ) : null}
+        </Box>
+
+        <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Additional Information</Typography>
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          size="small"
+          value={detail.additionalInformation}
+          onChange={(event) => onDetailChange(detail.id, 'additionalInformation', event.target.value)}
+          sx={{ mb: 2.5 }}
+        />
+
+        <Box
+          sx={{
+            mt: 1,
+            pt: 1.5,
+            borderTop: '1px dashed',
+            borderColor: alpha(theme.palette.secondary.main, 0.2),
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}
+        >
+          {/* <Typography sx={{ fontSize: '0.8rem' }}>Papers Size : {selectedPaperSizeOption?.label || '-'}</Typography> */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+            {/* <Typography sx={{ fontSize: '0.8rem' }}>No Of Copies : {detail.copies}</Typography> */}
+            {canDelete ? (
+              <Box
+                onClick={onDelete}
+                sx={{
+                  color: 'error.main',
+                  display: 'grid',
+                  placeItems: 'center',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.75
+                  }
+                }}
+              >
+                <DeleteOutlined style={{ fontSize: 14 }} />
+              </Box>
+            ) : null}
+          </Box>
+        </Box>
+
+        <Box sx={{ mt: 1.5 }}>
+          <Button
+            variant="contained"
+            onClick={onAddNew}
+            sx={{
+              borderRadius: 0,
+              px: 3,
+              py: 0.75,
+              bgcolor: theme.palette.warning.lighter,
+              color: theme.palette.text.primary,
+              boxShadow: 'none',
+              '&:hover': {
+                bgcolor: theme.palette.warning.light,
+                boxShadow: 'none'
+              }
+            }}
+          >
+            + Create New
+          </Button>
+        </Box>
+      </Box>
+    </Paper>
+  );
+}
+
+function BindingStep({
+  printTitle,
+  bindingTitle,
+  coverLabel,
+  coverMaterials,
+  masterOptions,
+  masterError,
+  a4PocketsLabel,
+  cdPocketsLabel,
+  showCdPockets,
+  bindingConfig,
+  onBindingConfigChange
+}) {
+  const theme = useTheme();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
+
+  const printDetails = bindingConfig.printDetails;
+  const selectedCover = bindingConfig.selectedCover;
+  const spinePrinting = bindingConfig.spinePrinting;
+  const coverDesignMode = bindingConfig.coverDesignMode;
+  const coverDesignFile = bindingConfig.coverDesignFile;
+  const spineContent = bindingConfig.spineContent;
+
+  useEffect(() => {
+    if (!coverMaterials.length) {
+      if (bindingConfig.selectedCover) {
+        onBindingConfigChange((prev) => ({ ...prev, selectedCover: '' }));
+      }
+      return;
+    }
+
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      selectedCover: coverMaterials.some((item) => item.id === prev.selectedCover) ? prev.selectedCover : coverMaterials[0].id
+    }));
+  }, [bindingConfig.selectedCover, coverMaterials, onBindingConfigChange]);
+
+  const openImagePreview = (image) => {
+    if (!image) {
+      return;
+    }
+
+    setPreviewImage(image);
+    setPreviewOpen(true);
+  };
+
+  const closeImagePreview = () => {
+    setPreviewOpen(false);
+    setPreviewImage('');
+  };
+
+  const handleDetailChange = (detailId, field, value) => {
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      printDetails: prev.printDetails.map((detail) => {
+        if (detail.id !== detailId) {
+          return detail;
+        }
+
+        if (field === 'paperSize') {
+          return {
+            ...detail,
+            paperSize: value,
+            a4Pockets: 0,
+            cdPockets: 0
+          };
+        }
+
+        if (['copies', 'a4Pockets', 'cdPockets'].includes(field)) {
+          const numericValue = Number.parseInt(value, 10);
+
+          return {
+            ...detail,
+            [field]: Number.isNaN(numericValue) ? 0 : Math.max(0, numericValue)
+          };
+        }
+
+        return {
+          ...detail,
+          [field]: value
+        };
+      })
+    }));
+  };
+
+  const handleQuantityAdjust = (detailId, field, delta) => {
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      printDetails: prev.printDetails.map((detail) =>
+        detail.id === detailId
+          ? {
+              ...detail,
+              [field]: Math.max(0, Number(detail[field] || 0) + delta)
+            }
+          : detail
+      )
+    }));
+  };
+
+  const handleAddPrintDetail = () => {
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      printDetails: [...prev.printDetails, createBindingPrintDetail()]
+    }));
+  };
+
+  const handleDeletePrintDetail = (detailId) => {
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      printDetails: prev.printDetails.length > 1 ? prev.printDetails.filter((detail) => detail.id !== detailId) : prev.printDetails
+    }));
+  };
+
+  const handleCoverDesignModeChange = (mode) => {
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      coverDesignMode: mode,
+      coverDesignFile: mode === 'upload' ? prev.coverDesignFile : null
+    }));
+  };
+
+  const handleCoverDesignFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      coverDesignFile: file
+    }));
+    event.target.value = '';
+  };
+
+  const handleSpineContentChange = (field, value) => {
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      spineContent: {
+        ...prev.spineContent,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSpinePrintingChange = (value) => {
+    onBindingConfigChange((prev) => ({
+      ...prev,
+      spinePrinting: value,
+      spineContent: value === 'not-required' ? { top: '', middle: '', bottom: '' } : prev.spineContent
+    }));
+  };
+
+  const isSameCoverDesign = coverDesignMode === 'same';
+  const isUploadCoverDesign = coverDesignMode === 'upload';
 
   return (
     <Box>
-      {/* Soft Print Details */}
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: 0,
-          border: '1px solid',
-          borderColor: 'divider',
-          mb: 4
-        }}
-      >
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: { xs: 2, md: 2.5 }, pb: { xs: 2.5, md: 3 } }}>
-          <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, mb: 2 }}>Soft Print Details</Typography>
+      {printDetails.map((detail, index) => {
+        const selectedPaperSizeOption = masterOptions.paperSizes.find((option) => option.value === detail.paperSize);
+        const isA4Full = selectedPaperSizeOption?.code === 'A4 - FULL';
 
-          {/* Header strip */}
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              px: 2,
-              py: 1,
-              mb: 1.5,
-              bgcolor: alpha(theme.palette.info.main, 0.06)
-            }}
-          >
-            <Typography sx={{ fontSize: '0.82rem' }}>Papers Size :</Typography>
-            <Typography sx={{ fontSize: '0.82rem' }}>No Of Copies :</Typography>
-          </Box>
+        return (
+          <BindingPrintDetailsCard
+            key={detail.id}
+            title={printDetails.length > 1 ? `${printTitle} ${index + 1}` : printTitle}
+            detail={detail}
+            masterOptions={masterOptions}
+            masterError={masterError}
+            showA4Pockets={isA4Full}
+            showCdPockets={showCdPockets && isA4Full}
+            a4PocketsLabel={a4PocketsLabel}
+            cdPocketsLabel={cdPocketsLabel}
+            onDetailChange={handleDetailChange}
+            onQuantityAdjust={handleQuantityAdjust}
+            onAddNew={handleAddPrintDetail}
+            canDelete={index > 0}
+            onDelete={() => handleDeletePrintDetail(detail.id)}
+          />
+        );
+      })}
 
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Papers Size</Typography>
-              <TextField size="small" fullWidth placeholder="A4 - Full" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>No. Of Copies</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  -
-                </Button>
-                <TextField
-                  size="small"
-                  sx={{ maxWidth: 80, '& .MuiInputBase-input': { textAlign: 'center' } }}
-                  defaultValue={0}
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  +
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Papers</Typography>
-              <TextField size="small" fullWidth placeholder="Art Card" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Printing Colour</Typography>
-              <TextField size="small" fullWidth placeholder="Select" />
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Printing Type</Typography>
-              <TextField size="small" fullWidth placeholder="Select" />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>A4 Pockets</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  -
-                </Button>
-                <TextField
-                  size="small"
-                  sx={{ maxWidth: 80, '& .MuiInputBase-input': { textAlign: 'center' } }}
-                  defaultValue={0}
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  +
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>CD Pockets</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  -
-                </Button>
-                <TextField
-                  size="small"
-                  sx={{ maxWidth: 80, '& .MuiInputBase-input': { textAlign: 'center' } }}
-                  defaultValue={0}
-                />
-                <Button
-                  variant="outlined"
-                  size="small"
-                  sx={{
-                    minWidth: 32,
-                    borderRadius: 0,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4)
-                  }}
-                >
-                  +
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
-
-          <Typography sx={{ fontSize: '0.8rem', mb: 0.5 }}>Additional Information</Typography>
-          <TextField fullWidth multiline minRows={2} size="small" sx={{ mb: 2.5 }} />
-
-          <Box
-            sx={{
-              mt: 1,
-              pt: 1.5,
-              borderTop: '1px dashed',
-              borderColor: alpha(theme.palette.secondary.main, 0.2),
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <Typography sx={{ fontSize: '0.8rem' }}>Papers Size :</Typography>
-            <Typography sx={{ fontSize: '0.8rem' }}>No Of Copies :</Typography>
-          </Box>
-
-          <Box sx={{ mt: 1.5 }}>
-            <Button
-              variant="contained"
-              sx={{
-                borderRadius: 0,
-                px: 3,
-                py: 0.75,
-                bgcolor: theme.palette.warning.lighter,
-                color: theme.palette.text.primary,
-                boxShadow: 'none',
-                '&:hover': {
-                  bgcolor: theme.palette.warning.light,
-                  boxShadow: 'none'
-                }
-              }}
-            >
-              + Create New
-            </Button>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* Soft Binding Details */}
       <Paper
         elevation={0}
         sx={{
@@ -1648,18 +2340,23 @@ function SoftBindingStep() {
         }}
       >
         <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 2.5 } }}>
-          <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, mb: 2 }}>Soft Binding Details</Typography>
+          <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, mb: 2 }}>{bindingTitle}</Typography>
 
-          <Typography sx={{ fontSize: '0.8rem', mb: 1.5 }}>Colour of Covering Materials (Soft)</Typography>
+          <Typography sx={{ fontSize: '0.8rem', mb: 1.5 }}>{coverLabel}</Typography>
 
           <Grid container spacing={1.5} sx={{ mb: 2 }}>
-            {coverOptions.map((code) => {
-              const isActive = code === selectedCover;
+            {coverMaterials.map((coverMaterial) => {
+              const isActive = coverMaterial.id === selectedCover;
 
               return (
-                <Grid key={code} item xs={6} sm={4} md={3}>
+                <Grid key={coverMaterial.id} item xs={6} sm={4} md={3}>
                   <Box
-                    onClick={() => setSelectedCover(code)}
+                    onClick={() =>
+                      onBindingConfigChange((prev) => ({
+                        ...prev,
+                        selectedCover: coverMaterial.id
+                      }))
+                    }
                     sx={{
                       cursor: 'pointer',
                       border: '1px solid',
@@ -1673,35 +2370,78 @@ function SoftBindingStep() {
                     }}
                   >
                     <Box
+                      component={coverMaterial.design ? 'img' : 'div'}
+                      src={coverMaterial.design || undefined}
+                      alt={coverMaterial.name}
+                      onClick={
+                        coverMaterial.design
+                          ? (event) => {
+                              event.stopPropagation();
+                              openImagePreview(coverMaterial.design);
+                            }
+                          : undefined
+                      }
                       sx={{
-                        width: '100%',
-                        pt: '135%',
-                        position: 'relative',
-                        bgcolor: isActive ? alpha(theme.palette.info.main, 0.3) : alpha(theme.palette.secondary.main, 0.08)
+                        width: 60,
+                        height: 81,
+                        objectFit: 'cover',
+                        borderRadius: 0.5,
+                        border: '1px solid rgba(0,0,0,0.12)',
+                        cursor: coverMaterial.design ? 'zoom-in' : 'default',
+                        transition: 'transform 0.15s ease-in-out',
+                        bgcolor: isActive ? alpha(theme.palette.info.main, 0.3) : alpha(theme.palette.secondary.main, 0.08),
+                        '&:hover': coverMaterial.design
+                          ? {
+                              transform: 'scale(1.1)'
+                            }
+                          : undefined
                       }}
                     />
-                    <Typography sx={{ fontSize: '0.75rem' }}>{code}</Typography>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{coverMaterial.code}</Typography>
+                      {coverMaterial.name && coverMaterial.name !== coverMaterial.code ? (
+                        <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>{coverMaterial.name}</Typography>
+                      ) : null}
+                    </Box>
                   </Box>
                 </Grid>
               );
             })}
           </Grid>
 
-          <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.75 }}>Cover Page Charges</Typography>
+          {!coverMaterials.length ? (
+            <Typography color="text.secondary" sx={{ fontSize: '0.75rem', mb: 2 }}>
+              No {bindingTitle.toLowerCase()} are available right now.
+            </Typography>
+          ) : null}
+
+          <Grid container spacing={3} sx={{ mt: 0.5 }}>
+            <Grid item xs={12}>
+              <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.75 }}>
+                <Typography sx={{ fontSize: '0.8rem' }}>Cover Page Design</Typography>
+                <Tooltip title="Select from the below option on what should be the design for the cover page of the Thesis.">
+                  <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                    <InfoCircleOutlined style={{ fontSize: 12, color: theme.palette.info.main }} />
+                  </Box>
+                </Tooltip>
+              </Stack>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
                 <Button
-                  variant="contained"
+                  variant={isSameCoverDesign ? 'contained' : 'outlined'}
+                  onClick={() => handleCoverDesignModeChange('same')}
+                  aria-pressed={isSameCoverDesign}
                   sx={{
                     borderRadius: 0,
-                    bgcolor: theme.palette.warning.lighter,
-                    color: theme.palette.text.primary,
+                    bgcolor: isSameCoverDesign ? '#13c2c2' : 'common.white',
+                    color: isSameCoverDesign ? 'common.white' : 'text.primary',
                     boxShadow: 'none',
                     px: 2.5,
                     py: 0.8,
+                    borderColor: isSameCoverDesign ? '#13c2c2' : alpha(theme.palette.secondary.main, 0.4),
                     '&:hover': {
                       bgcolor: theme.palette.warning.light,
+                      color: 'text.primary',
+                      borderColor: theme.palette.warning.light,
                       boxShadow: 'none'
                     }
                   }}
@@ -1709,71 +2449,280 @@ function SoftBindingStep() {
                   Same as Thesis Cover
                 </Button>
                 <Button
-                  variant="outlined"
+                  variant={isUploadCoverDesign ? 'contained' : 'outlined'}
+                  onClick={() => handleCoverDesignModeChange('upload')}
+                  aria-pressed={isUploadCoverDesign}
                   sx={{
                     borderRadius: 0,
                     px: 2.5,
                     py: 0.8,
-                    borderColor: alpha(theme.palette.secondary.main, 0.4),
-                    color: 'text.primary'
+                    bgcolor: isUploadCoverDesign ? '#13c2c2' : 'common.white',
+                    color: isUploadCoverDesign ? 'common.white' : 'text.primary',
+                    borderColor: isUploadCoverDesign ? '#13c2c2' : alpha(theme.palette.secondary.main, 0.4),
+                    boxShadow: 'none',
+                    '&:hover': {
+                      bgcolor: theme.palette.warning.light,
+                      color: 'text.primary',
+                      borderColor: theme.palette.warning.light,
+                      boxShadow: 'none'
+                    }
                   }}
                 >
                   Upload New Design
                 </Button>
               </Stack>
-            </Grid>
 
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontSize: '0.8rem', mb: 0.75 }}>Spine Printing Details</Typography>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <Button
-                  variant={spinePrinting === 'required' ? 'contained' : 'outlined'}
-                  onClick={() => setSpinePrinting('required')}
-                  sx={{
-                    borderRadius: 0,
-                    px: 2.5,
-                    py: 0.8,
-                    bgcolor: spinePrinting === 'required' ? theme.palette.info.main : 'common.white',
-                    color: spinePrinting === 'required' ? 'common.white' : 'text.primary',
-                    borderColor: alpha(theme.palette.info.main, 0.6),
-                    boxShadow: 'none',
-                    '&:hover': {
-                      bgcolor:
-                        spinePrinting === 'required' ? theme.palette.info.dark : alpha(theme.palette.info.main, 0.06),
-                      boxShadow: 'none'
-                    }
-                  }}
-                >
-                  Spine Printing Required
-                </Button>
-                <Button
-                  variant={spinePrinting === 'not-required' ? 'contained' : 'outlined'}
-                  onClick={() => setSpinePrinting('not-required')}
-                  sx={{
-                    borderRadius: 0,
-                    px: 2.5,
-                    py: 0.8,
-                    bgcolor: spinePrinting === 'not-required' ? theme.palette.warning.lighter : 'common.white',
-                    color: 'text.primary',
-                    borderColor: alpha(theme.palette.secondary.main, 0.4),
-                    boxShadow: 'none',
-                    '&:hover': {
-                      bgcolor:
-                        spinePrinting === 'not-required'
-                          ? theme.palette.warning.light
-                          : alpha(theme.palette.warning.light, 0.1),
-                      boxShadow: 'none'
-                    }
-                  }}
-                >
-                  Spine Printing Not Required
-                </Button>
-              </Stack>
+              {isUploadCoverDesign ? (
+                <Box sx={{ mt: 1.5, maxWidth: 290 }}>
+                  <Box
+                    component="label"
+                    sx={{
+                      minHeight: 102,
+                      px: 2,
+                      py: 2.25,
+                      border: '1px solid',
+                      borderColor: alpha(theme.palette.secondary.main, 0.18),
+                      bgcolor: 'common.white',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <input type="file" hidden accept="image/*,.pdf" onChange={handleCoverDesignFileChange} />
+                    <Box
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: theme.palette.info.main,
+                        color: 'common.white'
+                      }}
+                    >
+                      <CloudUploadOutlined style={{ fontSize: 24 }} />
+                    </Box>
+                    <Typography sx={{ fontSize: '0.8rem', color: 'text.primary' }}>
+                      {coverDesignFile ? coverDesignFile.name : 'Upload New Design'}
+                    </Typography>
+                  </Box>
+
+                  <Stack direction="row" spacing={0.4} alignItems="center" sx={{ mt: 1, mb: 1.25 }}>
+                    <Typography sx={{ fontSize: '0.72rem', color: 'text.primary' }}>
+                      *Maximum size allowed is 512MB. Supported formats are: pdf
+                    </Typography>
+                    <InfoCircleOutlined style={{ fontSize: 12, color: theme.palette.info.main }} />
+                  </Stack>
+
+                  <Box component="label" sx={{ display: 'block', cursor: 'pointer' }}>
+                    <input type="file" hidden accept="image/*,.pdf" onChange={handleCoverDesignFileChange} />
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      sx={{
+                        borderRadius: 0,
+                        py: 0.9,
+                        bgcolor: theme.palette.warning.lighter,
+                        color: theme.palette.text.primary,
+                        boxShadow: 'none',
+                        '&:hover': {
+                          bgcolor: theme.palette.warning.light,
+                          boxShadow: 'none'
+                        }
+                      }}
+                    >
+                      Upload File
+                    </Button>
+                  </Box>
+                </Box>
+              ) : null}
+
+              <Box sx={{ mt: 2 }}>
+                <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.75 }}>
+                  <Typography sx={{ fontSize: '0.8rem' }}>Spine Printing Details</Typography>
+                  <Tooltip title="The text that will be on the back portion of a book's binding which is visible when a book is shelved in a bookcase">
+                    <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                      <InfoCircleOutlined style={{ fontSize: 12, color: theme.palette.info.main }} />
+                    </Box>
+                  </Tooltip>
+                </Stack>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Button
+                    variant={spinePrinting === 'required' ? 'contained' : 'outlined'}
+                    onClick={() => handleSpinePrintingChange('required')}
+                    sx={{
+                      borderRadius: 0,
+                      px: 2.5,
+                      py: 0.8,
+                      bgcolor: spinePrinting === 'required' ? '#13c2c2' : 'common.white',
+                      color: spinePrinting === 'required' ? 'common.white' : 'text.primary',
+                      borderColor: spinePrinting === 'required' ? '#13c2c2' : alpha(theme.palette.info.main, 0.6),
+                      boxShadow: 'none',
+                      '&:hover': {
+                          bgcolor: theme.palette.warning.light,
+                          color: 'text.primary',
+                          borderColor: theme.palette.warning.light,
+                        boxShadow: 'none'
+                      }
+                    }}
+                  >
+                    Spine Printing Required
+                  </Button>
+                  <Button
+                    variant={spinePrinting === 'not-required' ? 'contained' : 'outlined'}
+                    onClick={() => handleSpinePrintingChange('not-required')}
+                    sx={{
+                      borderRadius: 0,
+                      px: 2.5,
+                      py: 0.8,
+                      bgcolor: spinePrinting === 'not-required' ? '#13c2c2' : 'common.white',
+                      color: spinePrinting === 'not-required' ? 'common.white' : 'text.primary',
+                      borderColor: spinePrinting === 'not-required' ? '#13c2c2' : alpha(theme.palette.secondary.main, 0.4),
+                      boxShadow: 'none',
+                      '&:hover': {
+                          bgcolor: theme.palette.warning.light,
+                          color: 'text.primary',
+                          borderColor: theme.palette.warning.light,
+                        boxShadow: 'none'
+                      }
+                    }}
+                  >
+                    Spine Printing Not Required
+                  </Button>
+                </Stack>
+              </Box>
             </Grid>
           </Grid>
+
+          {spinePrinting === 'required' ? (
+            <Grid container spacing={1.5} sx={{ mt: 1.75 }}>
+              <Grid item xs={12} md={4}>
+                <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.5 }}>
+                  <Typography sx={{ fontSize: '0.8rem' }}>Top Content Area</Typography>
+                  <Tooltip title="Content that will be on the top portion of the spine of the book's binding.">
+                    <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                      <InfoCircleOutlined style={{ fontSize: 12, color: theme.palette.info.main }} />
+                    </Box>
+                  </Tooltip>
+                </Stack>
+                <TextField fullWidth size="small" value={spineContent.top} onChange={(event) => handleSpineContentChange('top', event.target.value)} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.5 }}>
+                  <Typography sx={{ fontSize: '0.8rem' }}>Middle Content Area</Typography>
+                  <Tooltip title="Content that will be on the middle portion of the spine of the book's binding.">
+                    <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                      <InfoCircleOutlined style={{ fontSize: 12, color: theme.palette.info.main }} />
+                    </Box>
+                  </Tooltip>
+                </Stack>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={spineContent.middle}
+                  onChange={(event) => handleSpineContentChange('middle', event.target.value)}
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <Stack direction="row" spacing={0.6} alignItems="center" sx={{ mb: 0.5 }}>
+                  <Typography sx={{ fontSize: '0.8rem' }}>Bottom Content Area</Typography>
+                  <Tooltip title="Content that will be on the bottom portion of the spine of the book's binding.">
+                    <Box component="span" sx={{ display: 'inline-flex', cursor: 'help' }}>
+                      <InfoCircleOutlined style={{ fontSize: 12, color: theme.palette.info.main }} />
+                    </Box>
+                  </Tooltip>
+                </Stack>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={spineContent.bottom}
+                  onChange={(event) => handleSpineContentChange('bottom', event.target.value)}
+                />
+              </Grid>
+            </Grid>
+          ) : null}
         </Box>
       </Paper>
+
+      <Dialog fullScreen open={previewOpen} onClose={closeImagePreview} sx={{ bgcolor: 'rgba(0,0,0,0.9)' }}>
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 16,
+            right: 24,
+            zIndex: 1301,
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}
+        >
+          <Button variant="contained" color="secondary" size="small" onClick={closeImagePreview}>
+            Close
+          </Button>
+        </Box>
+        <Box
+          sx={{
+            width: '100%',
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'black'
+          }}
+        >
+          {previewImage ? (
+            <Box
+              component="img"
+              src={previewImage}
+              alt="Design full preview"
+              sx={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain',
+                boxShadow: 24
+              }}
+            />
+          ) : null}
+        </Box>
+      </Dialog>
     </Box>
+  );
+}
+
+function HardBindingStep({ masterOptions, masterError, coverMaterials = [], bindingConfig, onBindingConfigChange }) {
+  return (
+    <BindingStep
+      printTitle="Hard Print Details"
+      bindingTitle="Hard Binding Details"
+      coverLabel="Colour of Covering Materials (Block)"
+      coverMaterials={coverMaterials}
+      masterOptions={masterOptions}
+      masterError={masterError}
+      a4PocketsLabel="A4 Pockets"
+      cdPocketsLabel="CD Pockets"
+      showCdPockets={false}
+      bindingConfig={bindingConfig}
+      onBindingConfigChange={onBindingConfigChange}
+    />
+  );
+}
+
+function SoftBindingStep({ masterOptions, masterError, coverMaterials = [], bindingConfig, onBindingConfigChange }) {
+  return (
+    <BindingStep
+      printTitle="Soft Print Details"
+      bindingTitle="Soft Binding Details"
+      coverLabel="Colour of Covering Materials (Soft)"
+      coverMaterials={coverMaterials}
+      masterOptions={masterOptions}
+      masterError={masterError}
+      a4PocketsLabel="A4 Pockets (NOT RECOMMENDED)"
+      cdPocketsLabel="CD Pockets (NOT RECOMMENDED)"
+      showCdPockets
+      bindingConfig={bindingConfig}
+      onBindingConfigChange={onBindingConfigChange}
+    />
   );
 }
 
@@ -1783,6 +2732,8 @@ function OrderSummaryStep({ summary, loading, error }) {
   const border = `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`;
   const tableHeaderBg = alpha(theme.palette.info.main, 0.1);
   const subTotalBg = alpha(theme.palette.info.main, 0.08);
+  const printRows = Array.isArray(summary?.printingDetails) ? summary.printingDetails : [];
+  const bindingRows = Array.isArray(summary?.bindingDetails) ? summary.bindingDetails : [];
 
   const tableBaseStyles = {
     width: '100%',
@@ -1796,37 +2747,35 @@ function OrderSummaryStep({ summary, loading, error }) {
     }
   };
 
-  function SectionCard({ title, section, bindLabel }) {
-    const printRows = Array.isArray(section?.printDetails) ? section.printDetails : [];
-    const bindingRows = Array.isArray(section?.bindingDetails) ? section.bindingDetails : [];
-
-    return (
-      <Box
+  return (
+    <Box>
+      <Typography
         sx={{
-          border,
-          mb: 3,
-          overflow: 'hidden'
+          fontSize: { xs: '1.2rem', md: '1.4rem' },
+          fontWeight: 600,
+          textAlign: 'center',
+          mb: 3
         }}
       >
-        {/* Section title */}
+        Order Summary
+      </Typography>
+
+      {loading ? <Typography sx={{ textAlign: 'center', mb: 2, color: 'text.secondary' }}>Loading order summary...</Typography> : null}
+
+      {error ? <Typography sx={{ textAlign: 'center', mb: 2, color: 'error.main' }}>{error}</Typography> : null}
+
+      <Box sx={{ border, mb: 3, overflow: 'hidden' }}>
         <Box sx={{ px: 2.5, py: 1.5, bgcolor: alpha(theme.palette.info.main, 0.06), borderBottom: border }}>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>{title}</Typography>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Printing Details</Typography>
         </Box>
 
         <Box sx={{ p: { xs: 1.5, md: 2.5 } }}>
-          {/* Print Details header */}
-          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: theme.palette.info.main }}>Print Details</Typography>
-            <InfoCircleOutlined style={{ fontSize: 13, color: theme.palette.info.main }} />
-          </Stack>
-
-          {/* Print table */}
           <Box component="table" sx={{ ...tableBaseStyles, mb: 2.5 }}>
             <Box component="thead">
               <Box component="tr" sx={{ bgcolor: tableHeaderBg }}>
-                {['Description', 'Copies', 'Colour/ BW', '1st Copy Rate', 'Additional Copy Rate', 'Cost'].map((h) => (
-                  <Box key={h} component="th" sx={{ fontWeight: 600 }}>
-                    {h}
+                {['Description', 'Copies', 'Colour/ BW', '1st Copy Rate', 'Additional Copy Rate', 'Cost'].map((header) => (
+                  <Box key={header} component="th" sx={{ fontWeight: 600 }}>
+                    {header}
                   </Box>
                 ))}
               </Box>
@@ -1853,28 +2802,28 @@ function OrderSummaryStep({ summary, loading, error }) {
                   <Box component="td" sx={{ color: theme.palette.info.main }}>&#x20B9; 0</Box>
                 </Box>
               )}
-              <Box component="tr" sx={{ bgcolor: subTotalBg }}>
-                <Box component="td" colSpan={5} sx={{ fontWeight: 600, color: theme.palette.info.main }}>
-                  Sub Total
-                </Box>
-                <Box component="td" sx={{ fontWeight: 600, color: theme.palette.info.main }}>&#x20B9; {section?.subTotal ?? 0}</Box>
-              </Box>
             </Box>
           </Box>
 
-          {/* Binding Details header */}
-          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25 }}>
-            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: theme.palette.info.main }}>Binding Details</Typography>
-            <InfoCircleOutlined style={{ fontSize: 13, color: theme.palette.info.main }} />
-          </Stack>
+          <Box sx={{ px: 2, py: 1.5, bgcolor: subTotalBg, display: 'flex', justifyContent: 'space-between', border }}>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: theme.palette.info.main }}>Printing Cost</Typography>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: theme.palette.info.main }}>&#x20B9; {summary?.summary?.printingCost ?? 0}</Typography>
+          </Box>
+        </Box>
+      </Box>
 
-          {/* Binding table */}
-          <Box component="table" sx={tableBaseStyles}>
+      <Box sx={{ border, mb: 3, overflow: 'hidden' }}>
+        <Box sx={{ px: 2.5, py: 1.5, bgcolor: alpha(theme.palette.info.main, 0.06), borderBottom: border }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>Binding Details</Typography>
+        </Box>
+
+        <Box sx={{ p: { xs: 1.5, md: 2.5 } }}>
+          <Box component="table" sx={{ ...tableBaseStyles, mb: 2.5 }}>
             <Box component="thead">
               <Box component="tr" sx={{ bgcolor: tableHeaderBg }}>
-                {['Description', 'Copies', 'Cost'].map((h) => (
-                  <Box key={h} component="th" sx={{ fontWeight: 600 }}>
-                    {h}
+                {['Description', 'Copies', 'Cost'].map((header) => (
+                  <Box key={header} component="th" sx={{ fontWeight: 600 }}>
+                    {header}
                   </Box>
                 ))}
               </Box>
@@ -1882,15 +2831,15 @@ function OrderSummaryStep({ summary, loading, error }) {
             <Box component="tbody">
               {bindingRows.length ? (
                 bindingRows.map((row, index) => (
-                  <Box key={`${row.description || bindLabel}-${index}`} component="tr">
-                    <Box component="td">{row.description || bindLabel}</Box>
+                  <Box key={`${row.description || 'binding'}-${index}`} component="tr">
+                    <Box component="td">{row.description || '-'}</Box>
                     <Box component="td">{row.copies ?? 0}</Box>
                     <Box component="td" sx={{ color: theme.palette.info.main }}>&#x20B9; {row.cost ?? 0}</Box>
                   </Box>
                 ))
               ) : (
                 <Box component="tr">
-                  <Box component="td">{bindLabel}</Box>
+                  <Box component="td">-</Box>
                   <Box component="td">0</Box>
                   <Box component="td" sx={{ color: theme.palette.info.main }}>&#x20B9; 0</Box>
                 </Box>
@@ -1898,54 +2847,13 @@ function OrderSummaryStep({ summary, loading, error }) {
             </Box>
           </Box>
 
-          {/* Edit Order */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
-            <Stack
-              direction="row"
-              spacing={0.6}
-              alignItems="center"
-              sx={{
-                cursor: 'pointer',
-                color: theme.palette.info.main,
-                '&:hover': { opacity: 0.75 }
-              }}
-            >
-              <EditOutlined style={{ fontSize: 13 }} />
-              <Typography sx={{ fontSize: '0.8rem', color: 'inherit' }}>Edit Order</Typography>
-            </Stack>
+          <Box sx={{ px: 2, py: 1.5, bgcolor: subTotalBg, display: 'flex', justifyContent: 'space-between', border }}>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: theme.palette.info.main }}>Binding Cost</Typography>
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: theme.palette.info.main }}>&#x20B9; {summary?.summary?.bindingCost ?? 0}</Typography>
           </Box>
         </Box>
       </Box>
-    );
-  }
 
-  return (
-    <Box>
-      <Typography
-        sx={{
-          fontSize: { xs: '1.2rem', md: '1.4rem' },
-          fontWeight: 600,
-          textAlign: 'center',
-          mb: 3
-        }}
-      >
-        Order Summary
-      </Typography>
-
-      {loading ? (
-        <Typography sx={{ textAlign: 'center', mb: 2, color: 'text.secondary' }}>Loading order summary...</Typography>
-      ) : null}
-
-      {error ? <Typography sx={{ textAlign: 'center', mb: 2, color: 'error.main' }}>{error}</Typography> : null}
-
-      <SectionCard title={summary?.hardSection?.sectionName || 'Hard Binding & Printing'} section={summary?.hardSection} bindLabel="Hard Bind" />
-      <SectionCard title={summary?.softSection?.sectionName || 'Soft Binding & Printing'} section={summary?.softSection} bindLabel="Soft Bind" />
-
-      {summary?.synopsisSection ? (
-        <SectionCard title={summary.synopsisSection.sectionName || 'Synopsis Binding & Printing'} section={summary.synopsisSection} bindLabel="Synopsis" />
-      ) : null}
-
-      {/* Total */}
       <Box
         sx={{
           display: 'flex',
@@ -1958,8 +2866,204 @@ function OrderSummaryStep({ summary, loading, error }) {
         }}
       >
         <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: theme.palette.info.main }}>Total</Typography>
-        <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>{summary?.grandTotal ?? 0} INR</Typography>
+        <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>{summary?.summary?.totalAmount ?? 0} INR</Typography>
       </Box>
+    </Box>
+  );
+}
+
+function CheckoutStep({ summary, checkoutForm, checkoutError, onFieldChange }) {
+  const theme = useTheme();
+  const border = `1px solid ${alpha(theme.palette.secondary.main, 0.16)}`;
+  const cardShadow = theme.vars.customShadows?.z1 || '0 8px 30px rgba(0, 0, 0, 0.06)';
+  const totalAmount = summary?.summary?.totalAmount ?? 0;
+  const subTotal = summary?.summary?.subTotal ?? summary?.summary?.printingCost ?? 0;
+  const gstAmount = summary?.summary?.gstAmount ?? summary?.summary?.taxAmount ?? 0;
+  const showShippingAddress = checkoutForm.shippingMode === 'delivery' && !checkoutForm.shippingSameAsBilling;
+
+  const inputSx = {
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 0,
+      bgcolor: 'common.white'
+    }
+  };
+
+  return (
+    <Box>
+      <Typography sx={{ fontSize: { xs: '1.2rem', md: '1.45rem' }, fontWeight: 600, mb: 3 }}>Check Out</Typography>
+
+      <Grid container spacing={3} alignItems="flex-start">
+        <Grid item xs={12} lg={8}>
+          <Paper elevation={0} sx={{ p: { xs: 2, md: 3 }, borderRadius: 0, border, boxShadow: cardShadow }}>
+            <Typography sx={{ fontSize: '1.55rem', fontWeight: 600, mb: 3 }}>Contact</Typography>
+            <Grid container spacing={2.5}>
+              <Grid item xs={12}>
+                <FieldLabel>Phone Number</FieldLabel>
+                <TextField fullWidth value={checkoutForm.mobile} onChange={(event) => onFieldChange('mobile', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12}>
+                <FieldLabel>Email</FieldLabel>
+                <TextField fullWidth value={checkoutForm.customerEmail} onChange={(event) => onFieldChange('customerEmail', event.target.value)} sx={inputSx} />
+              </Grid>
+            </Grid>
+
+            <Typography sx={{ fontSize: '1.55rem', fontWeight: 600, mt: 4, mb: 3 }}>Billing Address</Typography>
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} md={6}>
+                <FieldLabel>First Name</FieldLabel>
+                <TextField fullWidth value={checkoutForm.firstName} onChange={(event) => onFieldChange('firstName', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FieldLabel>Last Name</FieldLabel>
+                <TextField fullWidth value={checkoutForm.lastName} onChange={(event) => onFieldChange('lastName', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12}>
+                <FieldLabel>GST</FieldLabel>
+                <TextField fullWidth value={checkoutForm.gst} onChange={(event) => onFieldChange('gst', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12}>
+                <FieldLabel>University Name</FieldLabel>
+                <TextField fullWidth value={checkoutForm.universityName} onChange={(event) => onFieldChange('universityName', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12}>
+                <FieldLabel>Address</FieldLabel>
+                <TextField fullWidth value={checkoutForm.customerAddress} onChange={(event) => onFieldChange('customerAddress', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12}>
+                <FieldLabel>Apartment, suite, etc. (optional)</FieldLabel>
+                <TextField fullWidth value={checkoutForm.apartment} onChange={(event) => onFieldChange('apartment', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12}>
+                <FieldLabel>Country</FieldLabel>
+                <TextField fullWidth value={checkoutForm.country} onChange={(event) => onFieldChange('country', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FieldLabel>City</FieldLabel>
+                <TextField fullWidth value={checkoutForm.customerCity} onChange={(event) => onFieldChange('customerCity', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FieldLabel>State</FieldLabel>
+                <TextField fullWidth value={checkoutForm.state} onChange={(event) => onFieldChange('state', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <FieldLabel>PIN code</FieldLabel>
+                <TextField fullWidth value={checkoutForm.pincode} onChange={(event) => onFieldChange('pincode', event.target.value)} sx={inputSx} />
+              </Grid>
+            </Grid>
+
+            <Typography sx={{ fontSize: '1.55rem', fontWeight: 600, mt: 4, mb: 3 }}>Shipping Address</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
+              <CheckoutToggleButton active={checkoutForm.shippingMode === 'pickup'} onClick={() => onFieldChange('shippingMode', 'pickup')}>
+                I will Collect in Person
+              </CheckoutToggleButton>
+              <CheckoutToggleButton active={checkoutForm.shippingMode === 'delivery'} onClick={() => onFieldChange('shippingMode', 'delivery')}>
+                To be Sent to the Address
+              </CheckoutToggleButton>
+            </Stack>
+
+            {checkoutForm.shippingMode === 'delivery' ? (
+              <>
+                <CheckoutToggleButton active={checkoutForm.shippingSameAsBilling} onClick={() => onFieldChange('shippingSameAsBilling', !checkoutForm.shippingSameAsBilling)}>
+                  Same As Billing Address
+                </CheckoutToggleButton>
+
+                {showShippingAddress ? (
+                  <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
+                    <Grid item xs={12}>
+                      <FieldLabel>Address</FieldLabel>
+                      <TextField fullWidth value={checkoutForm.shippingAddress} onChange={(event) => onFieldChange('shippingAddress', event.target.value)} sx={inputSx} />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FieldLabel>Apartment, suite, etc. (optional)</FieldLabel>
+                      <TextField fullWidth value={checkoutForm.shippingApartment} onChange={(event) => onFieldChange('shippingApartment', event.target.value)} sx={inputSx} />
+                    </Grid>
+                    <Grid item xs={12}>
+                      <FieldLabel>Country</FieldLabel>
+                      <TextField fullWidth value={checkoutForm.shippingCountry} onChange={(event) => onFieldChange('shippingCountry', event.target.value)} sx={inputSx} />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <FieldLabel>City</FieldLabel>
+                      <TextField fullWidth value={checkoutForm.shippingCity} onChange={(event) => onFieldChange('shippingCity', event.target.value)} sx={inputSx} />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <FieldLabel>State</FieldLabel>
+                      <TextField fullWidth value={checkoutForm.shippingState} onChange={(event) => onFieldChange('shippingState', event.target.value)} sx={inputSx} />
+                    </Grid>
+                    <Grid item xs={12} md={4}>
+                      <FieldLabel>PIN code</FieldLabel>
+                      <TextField fullWidth value={checkoutForm.shippingPincode} onChange={(event) => onFieldChange('shippingPincode', event.target.value)} sx={inputSx} />
+                    </Grid>
+                  </Grid>
+                ) : null}
+              </>
+            ) : null}
+
+            {checkoutError ? (
+              <Typography color="error" sx={{ mt: 2, fontSize: '0.85rem' }}>
+                {checkoutError}
+              </Typography>
+            ) : null}
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} lg={4}>
+          <Paper elevation={0} sx={{ p: { xs: 2, md: 2.5 }, borderRadius: 0, border, boxShadow: cardShadow, position: { lg: 'sticky' }, top: 24 }}>
+            <Typography sx={{ fontSize: '1.2rem', fontWeight: 600, mb: 2 }}>Order Summary</Typography>
+
+            <Stack spacing={1.5} sx={{ mb: 2.5 }}>
+              <SummaryLine label="Sub Total" value={`${subTotal} INR`} />
+              <SummaryLine label="GST | 9 %" value={`${gstAmount} INR`} />
+            </Stack>
+
+            <Box sx={{ borderTop: border, pt: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography sx={{ fontSize: '1.4rem', fontWeight: 700, color: theme.palette.info.main }}>Total</Typography>
+              <Typography sx={{ fontSize: '1.3rem', fontWeight: 700, color: theme.palette.info.main }}>&#x20B9; {totalAmount}</Typography>
+            </Box>
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+}
+
+function FieldLabel({ children }) {
+  return (
+    <Typography sx={{ mb: 0.75, fontSize: '0.82rem', color: 'text.primary' }}>
+      {children}
+    </Typography>
+  );
+}
+
+function CheckoutToggleButton({ active, children, onClick }) {
+  const theme = useTheme();
+
+  return (
+    <Button
+      onClick={onClick}
+      variant="outlined"
+      sx={{
+        borderRadius: 0,
+        px: 2,
+        py: 1,
+        borderColor: theme.palette.info.main,
+        color: active ? 'common.white' : theme.palette.info.main,
+        bgcolor: active ? theme.palette.info.main : 'common.white',
+        '&:hover': {
+          borderColor: theme.palette.info.main,
+          bgcolor: active ? theme.palette.info.main : alpha(theme.palette.info.main, 0.08)
+        }
+      }}
+    >
+      {children}
+    </Button>
+  );
+}
+
+function SummaryLine({ label, value }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+      <Typography sx={{ fontSize: '0.92rem', color: 'text.secondary' }}>{label}</Typography>
+      <Typography sx={{ fontSize: '0.92rem', color: 'text.primary' }}>{value}</Typography>
     </Box>
   );
 }
