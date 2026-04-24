@@ -41,6 +41,12 @@ const support = {
           title: 'Teams',
           type: 'item',
           url: '/admin/teams'
+        },
+        {
+          id: 'payment-details',
+          title: 'Payment Details',
+          type: 'item',
+          url: '/admin/payment-details'
         }
       ]
     },

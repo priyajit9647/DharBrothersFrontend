@@ -36,6 +36,7 @@ const BindingCoverMaterialMaster = Loadable(lazy(() => import('pages/admin/maste
 const PrintingRateMaster = Loadable(lazy(() => import('pages/admin/masters/PrintingRateMaster')));
 const OtherChargeMaster = Loadable(lazy(() => import('pages/admin/masters/OtherChargeMaster')));
 const BindingRateMaster = Loadable(lazy(() => import('pages/admin/masters/BindingRateMaster')));
+const PaymentConfigurationMaster = Loadable(lazy(() => import('pages/admin/PaymentConfigurationMaster')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -110,6 +111,10 @@ const MainRoutes = {
         {
           path: 'teams',
           element: <Teams />
+        },
+        {
+          path: 'payment-details',
+          element: <PaymentConfigurationMaster />
         },
         {
           path: 'users',

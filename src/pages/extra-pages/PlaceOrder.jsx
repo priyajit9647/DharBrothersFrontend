@@ -709,8 +709,14 @@ export default function PlaceOrder() {
         throw new Error('Invalid temp order id received from upload-temp API.');
       }
 
-      await attachOrder(tempId, buildCreateOrderPayload());
-      setSubmitMessage('Order created successfully.');
+      const attachResponse = await attachOrder(tempId, buildCreateOrderPayload());
+      const paymentUrl = `${attachResponse?.reason || ''}`.trim();
+
+      if (!paymentUrl) {
+        throw new Error('Payment redirect URL was not returned by attach-order API.');
+      }
+
+      window.location.assign(paymentUrl);
     } catch (error) {
       setSubmitError(error.message || 'Failed to create order.');
     } finally {
@@ -863,7 +869,7 @@ export default function PlaceOrder() {
                     {currentStepKey === 'checkout'
                       ? isSubmittingOrder
                         ? 'Submitting...'
-                        : 'Place Order'
+                        : 'Make Payment'
                       : currentStepKey === 'summary'
                         ? 'Proceed to Checkout'
                       : currentStepKey === 'upload' && pageDetailsLoading
