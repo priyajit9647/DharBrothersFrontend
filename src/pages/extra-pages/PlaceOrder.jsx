@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 
-import { CloudUploadOutlined, EnvironmentOutlined, FacebookFilled, InstagramOutlined, MailOutlined, PhoneOutlined, TwitterOutlined } from '@ant-design/icons';
+import { CloudUploadOutlined, EditOutlined, EnvironmentOutlined, FacebookFilled, InfoCircleOutlined, InstagramOutlined, MailOutlined, PhoneOutlined, TwitterOutlined } from '@ant-design/icons';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -11,6 +11,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
+import { createOrder, getOrderSummary } from 'api/order';
 import Logo from 'components/logo';
 
 import banner2 from 'assets/banner/banner2.jpg';
@@ -30,6 +31,12 @@ const stepTitles = {
 export default function PlaceOrder() {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState('');
+  const [orderSummary, setOrderSummary] = useState(null);
 
   const stepGroupIndex = activeStep;
   const currentTitle = useMemo(() => stepTitles[activeStep] || 'Upload Documents', [activeStep]);
@@ -40,6 +47,65 @@ export default function PlaceOrder() {
 
   const handleBack = () => {
     setActiveStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const loadOrderSummary = async (orderId) => {
+    if (!orderId) {
+      setSummaryError('Order created, but orderId is missing in response.');
+      return;
+    }
+
+    setSummaryLoading(true);
+    setSummaryError('');
+
+    try {
+      const summary = await getOrderSummary(orderId);
+      setOrderSummary(summary);
+    } catch (error) {
+      setSummaryError(error.message || 'Failed to load order summary.');
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    setSubmitError('');
+    setSubmitMessage('');
+    setSummaryError('');
+    setIsSubmittingOrder(true);
+
+    try {
+      const payload = {
+        thesisDocument: 'string',
+        synopsisDocument: 'string',
+        totalPages: 1073741824,
+        colourPages: 1073741824,
+        pageAndPageTypeIdMap: {
+          additionalProp1: 9007199254740991,
+          additionalProp2: 9007199254740991,
+          additionalProp3: 9007199254740991
+        }
+      };
+
+      const created = await createOrder(payload);
+      setSubmitMessage('Order created successfully.');
+
+      const orderId = created?.orderId ?? created?.id ?? created?.data?.orderId ?? created?.data?.id;
+      await loadOrderSummary(orderId);
+    } catch (error) {
+      setSubmitError(error.message || 'Failed to create order.');
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const handlePrimaryAction = async () => {
+    if (activeStep === steps.length - 1) {
+      await handlePlaceOrder();
+      return;
+    }
+
+    handleNext();
   };
 
   return (
@@ -69,7 +135,7 @@ export default function PlaceOrder() {
               {activeStep === 1 && <DocumentDetailsStep />}
               {activeStep === 2 && <HardBindingStep />}
               {activeStep === 3 && <SoftBindingStep />}
-              {activeStep > 3 && <DetailStep title={currentTitle} stepIndex={activeStep} />}
+              {activeStep === 4 && <OrderSummaryStep summary={orderSummary} loading={summaryLoading} error={summaryError} />}
 
               <Box
                 sx={{
@@ -98,8 +164,9 @@ export default function PlaceOrder() {
 
                 <Box>
                   <Button
-                    onClick={handleNext}
+                    onClick={handlePrimaryAction}
                     variant="contained"
+                    disabled={isSubmittingOrder}
                     sx={{
                       minWidth: 110,
                       borderRadius: 0,
@@ -112,10 +179,22 @@ export default function PlaceOrder() {
                       }
                     }}
                   >
-                    {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
+                    {activeStep === steps.length - 1 ? (isSubmittingOrder ? 'Submitting...' : 'Confirm Order') : 'Next'}
                   </Button>
                 </Box>
               </Box>
+
+              {submitError ? (
+                <Typography color="error" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
+                  {submitError}
+                </Typography>
+              ) : null}
+
+              {submitMessage ? (
+                <Typography color="success.main" sx={{ mt: 1.5, fontSize: '0.85rem' }}>
+                  {submitMessage}
+                </Typography>
+              ) : null}
             </Box>
           </Paper>
         </Container>
@@ -1698,61 +1777,189 @@ function SoftBindingStep() {
   );
 }
 
-function DetailStep({ title, stepIndex }) {
+function OrderSummaryStep({ summary, loading, error }) {
   const theme = useTheme();
 
+  const border = `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`;
+  const tableHeaderBg = alpha(theme.palette.info.main, 0.1);
+  const subTotalBg = alpha(theme.palette.info.main, 0.08);
+
+  const tableBaseStyles = {
+    width: '100%',
+    borderCollapse: 'collapse',
+    '& th, & td': {
+      border,
+      px: 1.5,
+      py: 1,
+      fontSize: '0.8rem',
+      textAlign: 'left'
+    }
+  };
+
+  function SectionCard({ title, section, bindLabel }) {
+    const printRows = Array.isArray(section?.printDetails) ? section.printDetails : [];
+    const bindingRows = Array.isArray(section?.bindingDetails) ? section.bindingDetails : [];
+
+    return (
+      <Box
+        sx={{
+          border,
+          mb: 3,
+          overflow: 'hidden'
+        }}
+      >
+        {/* Section title */}
+        <Box sx={{ px: 2.5, py: 1.5, bgcolor: alpha(theme.palette.info.main, 0.06), borderBottom: border }}>
+          <Typography sx={{ fontSize: '1rem', fontWeight: 700 }}>{title}</Typography>
+        </Box>
+
+        <Box sx={{ p: { xs: 1.5, md: 2.5 } }}>
+          {/* Print Details header */}
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25 }}>
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: theme.palette.info.main }}>Print Details</Typography>
+            <InfoCircleOutlined style={{ fontSize: 13, color: theme.palette.info.main }} />
+          </Stack>
+
+          {/* Print table */}
+          <Box component="table" sx={{ ...tableBaseStyles, mb: 2.5 }}>
+            <Box component="thead">
+              <Box component="tr" sx={{ bgcolor: tableHeaderBg }}>
+                {['Description', 'Copies', 'Colour/ BW', '1st Copy Rate', 'Additional Copy Rate', 'Cost'].map((h) => (
+                  <Box key={h} component="th" sx={{ fontWeight: 600 }}>
+                    {h}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box component="tbody">
+              {printRows.length ? (
+                printRows.map((row, index) => (
+                  <Box key={`${row.description || 'print'}-${index}`} component="tr">
+                    <Box component="td">{row.description || '-'}</Box>
+                    <Box component="td">{row.copies ?? 0}</Box>
+                    <Box component="td">{row.colorType || '-'}</Box>
+                    <Box component="td">{row.firstCopyRate ?? 0}</Box>
+                    <Box component="td">{row.additionalCopyRate ?? 0}</Box>
+                    <Box component="td" sx={{ color: theme.palette.info.main }}>&#x20B9; {row.cost ?? 0}</Box>
+                  </Box>
+                ))
+              ) : (
+                <Box component="tr">
+                  <Box component="td">-</Box>
+                  <Box component="td">0</Box>
+                  <Box component="td">-</Box>
+                  <Box component="td">0</Box>
+                  <Box component="td">0</Box>
+                  <Box component="td" sx={{ color: theme.palette.info.main }}>&#x20B9; 0</Box>
+                </Box>
+              )}
+              <Box component="tr" sx={{ bgcolor: subTotalBg }}>
+                <Box component="td" colSpan={5} sx={{ fontWeight: 600, color: theme.palette.info.main }}>
+                  Sub Total
+                </Box>
+                <Box component="td" sx={{ fontWeight: 600, color: theme.palette.info.main }}>&#x20B9; {section?.subTotal ?? 0}</Box>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Binding Details header */}
+          <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mb: 1.25 }}>
+            <Typography sx={{ fontSize: '0.85rem', fontWeight: 600, color: theme.palette.info.main }}>Binding Details</Typography>
+            <InfoCircleOutlined style={{ fontSize: 13, color: theme.palette.info.main }} />
+          </Stack>
+
+          {/* Binding table */}
+          <Box component="table" sx={tableBaseStyles}>
+            <Box component="thead">
+              <Box component="tr" sx={{ bgcolor: tableHeaderBg }}>
+                {['Description', 'Copies', 'Cost'].map((h) => (
+                  <Box key={h} component="th" sx={{ fontWeight: 600 }}>
+                    {h}
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box component="tbody">
+              {bindingRows.length ? (
+                bindingRows.map((row, index) => (
+                  <Box key={`${row.description || bindLabel}-${index}`} component="tr">
+                    <Box component="td">{row.description || bindLabel}</Box>
+                    <Box component="td">{row.copies ?? 0}</Box>
+                    <Box component="td" sx={{ color: theme.palette.info.main }}>&#x20B9; {row.cost ?? 0}</Box>
+                  </Box>
+                ))
+              ) : (
+                <Box component="tr">
+                  <Box component="td">{bindLabel}</Box>
+                  <Box component="td">0</Box>
+                  <Box component="td" sx={{ color: theme.palette.info.main }}>&#x20B9; 0</Box>
+                </Box>
+              )}
+            </Box>
+          </Box>
+
+          {/* Edit Order */}
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+            <Stack
+              direction="row"
+              spacing={0.6}
+              alignItems="center"
+              sx={{
+                cursor: 'pointer',
+                color: theme.palette.info.main,
+                '&:hover': { opacity: 0.75 }
+              }}
+            >
+              <EditOutlined style={{ fontSize: 13 }} />
+              <Typography sx={{ fontSize: '0.8rem', color: 'inherit' }}>Edit Order</Typography>
+            </Stack>
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ py: { xs: 1, md: 2 } }}>
-      <Typography sx={{ fontSize: { xs: '1.35rem', md: '1.8rem' }, fontWeight: 700, mb: 1.5 }}>{title}</Typography>
-      <Typography sx={{ maxWidth: 720, color: 'text.secondary', fontSize: '0.94rem', mb: 3 }}>
-        Continue the order flow with the same visual language. This section keeps the public-site layout from the upload screen while exposing the next step in the thesis ordering journey.
+    <Box>
+      <Typography
+        sx={{
+          fontSize: { xs: '1.2rem', md: '1.4rem' },
+          fontWeight: 600,
+          textAlign: 'center',
+          mb: 3
+        }}
+      >
+        Order Summary
       </Typography>
 
-      <Grid container spacing={2.5}>
-        <Grid item xs={12} md={7}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 2.5, md: 3 },
-              borderRadius: 0,
-              border: '1px solid',
-              borderColor: 'divider',
-              minHeight: 260
-            }}
-          >
-            <Typography sx={{ fontSize: '0.8rem', letterSpacing: 1.2, color: 'text.secondary', textTransform: 'uppercase', mb: 1.25 }}>
-              Step {stepIndex + 1} of {steps.length}
-            </Typography>
-            <Typography sx={{ fontSize: '1.05rem', fontWeight: 600, mb: 1.5 }}>Section details will be placed here</Typography>
-            <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem', lineHeight: 1.7 }}>
-              Use this area for the corresponding fields, selections, and pricing inputs. The page styling remains aligned with the uploaded reference: light backgrounds, thin dividers, muted text, and cyan and pale-gold accents.
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={5}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 2.5, md: 3 },
-              borderRadius: 0,
-              border: '1px solid',
-              borderColor: 'divider',
-              minHeight: 260,
-              bgcolor: alpha(theme.palette.warning.lighter, 0.22)
-            }}
-          >
-            <Typography sx={{ fontSize: '1rem', fontWeight: 600, mb: 1.25 }}>Order Snapshot</Typography>
-            <Stack spacing={1.25}>
-              {steps.slice(0, stepIndex + 1).map((step) => (
-                <Box key={step} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-                  <Typography sx={{ fontSize: '0.88rem' }}>{step}</Typography>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.info.main }} />
-                </Box>
-              ))}
-            </Stack>
-          </Paper>
-        </Grid>
-      </Grid>
+      {loading ? (
+        <Typography sx={{ textAlign: 'center', mb: 2, color: 'text.secondary' }}>Loading order summary...</Typography>
+      ) : null}
+
+      {error ? <Typography sx={{ textAlign: 'center', mb: 2, color: 'error.main' }}>{error}</Typography> : null}
+
+      <SectionCard title={summary?.hardSection?.sectionName || 'Hard Binding & Printing'} section={summary?.hardSection} bindLabel="Hard Bind" />
+      <SectionCard title={summary?.softSection?.sectionName || 'Soft Binding & Printing'} section={summary?.softSection} bindLabel="Soft Bind" />
+
+      {summary?.synopsisSection ? (
+        <SectionCard title={summary.synopsisSection.sectionName || 'Synopsis Binding & Printing'} section={summary.synopsisSection} bindLabel="Synopsis" />
+      ) : null}
+
+      {/* Total */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          px: 2,
+          py: 1.5,
+          border,
+          mt: 0.5
+        }}
+      >
+        <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: theme.palette.info.main }}>Total</Typography>
+        <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary' }}>{summary?.grandTotal ?? 0} INR</Typography>
+      </Box>
     </Box>
   );
 }
