@@ -146,5 +146,80 @@ export async function fetchWhatsappAttachmentBlob(attachmentId) {
 	return response.blob();
 }
 
+/**
+ * Create a WhatsApp notification template.
+ *
+ * Backend route: POST /api/v1/master/whatsapp-notifications/create
+ */
+export function createWhatsappNotificationTemplate({ event, subjectTemplate, bodyTemplate, active }) {
+	if (!event) {
+		throw new Error('event is required to create a WhatsApp notification template');
+	}
+
+	return authorizedFetch('/api/v1/master/whatsapp-notifications/create', {
+		method: 'POST',
+		body: JSON.stringify({ event, subjectTemplate, bodyTemplate, active })
+	});
+}
+
+/**
+ * Fetch the list of WhatsApp notification templates.
+ *
+ * Backend route: POST /api/v1/master/whatsapp-notifications/list
+ */
+export function fetchWhatsappNotificationTemplates() {
+	return authorizedFetch('/api/v1/master/whatsapp-notifications/list', {
+		method: 'POST'
+	});
+}
+
+/**
+ * Update a WhatsApp notification template.
+ *
+ * Backend route: PUT /api/v1/master/whatsapp-notifications/edit/{id}
+ */
+export function editWhatsappNotificationTemplate(id, { event, subjectTemplate, bodyTemplate, active }) {
+	if (!id) {
+		throw new Error('id is required to edit a WhatsApp notification template');
+	}
+
+	if (!event) {
+		throw new Error('event is required to edit a WhatsApp notification template');
+	}
+
+	return authorizedFetch(`/api/v1/master/whatsapp-notifications/edit/${encodeURIComponent(id)}`, {
+		method: 'PUT',
+		body: JSON.stringify({ event, subjectTemplate, bodyTemplate, active })
+	});
+}
+
+/**
+ * Enable or disable a WhatsApp notification template.
+ *
+ * Backend route: PATCH /api/v1/master/whatsapp-notifications/disable/{id}/{active}
+ */
+export function toggleWhatsappNotificationTemplate(id, active) {
+	if (!id) {
+		throw new Error('id is required to update a WhatsApp notification template');
+	}
+
+	return authorizedFetch(`/api/v1/master/whatsapp-notifications/disable/${encodeURIComponent(id)}/${active}`, {
+		method: 'PATCH'
+	});
+}
+
+/**
+ * Fetch the list of WhatsApp notifications (sent notification history/logs).
+ *
+ * Backend route: POST /api/v1/notifications/whatsapp/list
+ * Returns an array of notification objects with id, customerId, customerName, customerPhone, 
+ * notificationId, event, subject, body, sent, retryCount, errorMessage, createdDate
+ */
+export function fetchWhatsappNotificationHistory() {
+	return authorizedFetch('/api/v1/notifications/whatsapp/list', {
+		method: 'GET'
+	});
+}
+
 // Note: webhook verification and receive endpoints are handled server-side only.
 
