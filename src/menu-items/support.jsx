@@ -83,17 +83,23 @@ const support = {
         }
       ]
     },
-        {
-          id: 'masters',
-          title: 'Masters',
-          type: 'collapse',
-          icon: icons.SettingOutlined,
-          children: [
+    {
+      id: 'masters',
+      title: 'Masters',
+      type: 'collapse',
+      icon: icons.SettingOutlined,
+      children: [
         {
           id: 'process-stage-master',
           title: 'Process Stages',
           type: 'item',
           url: '/admin/masters/process-stages'
+        },
+        {
+          id: 'process-stage-assignment',
+          title: 'Stage Assignments',
+          type: 'item',
+          url: '/admin/masters/process-stage-assignments'
         },
         {
           id: 'printing-type-master',
