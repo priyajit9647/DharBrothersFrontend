@@ -24,6 +24,9 @@ const Teams = Loadable(lazy(() => import('pages/admin/Teams')));
 const AdminUsers = Loadable(lazy(() => import('pages/admin/AdminUsers')));
 const Materials = Loadable(lazy(() => import('pages/admin/Materials')));
 const NotificationTemplates = Loadable(lazy(() => import('pages/admin/NotificationTemplates')));
+const NotificationEmail = Loadable(lazy(() => import('pages/admin/NotificationEmail')));
+const WhatsappNotifications = Loadable(lazy(() => import('pages/admin/WhatsappNotifications')));
+const InAppNotifications = Loadable(lazy(() => import('pages/admin/InAppNotifications')));
 const SystemSettings = Loadable(lazy(() => import('pages/admin/Settings')));
 const ProcessStageMaster = Loadable(lazy(() => import('pages/admin/masters/ProcessStageMaster')));
 const PrintingTypeMaster = Loadable(lazy(() => import('pages/admin/masters/PrintingTypeMaster')));
@@ -127,6 +130,18 @@ const MainRoutes = {
         {
           path: 'notifications',
           element: <NotificationTemplates />
+        },
+        {
+          path: 'notifications/email',
+          element: <NotificationEmail />
+        },
+        {
+          path: 'notifications/whatsapp-history',
+          element: <WhatsappNotifications />
+        },
+        {
+          path: 'notifications/in-app',
+          element: <InAppNotifications />
         },
         {
           path: 'settings',

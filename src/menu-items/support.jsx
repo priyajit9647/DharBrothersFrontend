@@ -60,9 +60,28 @@ const support = {
     {
       id: 'notification-templates',
       title: 'Notification Templates',
-      type: 'item',
-      url: '/admin/notifications',
-      icon: icons.BellOutlined
+      type: 'collapse',
+      icon: icons.BellOutlined,
+      children: [
+        {
+          id: 'notification-email',
+          title: 'Email Notification',
+          type: 'item',
+          url: '/admin/notifications/email'
+        },
+        {
+          id: 'whatsapp-notifications',
+          title: 'WhatsApp Notifications',
+          type: 'item',
+          url: '/admin/notifications/whatsapp-history'
+        },
+        {
+          id: 'in-app-notifications',
+          title: 'In-App Notifications',
+          type: 'item',
+          url: '/admin/notifications/in-app'
+        }
+      ]
     },
         {
           id: 'masters',
