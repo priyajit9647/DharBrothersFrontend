@@ -26,6 +26,7 @@ const Materials = Loadable(lazy(() => import('pages/admin/Materials')));
 const NotificationTemplates = Loadable(lazy(() => import('pages/admin/NotificationTemplates')));
 const SystemSettings = Loadable(lazy(() => import('pages/admin/Settings')));
 const ProcessStageMaster = Loadable(lazy(() => import('pages/admin/masters/ProcessStageMaster')));
+const ProcessStageAssignment = Loadable(lazy(() => import('pages/admin/masters/ProcessStageAssignment')));
 const PrintingTypeMaster = Loadable(lazy(() => import('pages/admin/masters/PrintingTypeMaster')));
 const PrintColorMaster = Loadable(lazy(() => import('pages/admin/masters/PrintColorMaster')));
 const PaperMaster = Loadable(lazy(() => import('pages/admin/masters/PaperMaster')));
@@ -138,6 +139,10 @@ const MainRoutes = {
             {
               path: 'process-stages',
               element: <ProcessStageMaster />
+            },
+            {
+              path: 'process-stage-assignments',
+              element: <ProcessStageAssignment />
             },
             {
               path: 'printing-types',
