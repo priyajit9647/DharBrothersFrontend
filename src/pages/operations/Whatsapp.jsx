@@ -16,12 +16,103 @@ import Avatar from '@mui/material/Avatar';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 
-import { SearchOutlined, SendOutlined, MoreOutlined } from '@ant-design/icons';
+import { SearchOutlined, SendOutlined, MoreOutlined, PaperClipOutlined } from '@ant-design/icons';
 
 import MainCard from 'components/MainCard';
-import { fetchWhatsappConversations, fetchWhatsappConversationById, sendWhatsappMessage } from 'api/whatsapp';
+import { fetchWhatsappAttachmentBlob, fetchWhatsappConversations, fetchWhatsappConversationById, sendWhatsappMessage } from 'api/whatsapp';
 
 // ==============================|| BMS - WHATSAPP (WEB-STYLE VIEW) ||============================== //
+
+const getMessageTimestamp = (message) => {
+  const rawTimestamp = message?.receivedDate || message?.processedDate || message?.sentAt || message?.createdAt;
+
+  if (!rawTimestamp) {
+    return null;
+  }
+
+  const timestamp = new Date(rawTimestamp);
+  return Number.isNaN(timestamp.getTime()) ? null : timestamp;
+};
+
+const formatMessageDateTime = (timestamp) => {
+  if (!timestamp) {
+    return '';
+  }
+
+  return timestamp.toLocaleString([], {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const getConversationPhone = (conversation) => {
+  const directPhone =
+    conversation?.phone ||
+    conversation?.mobileNo ||
+    conversation?.mobile ||
+    conversation?.customerPhone ||
+    conversation?.whatsappNo ||
+    conversation?.whatsapp ||
+    conversation?.contactPhone;
+
+  if (directPhone) {
+    return String(directPhone);
+  }
+
+  const direction = typeof conversation?.direction === 'string' ? conversation.direction.toLowerCase() : '';
+
+  if (direction === 'outgoing' || direction === 'outbound' || direction === 'out') {
+    return conversation?.toPhone ? String(conversation.toPhone) : null;
+  }
+
+  if (direction === 'incoming' || direction === 'inbound' || direction === 'in') {
+    return conversation?.fromPhone ? String(conversation.fromPhone) : null;
+  }
+
+  return conversation?.toPhone || conversation?.fromPhone ? String(conversation?.toPhone || conversation?.fromPhone) : null;
+};
+
+const getConversationDisplayName = (conversation) => {
+  return conversation?.customerName || conversation?.name || conversation?.title || getConversationPhone(conversation) || 'Customer';
+};
+
+const getConversationTimestamp = (conversation) => {
+  return (
+    conversation?.escalatedAt ||
+    conversation?.lastMessageAt ||
+    conversation?.updatedAt ||
+    conversation?.createdAt ||
+    conversation?.processedDate ||
+    conversation?.receivedDate ||
+    conversation?.sentAt
+  );
+};
+
+const isIncomingMessage = (message) => {
+  const direction = typeof message?.direction === 'string' ? message.direction.toUpperCase() : '';
+  return direction === 'INCOMING' || direction === 'INBOUND' || direction === 'IN';
+};
+
+const getMessageAttachments = (message) => {
+  if (!message?.attachments || typeof message.attachments !== 'object') {
+    return [];
+  }
+
+  return Object.entries(message.attachments).map(([attachmentId, attachmentValue]) => {
+    const fallbackName = message?.messageType === 'document' ? 'Document' : 'Attachment';
+    const keyLooksLikeUrl = /^https?:\/\//i.test(attachmentId);
+    const valueLooksLikeUrl = typeof attachmentValue === 'string' && /^https?:\/\//i.test(attachmentValue);
+
+    return {
+      id: attachmentId,
+      filename: valueLooksLikeUrl ? fallbackName : attachmentValue || fallbackName,
+      href: valueLooksLikeUrl ? attachmentValue : keyLooksLikeUrl ? attachmentId : null
+    };
+  });
+};
 
 export default function Whatsapp() {
   const [conversations, setConversations] = useState([]);
@@ -49,7 +140,7 @@ export default function Whatsapp() {
         // Auto-select the first conversation when none is selected yet.
         if (!selectedConversationId && items.length > 0) {
           const first = items[0];
-          const firstId = first.phone || first.id || first._id;
+          const firstId = getConversationPhone(first);
           if (firstId) {
             setSelectedConversationId(firstId);
           }
@@ -73,7 +164,15 @@ export default function Whatsapp() {
       setError('');
 
       const data = await fetchWhatsappConversationById(conversationId);
-      setSelectedConversation(data);
+      const messageItems = Array.isArray(data) ? data : data?.items || data?.data || data?.messages || data?.chats || [];
+      const selectedRecord = conversations.find((conversation) => getConversationPhone(conversation) === conversationId);
+
+      setSelectedConversation({
+        ...selectedRecord,
+        phone: conversationId,
+        customerName: getConversationDisplayName(selectedRecord),
+        messages: messageItems
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to load WhatsApp conversation', err);
@@ -81,7 +180,7 @@ export default function Whatsapp() {
     } finally {
       setConversationLoading(false);
     }
-  }, []);
+  }, [conversations]);
 
   useEffect(() => {
     loadConversations(search);
@@ -96,7 +195,7 @@ export default function Whatsapp() {
   }, [selectedConversationId, loadConversationDetail]);
 
   const handleSelectConversation = (conversation) => {
-    const id = conversation?.phone || conversation?.id || conversation?._id;
+    const id = getConversationPhone(conversation);
     if (!id) return;
     setSelectedConversationId(id);
   };
@@ -117,10 +216,44 @@ export default function Whatsapp() {
     }
   };
 
+  const handleOpenAttachment = (attachment) => {
+    if (attachment?.href) {
+      window.open(attachment.href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment) => {
+    if (!attachment) {
+      return;
+    }
+
+    if (attachment.href) {
+      handleOpenAttachment(attachment);
+      return;
+    }
+
+    try {
+      const blob = await fetchWhatsappAttachmentBlob(attachment.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.filename || 'attachment';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (downloadError) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to download WhatsApp attachment', downloadError);
+      setError(downloadError?.message || 'Failed to download WhatsApp attachment');
+    }
+  };
+
   const formattedConversations = useMemo(() => {
     return conversations.map((conv) => {
-      const id = conv.phone || conv.id || conv._id;
-      const customerName = conv.phone || conv.customerName || conv.name || conv.title || 'Customer';
+      const id = getConversationPhone(conv);
+      const customerName = getConversationDisplayName(conv);
       const jobLabel = conv.assignedAdmin
         ? `Agent: ${conv.assignedAdmin}`
         : conv.jobId
@@ -128,7 +261,7 @@ export default function Whatsapp() {
           : conv.orderId
             ? `Order #${conv.orderId}`
             : '';
-      const lastMessageTimeRaw = conv.escalatedAt || conv.lastMessageAt || conv.updatedAt || conv.createdAt;
+      const lastMessageTimeRaw = getConversationTimestamp(conv);
       let lastMessageTime = '';
       if (lastMessageTimeRaw) {
         const d = new Date(lastMessageTimeRaw);
@@ -142,7 +275,8 @@ export default function Whatsapp() {
           ? conv.aiEnabled
             ? 'AI enabled'
             : 'AI disabled'
-          : conv.lastMessageSnippet ||
+          : conv.body ||
+            conv.lastMessageSnippet ||
             conv.lastMessagePreview ||
             conv.lastMessage?.body ||
             conv.preview ||
@@ -163,15 +297,30 @@ export default function Whatsapp() {
   const messages = useMemo(() => {
     if (!selectedConversation) return [];
 
-    if (Array.isArray(selectedConversation.messages)) {
-      return selectedConversation.messages;
-    }
+    const rawMessages = Array.isArray(selectedConversation.messages)
+      ? selectedConversation.messages
+      : Array.isArray(selectedConversation.chats)
+        ? selectedConversation.chats
+        : [];
 
-    if (Array.isArray(selectedConversation.chats)) {
-      return selectedConversation.chats;
-    }
+    return [...rawMessages].sort((leftMessage, rightMessage) => {
+      const leftTimestamp = getMessageTimestamp(leftMessage);
+      const rightTimestamp = getMessageTimestamp(rightMessage);
 
-    return [];
+      if (!leftTimestamp && !rightTimestamp) {
+        return 0;
+      }
+
+      if (!leftTimestamp) {
+        return 1;
+      }
+
+      if (!rightTimestamp) {
+        return -1;
+      }
+
+      return leftTimestamp.getTime() - rightTimestamp.getTime();
+    });
   }, [selectedConversation]);
 
   const headerTitle =
@@ -348,37 +497,63 @@ export default function Whatsapp() {
               ) : selectedConversation ? (
                 <Stack spacing={1.5}>
                   {messages.map((msg) => {
-                    const key = msg.id || msg._id || `${msg.sentAt}-${Math.random()}`;
-                    const direction = typeof msg.direction === 'string' ? msg.direction.toLowerCase() : '';
-                    const isOutbound = direction === 'outbound' || direction === 'out' || msg.from === 'business';
+                    const key = msg.id || msg._id || `${msg.waMessageId || msg.sentAt || msg.processedDate || msg.receivedDate}-${msg.body || ''}`;
+                    const isIncoming = isIncomingMessage(msg);
+                    const attachments = getMessageAttachments(msg);
+                    const shouldHideBody = msg.messageType === 'document' && attachments.length > 0;
 
-                    const timestamp = msg.sentAt || msg.processedDate || msg.receivedDate;
-                    const timeLabel = timestamp
-                      ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : '';
+                    const timestamp = getMessageTimestamp(msg);
+                    const timeLabel = formatMessageDateTime(timestamp);
 
                     return (
-                      <Box key={key} sx={{ display: 'flex', justifyContent: isOutbound ? 'flex-end' : 'flex-start' }}>
+                      <Box key={key} sx={{ display: 'flex', justifyContent: isIncoming ? 'flex-start' : 'flex-end' }}>
                         <Box
                           sx={{
-                            maxWidth: '100%',
-                            px: 1.5,
-                            py: 1,
-                            borderRadius: 2,
-                            bgcolor: isOutbound ? 'success.light' : 'background.paper'
+                            maxWidth: '75%',
+                            p: 1.25,
+                            borderRadius: 1.5,
+                            bgcolor: isIncoming ? 'background.paper' : 'primary.light'
                           }}
                         >
-                          <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                            {msg.body || ''}
+                          <Typography variant="caption" color="text.secondary">
+                            {isIncoming ? 'From' : 'To'} {isIncoming ? msg.fromPhone : msg.toPhone}
+                            {timeLabel ? ` · ${timeLabel}` : ''}
                           </Typography>
-                          {timeLabel && (
+
+                          {!shouldHideBody && (
+                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>
+                              {msg.body || ''}
+                            </Typography>
+                          )}
+
+                          {attachments.length > 0 && (
+                            <Stack direction="row" spacing={1} sx={{ mt: shouldHideBody ? 0.75 : 1 }}>
+                              <PaperClipOutlined style={{ fontSize: 16 }} />
+                              <Stack spacing={0.5}>
+                                {attachments.map((attachment) => (
+                                  <Button
+                                    key={`${key}-${attachment.id}`}
+                                    size="small"
+                                    variant="text"
+                                    sx={{ justifyContent: 'flex-start', p: 0, minWidth: 0, textTransform: 'none' }}
+                                    onClick={() => handleDownloadAttachment(attachment)}
+                                  >
+                                    <Typography variant="body2" color="primary">
+                                      {attachment.filename}
+                                    </Typography>
+                                  </Button>
+                                ))}
+                              </Stack>
+                            </Stack>
+                          )}
+
+                          {(timeLabel || msg.aiGenerated) && (
                             <Typography
                               variant="caption"
                               color="text.secondary"
-                              sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}
+                              sx={{ display: 'block', textAlign: 'right', mt: 0.75 }}
                             >
-                              {timeLabel}
-                              {msg.aiGenerated ? ' · AI' : ''}
+                              {msg.aiGenerated ? 'AI' : ''}
                             </Typography>
                           )}
                         </Box>

@@ -1,4 +1,4 @@
-import { authorizedFetch } from './auth';
+import { authorizedFetch, authorizedFetchRaw } from './auth';
 
 // ==============================|| WHATSAPP CONVERSATIONS API CLIENT ||============================== //
 
@@ -127,6 +127,23 @@ export function closeWhatsappConversation(phone, payload = {}) {
 		method: 'POST',
 		body: JSON.stringify(body)
 	});
+}
+
+/**
+ * Download a specific WhatsApp attachment by its id.
+ *
+ * Backend route: GET /api/v1/admin/whatsapp/attachments/{attachmentId}/download
+ */
+export async function fetchWhatsappAttachmentBlob(attachmentId) {
+	if (!attachmentId && attachmentId !== 0 && attachmentId !== '0') {
+		throw new Error('attachmentId is required to download a WhatsApp attachment');
+	}
+
+	const response = await authorizedFetchRaw(`/api/v1/admin/whatsapp/attachments/${encodeURIComponent(String(attachmentId))}/download`, {
+		method: 'GET'
+	});
+
+	return response.blob();
 }
 
 // Note: webhook verification and receive endpoints are handled server-side only.
