@@ -64,3 +64,78 @@ export async function fetchAttachmentBlob(attachmentId) {
 	return response.blob();
 }
 
+// ==============================|| EMAIL NOTIFICATION TEMPLATE API CLIENT ||============================== //
+
+/**
+ * Create an email notification template.
+ *
+ * Backend route: POST /api/v1/master/email-notifications/create
+ */
+export async function createEmailNotificationTemplate({ event, subjectTemplate, bodyTemplate, active }) {
+	if (!event) {
+		throw new Error('event is required to create an email notification template');
+	}
+
+	return authorizedFetch('/api/v1/master/email-notifications/create', {
+		method: 'POST',
+		body: JSON.stringify({ event, subjectTemplate, bodyTemplate, active })
+	});
+}
+
+/**
+ * Fetch email notification templates.
+ *
+ * Backend route: POST /api/v1/master/email-notifications/list
+ */
+export async function fetchEmailNotificationTemplates() {
+	return authorizedFetch('/api/v1/master/email-notifications/list', {
+		method: 'POST'
+	});
+}
+
+/**
+ * Edit an email notification template.
+ *
+ * Backend route: PUT /api/v1/master/email-notifications/edit/{id}
+ */
+export async function editEmailNotificationTemplate(id, { event, subjectTemplate, bodyTemplate, active }) {
+	if (!id) {
+		throw new Error('id is required to edit an email notification template');
+	}
+
+	if (!event) {
+		throw new Error('event is required to edit an email notification template');
+	}
+
+	return authorizedFetch(`/api/v1/master/email-notifications/edit/${encodeURIComponent(id)}`, {
+		method: 'PUT',
+		body: JSON.stringify({ event, subjectTemplate, bodyTemplate, active })
+	});
+}
+
+/**
+ * Enable or disable an email notification template.
+ *
+ * Backend route: PATCH /api/v1/master/email-notifications/disable/{id}/{active}
+ */
+export async function toggleEmailNotificationTemplate(id, active) {
+	if (!id) {
+		throw new Error('id is required to update an email notification template');
+	}
+
+	return authorizedFetch(`/api/v1/master/email-notifications/disable/${encodeURIComponent(id)}/${active}`, {
+		method: 'PATCH'
+	});
+}
+
+/**
+ * Fetch sent email notification history.
+ *
+ * Backend route: GET /api/v1/notifications/email/list
+ */
+export async function fetchEmailNotificationHistory() {
+	return authorizedFetch('/api/v1/notifications/email/list', {
+		method: 'GET'
+	});
+}
+
