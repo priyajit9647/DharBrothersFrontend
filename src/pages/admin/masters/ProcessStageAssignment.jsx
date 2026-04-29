@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 
 import Grid from '@mui/material/Grid';
-import MainCard from 'components/MainCard';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import FormControl from '@mui/material/FormControl';
@@ -11,9 +14,10 @@ import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 
+import MasterList from 'sections/admin/masters/MasterList';
 import { getBranches } from 'api/branch';
 import { getProcessStages } from 'api/processStage';
-import { createProcessStageAssignment, editProcessStageAssignment } from 'api/processStageAssignment';
+import { createProcessStageAssignment, editProcessStageAssignment, getProcessStageAssignments } from 'api/processStageAssignment';
 import { getActiveUsersByBranch } from 'api/user';
 
 // ==============================|| MASTER - PROCESS STAGE ASSIGNMENT ||============================== //
@@ -22,75 +26,83 @@ export default function ProcessStageAssignment() {
   const [branches, setBranches] = useState([]);
   const [stages, setStages] = useState([]);
   const [users, setUsers] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
 
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [selectedStageId, setSelectedStageId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [assignmentType, setAssignmentType] = useState('');
-  const [assignmentId, setAssignmentId] = useState('');
+  const [noOfDays, setNoOfDays] = useState('');
 
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [loadingStages, setLoadingStages] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingAssignments, setLoadingAssignments] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    const loadAssignments = async () => {
+      try {
+        setLoadingAssignments(true);
+        const data = await getProcessStageAssignments();
+        const items = Array.isArray(data) ? data : [];
+        setRows(items);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load process stage assignments', err);
+        setError(err?.message || 'Failed to load process stage assignments');
+      } finally {
+        setLoadingAssignments(false);
+      }
+    };
+
+    loadAssignments();
+  }, []);
 
   useEffect(() => {
     const loadBranches = async () => {
       try {
         setLoadingBranches(true);
-        setError('');
         const data = await getBranches();
         const items = Array.isArray(data) ? data : data?.items || data?.data || [];
         setBranches(items);
-        if (!selectedBranchId && items.length > 0) {
-          setSelectedBranchId(String(items[0].id));
-        }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load branches', err);
-        setError(err?.message || 'Failed to load branches');
       } finally {
         setLoadingBranches(false);
       }
     };
-
     loadBranches();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const loadStages = async () => {
       try {
         setLoadingStages(true);
-        setError('');
         const data = await getProcessStages();
         const items = Array.isArray(data) ? data : data?.items || data?.data || [];
         setStages(items);
-        if (!selectedStageId && items.length > 0) {
-          setSelectedStageId(String(items[0].id));
-        }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load process stages', err);
-        setError(err?.message || 'Failed to load process stages');
       } finally {
         setLoadingStages(false);
       }
     };
-
     loadStages();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     const loadUsers = async () => {
       if (!selectedBranchId) return;
-
       try {
         setLoadingUsers(true);
-        setError('');
         const data = await getActiveUsersByBranch(selectedBranchId);
         const items = Array.isArray(data) ? data : data?.items || data?.data || [];
         setUsers(items);
@@ -100,83 +112,122 @@ export default function ProcessStageAssignment() {
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('Failed to load users for branch', err);
-        setError(err?.message || 'Failed to load users for this branch');
       } finally {
         setLoadingUsers(false);
       }
     };
-
     loadUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranchId]);
 
+  const pagedRows = useMemo(() => {
+    const start = page * rowsPerPage;
+    return rows.slice(start, start + rowsPerPage);
+  }, [page, rowsPerPage, rows]);
+
+  const openCreateDialog = () => {
+    setEditingRow(null);
+    setSelectedBranchId('');
+    setSelectedStageId('');
+    setSelectedUserId('');
+    setNoOfDays('');
+    setError('');
+    setDialogOpen(true);
+  };
+
+  const openEditDialog = (row) => {
+    setEditingRow(row);
+    setSelectedBranchId(String(row.branchId || ''));
+    setSelectedStageId(String(row.stageId || ''));
+    setSelectedUserId(String(row.userId || ''));
+    setNoOfDays(row.noOfDays || '');
+    setError('');
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    if (saving) return;
+    setDialogOpen(false);
+  };
+
   const selectedBranchName = useMemo(
-    () => branches.find((branch) => String(branch.id) === String(selectedBranchId))?.name || '',
+    () => branches.find((b) => String(b.id) === String(selectedBranchId))?.name || '',
     [branches, selectedBranchId]
   );
 
   const selectedStageName = useMemo(
-    () => stages.find((stage) => String(stage.id) === String(selectedStageId))?.stageName || '',
-    [selectedStageId, stages]
+    () => stages.find((s) => String(s.id) === String(selectedStageId))?.stageName || '',
+    [stages, selectedStageId]
   );
 
   const selectedUserLabel = useMemo(() => {
-    const user = users.find((item) => String(item.id) === String(selectedUserId));
+    const user = users.find((u) => String(u.id) === String(selectedUserId));
     const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
     return user?.userName || fullName || user?.email || '';
-  }, [selectedUserId, users]);
+  }, [users, selectedUserId]);
 
-  const handleSubmit = async () => {
+  const handleSave = async () => {
     const stageId = Number(selectedStageId);
     const userId = String(selectedUserId).trim();
-    const type = assignmentType.trim();
-    const id = assignmentId.trim();
+    const daysNum = Number(String(noOfDays).trim());
 
     if (!selectedBranchId) {
       setError('Please select a branch');
       return;
     }
-
     if (!selectedStageId || Number.isNaN(stageId)) {
       setError('Please select a valid process stage');
       return;
     }
-
     if (!userId) {
       setError('Please select a user');
       return;
     }
-
-    if (!type) {
-      setError('Assignment type is required');
+    if (!String(noOfDays).trim() || Number.isNaN(daysNum)) {
+      setError('No of days is required and must be a number');
       return;
     }
 
     try {
       setSaving(true);
       setError('');
-      setSuccess('');
 
-      if (id) {
-        // Edit existing assignment
-        await editProcessStageAssignment(id, {
-          stageId,
-          userId,
-          assignmentType: type
-        });
-        setSuccess('Process stage assignment updated successfully.');
+      if (editingRow?.id) {
+        await editProcessStageAssignment(editingRow.id, { stageId, userId, noOfDays: daysNum });
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === editingRow.id
+              ? {
+                  ...r,
+                  branchId: selectedBranchId,
+                  branchName: selectedBranchName,
+                  stageId,
+                  stageName: selectedStageName,
+                  userId,
+                  userName: selectedUserLabel,
+                  noOfDays: daysNum
+                }
+              : r
+          )
+        );
       } else {
-        // Create new assignment
-        await createProcessStageAssignment({
-          stageId,
-          userId,
-          assignmentType: type
-        });
-        setSuccess('Process stage assignment created successfully.');
+        await createProcessStageAssignment({ stageId, userId, noOfDays: daysNum });
+        setRows((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            branchId: selectedBranchId,
+            branchName: selectedBranchName,
+            stageId,
+            stageName: selectedStageName,
+            userId,
+            userName: selectedUserLabel,
+            noOfDays: daysNum,
+            active: true
+          }
+        ]);
       }
-
-      setAssignmentType('');
-      setAssignmentId('');
+      setDialogOpen(false);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to save process stage assignment', err);
@@ -186,44 +237,53 @@ export default function ProcessStageAssignment() {
     }
   };
 
-  const handleClearForm = () => {
-    setAssignmentId('');
-    setAssignmentType('');
-    setError('');
-    setSuccess('');
-  };
-
-  const loading = loadingBranches || loadingStages || loadingUsers;
+  const loading = loadingBranches || loadingStages || loadingUsers || loadingAssignments;
 
   return (
-    <Grid container spacing={2} sx={{ width: '100%', flexGrow: 1 }}>
-      <Grid item xs={12}>
-        <Typography variant="h5">Process Stage Assignment</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Assign an active user to a process stage using the backend create endpoint.
-        </Typography>
-        {error && (
-          <Typography variant="caption" color="error.main" sx={{ display: 'block', mt: 0.5 }}>
-            {error}
-          </Typography>
-        )}
-        {success && (
-          <Typography variant="caption" color="success.main" sx={{ display: 'block', mt: 0.5 }}>
-            {success}
-          </Typography>
-        )}
+    <>
+      <Grid container sx={{ width: '100%', flexGrow: 1 }}>
+        <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
+          {error && !dialogOpen && (
+            <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+              {error}
+            </Typography>
+          )}
+          <MasterList
+            title="Stage Assignments"
+            description="Assign active users to process stages per branch."
+            columns={[
+              { id: 'branchName', label: 'Branch' },
+              { id: 'stageName', label: 'Process Stage' },
+              { id: 'userName', label: 'User' },
+              { id: 'noOfDays', label: 'No Of Days' }
+            ]}
+            rows={pagedRows}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalCount={rows.length}
+            onPageChange={setPage}
+            onRowsPerPageChange={(value) => {
+              setRowsPerPage(value);
+              setPage(0);
+            }}
+            onCreate={openCreateDialog}
+            onEdit={openEditDialog}
+            loading={loading}
+          />
+        </Grid>
       </Grid>
 
-      <Grid item xs={12} lg={8}>
-        <MainCard title="Create Assignment">
-          <Stack spacing={2}>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>{editingRow ? 'Edit Assignment' : 'Create Assignment'}</DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} mt={0.5}>
             <FormControl fullWidth size="small" disabled={loadingBranches}>
-              <InputLabel id="assignment-branch-label">Branch</InputLabel>
+              <InputLabel id="branch-label">Branch</InputLabel>
               <Select
-                labelId="assignment-branch-label"
+                labelId="branch-label"
                 label="Branch"
                 value={selectedBranchId}
-                onChange={(event) => setSelectedBranchId(event.target.value)}
+                onChange={(e) => setSelectedBranchId(e.target.value)}
               >
                 {branches.map((branch) => (
                   <MenuItem key={branch.id} value={String(branch.id)}>
@@ -234,12 +294,12 @@ export default function ProcessStageAssignment() {
             </FormControl>
 
             <FormControl fullWidth size="small" disabled={loadingStages}>
-              <InputLabel id="assignment-stage-label">Process Stage</InputLabel>
+              <InputLabel id="stage-label">Process Stage</InputLabel>
               <Select
-                labelId="assignment-stage-label"
+                labelId="stage-label"
                 label="Process Stage"
                 value={selectedStageId}
-                onChange={(event) => setSelectedStageId(event.target.value)}
+                onChange={(e) => setSelectedStageId(e.target.value)}
               >
                 {stages.map((stage) => (
                   <MenuItem key={stage.id} value={String(stage.id)}>
@@ -250,17 +310,16 @@ export default function ProcessStageAssignment() {
             </FormControl>
 
             <FormControl fullWidth size="small" disabled={loadingUsers || !selectedBranchId}>
-              <InputLabel id="assignment-user-label">User</InputLabel>
+              <InputLabel id="user-label">User</InputLabel>
               <Select
-                labelId="assignment-user-label"
+                labelId="user-label"
                 label="User"
                 value={selectedUserId}
-                onChange={(event) => setSelectedUserId(event.target.value)}
+                onChange={(e) => setSelectedUserId(e.target.value)}
               >
                 {users.map((user) => {
                   const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
                   const label = user.userName || fullName || user.email || `User ${user.id}`;
-
                   return (
                     <MenuItem key={user.id} value={String(user.id)}>
                       {label}
@@ -273,53 +332,29 @@ export default function ProcessStageAssignment() {
             <TextField
               fullWidth
               size="small"
-              label="Assignment Type"
-              value={assignmentType}
-              onChange={(event) => setAssignmentType(event.target.value)}
-              placeholder="e.g. MANUAL or AUTO"
+              type="number"
+              label="No Of Days"
+              value={noOfDays}
+              onChange={(e) => setNoOfDays(e.target.value)}
+              placeholder="e.g. 7"
             />
 
-            <TextField
-              fullWidth
-              size="small"
-              label="Assignment ID (for editing)"
-              value={assignmentId}
-              onChange={(event) => setAssignmentId(event.target.value)}
-              placeholder="Leave empty to create new, fill to edit existing"
-            />
-
-            <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
-              <Button variant="contained" onClick={handleSubmit} disabled={saving || loading}>
-                {saving ? 'Saving...' : assignmentId ? 'Update Assignment' : 'Create Assignment'}
-              </Button>
-              {assignmentId && (
-                <Button variant="outlined" onClick={handleClearForm} disabled={saving}>
-                  Clear
-                </Button>
-              )}
-            </Stack>
+            {error && (
+              <Typography variant="body2" color="error">
+                {error}
+              </Typography>
+            )}
           </Stack>
-        </MainCard>
-      </Grid>
-
-      <Grid item xs={12} lg={4}>
-        <MainCard title="Current Selection">
-          <Stack spacing={1.5}>
-            <Typography variant="body2" color="text.secondary">
-              Branch: {selectedBranchName || 'None'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Stage: {selectedStageName || 'None'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              User: {selectedUserLabel || 'None'}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Active users are loaded from the selected branch.
-            </Typography>
-          </Stack>
-        </MainCard>
-      </Grid>
-    </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSave} disabled={saving || loading}>
+            {saving ? 'Saving...' : editingRow ? 'Update' : 'Create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
