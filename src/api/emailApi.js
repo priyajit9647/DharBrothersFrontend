@@ -83,7 +83,7 @@ export async function createEmailNotificationTemplate({ event, subjectTemplate, 
 }
 
 /**
- * Fetch email notification templates.
+ * Fetch email Notification History.
  *
  * Backend route: POST /api/v1/master/email-notifications/list
  */

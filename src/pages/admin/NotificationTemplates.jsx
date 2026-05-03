@@ -3,13 +3,13 @@ import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
 
-// ==============================|| BMS - NOTIFICATION TEMPLATES (ADMIN) ||============================== //
+// ==============================|| BMS - Notification History (ADMIN) ||============================== //
 
 export default function NotificationTemplates() {
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       <Grid item xs={12}>
-        <Typography variant="h5">Notification Templates</Typography>
+        <Typography variant="h5">Notification History</Typography>
         <Typography variant="body2" color="text.secondary">
           Manage WhatsApp, SMS and Email templates triggered at each workflow event.
         </Typography>

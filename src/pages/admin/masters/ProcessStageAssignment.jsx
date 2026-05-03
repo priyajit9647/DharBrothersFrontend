@@ -45,22 +45,22 @@ export default function ProcessStageAssignment() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const loadAssignments = async () => {
-      try {
-        setLoadingAssignments(true);
-        const data = await getProcessStageAssignments();
-        const items = Array.isArray(data) ? data : [];
-        setRows(items);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load process stage assignments', err);
-        setError(err?.message || 'Failed to load process stage assignments');
-      } finally {
-        setLoadingAssignments(false);
-      }
-    };
+  const loadAssignments = async () => {
+    try {
+      setLoadingAssignments(true);
+      const data = await getProcessStageAssignments();
+      const items = Array.isArray(data) ? data : [];
+      setRows(items);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load process stage assignments', err);
+      setError(err?.message || 'Failed to load process stage assignments');
+    } finally {
+      setLoadingAssignments(false);
+    }
+  };
 
+  useEffect(() => {
     loadAssignments();
   }, []);
 
@@ -100,7 +100,11 @@ export default function ProcessStageAssignment() {
 
   useEffect(() => {
     const loadUsers = async () => {
-      if (!selectedBranchId) return;
+      if (!selectedBranchId) {
+        setUsers([]);
+        setSelectedUserId('');
+        return;
+      }
       try {
         setLoadingUsers(true);
         const data = await getActiveUsersByBranch(selectedBranchId);
@@ -150,28 +154,13 @@ export default function ProcessStageAssignment() {
     setDialogOpen(false);
   };
 
-  const selectedBranchName = useMemo(
-    () => branches.find((b) => String(b.id) === String(selectedBranchId))?.name || '',
-    [branches, selectedBranchId]
-  );
-
-  const selectedStageName = useMemo(
-    () => stages.find((s) => String(s.id) === String(selectedStageId))?.stageName || '',
-    [stages, selectedStageId]
-  );
-
-  const selectedUserLabel = useMemo(() => {
-    const user = users.find((u) => String(u.id) === String(selectedUserId));
-    const fullName = `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
-    return user?.userName || fullName || user?.email || '';
-  }, [users, selectedUserId]);
-
   const handleSave = async () => {
+    const branchId = Number(selectedBranchId);
     const stageId = Number(selectedStageId);
     const userId = String(selectedUserId).trim();
     const daysNum = Number(String(noOfDays).trim());
 
-    if (!selectedBranchId) {
+    if (!selectedBranchId || Number.isNaN(branchId)) {
       setError('Please select a branch');
       return;
     }
@@ -193,40 +182,11 @@ export default function ProcessStageAssignment() {
       setError('');
 
       if (editingRow?.id) {
-        await editProcessStageAssignment(editingRow.id, { stageId, userId, noOfDays: daysNum });
-        setRows((prev) =>
-          prev.map((r) =>
-            r.id === editingRow.id
-              ? {
-                  ...r,
-                  branchId: selectedBranchId,
-                  branchName: selectedBranchName,
-                  stageId,
-                  stageName: selectedStageName,
-                  userId,
-                  userName: selectedUserLabel,
-                  noOfDays: daysNum
-                }
-              : r
-          )
-        );
+        await editProcessStageAssignment(editingRow.id, { stageId, userId, noOfDays: daysNum, branchId });
       } else {
-        await createProcessStageAssignment({ stageId, userId, noOfDays: daysNum });
-        setRows((prev) => [
-          ...prev,
-          {
-            id: Date.now(),
-            branchId: selectedBranchId,
-            branchName: selectedBranchName,
-            stageId,
-            stageName: selectedStageName,
-            userId,
-            userName: selectedUserLabel,
-            noOfDays: daysNum,
-            active: true
-          }
-        ]);
+        await createProcessStageAssignment({ stageId, userId, noOfDays: daysNum, branchId });
       }
+      await loadAssignments();
       setDialogOpen(false);
     } catch (err) {
       // eslint-disable-next-line no-console

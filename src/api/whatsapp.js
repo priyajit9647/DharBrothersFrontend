@@ -59,12 +59,10 @@ export function fetchWhatsappConversationById(phone) {
 /**
  * Send a WhatsApp message within an existing conversation.
  *
- * Example payload (adjust to backend):
- * {
- *   body: string;
- *   mediaUrl?: string;
- *   metadata?: Record<string, any>;
- * }
+ * Backend expects request params:
+ *   phone: string
+ *   adminUsername: string
+ *   message: string
  */
 export function sendWhatsappMessage(phone, payload) {
 	if (!phone) {
@@ -75,15 +73,25 @@ export function sendWhatsappMessage(phone, payload) {
 		throw new Error('payload is required to send a WhatsApp message');
 	}
 
-	// Backend route: POST /api/v1/admin/whatsapp/reply
-	const body = {
-		phone,
-		...payload
-	};
+	const adminUsername = payload.adminUsername || payload.username || '';
+	const message = payload.message || payload.body || '';
 
-	return authorizedFetch('/api/v1/admin/whatsapp/reply', {
-		method: 'POST',
-		body: JSON.stringify(body)
+	if (!adminUsername) {
+		throw new Error('adminUsername is required to send a WhatsApp message');
+	}
+
+	if (!message) {
+		throw new Error('message is required to send a WhatsApp message');
+	}
+
+	const searchParams = new URLSearchParams({
+		phone: String(phone),
+		adminUsername: String(adminUsername),
+		message: String(message)
+	});
+
+	return authorizedFetch(`/api/v1/admin/whatsapp/reply?${searchParams.toString()}`, {
+		method: 'POST'
 	});
 }
 
@@ -163,7 +171,7 @@ export function createWhatsappNotificationTemplate({ event, subjectTemplate, bod
 }
 
 /**
- * Fetch the list of WhatsApp notification templates.
+ * Fetch the list of WhatsApp Notification History.
  *
  * Backend route: POST /api/v1/master/whatsapp-notifications/list
  */

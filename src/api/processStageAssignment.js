@@ -15,13 +15,15 @@ export async function getProcessStageAssignments() {
     userName: item.userName,
     stageId: item.stageId,
     stageName: item.stageName,
-    noOfDays: item.noOfDays
+    noOfDays: item.noOfDays,
+    branchId: item.branchId,
+    branchName: item.branchName
   }));
 }
 
-export async function createProcessStageAssignment({ stageId, userId, noOfDays }) {
-  if (stageId == null || userId == null || noOfDays == null) {
-    throw new Error('stageId, userId and noOfDays are required');
+export async function createProcessStageAssignment({ stageId, userId, noOfDays, branchId }) {
+  if (stageId == null || userId == null || noOfDays == null || branchId == null) {
+    throw new Error('stageId, userId, noOfDays and branchId are required');
   }
 
   return authorizedFetch('/api/v1/process-stage-assignment/create', {
@@ -29,18 +31,19 @@ export async function createProcessStageAssignment({ stageId, userId, noOfDays }
     body: JSON.stringify({
       stageId,
       userId,
-      noOfDays: Number(noOfDays)
+      noOfDays: Number(noOfDays),
+      branchId: Number(branchId)
     })
   });
 }
 
-export async function editProcessStageAssignment(id, { stageId, userId, noOfDays }) {
+export async function editProcessStageAssignment(id, { stageId, userId, noOfDays, branchId }) {
   if (id == null) {
     throw new Error('id is required to edit a process stage assignment');
   }
 
-  if (stageId == null || userId == null || noOfDays == null) {
-    throw new Error('stageId, userId and noOfDays are required');
+  if (stageId == null || userId == null || noOfDays == null || branchId == null) {
+    throw new Error('stageId, userId, noOfDays and branchId are required');
   }
 
   return authorizedFetch(`/api/v1/process-stage-assignment/edit/${id}`, {
@@ -48,7 +51,8 @@ export async function editProcessStageAssignment(id, { stageId, userId, noOfDays
     body: JSON.stringify({
       stageId,
       userId,
-      noOfDays: Number(noOfDays)
+      noOfDays: Number(noOfDays),
+      branchId: Number(branchId)
     })
   });
 }

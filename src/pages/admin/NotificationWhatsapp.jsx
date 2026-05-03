@@ -20,7 +20,7 @@ import {
   fetchWhatsappNotificationHistory
 } from 'api/whatsapp';
 
-// ==============================|| BMS - WHATSAPP NOTIFICATION TEMPLATES ||============================== //
+// ==============================|| BMS - WHATSAPP Notification History ||============================== //
 
 export default function NotificationWhatsapp() {
   const [templates, setTemplates] = useState([]);
@@ -56,8 +56,8 @@ export default function NotificationWhatsapp() {
       setTemplates(items);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('Failed to load WhatsApp notification templates', err);
-      setTemplateError(err?.message || 'Failed to load WhatsApp notification templates');
+      console.error('Failed to load WhatsApp Notification History', err);
+      setTemplateError(err?.message || 'Failed to load WhatsApp Notification History');
     } finally {
       setTemplatesLoading(false);
     }
@@ -195,7 +195,7 @@ export default function NotificationWhatsapp() {
             </Typography>
           )}
           <MasterList
-            title="WhatsApp Notification Templates"
+            title="WhatsApp Notification History"
             description="Configure WhatsApp notification subjects, message bodies and activation status for order events."
             columns={[
               { id: 'event', label: 'Event' },

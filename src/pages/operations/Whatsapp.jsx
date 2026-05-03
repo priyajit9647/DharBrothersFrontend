@@ -19,6 +19,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { SearchOutlined, SendOutlined, MoreOutlined, PaperClipOutlined } from '@ant-design/icons';
 
 import MainCard from 'components/MainCard';
+import { useAuth } from 'hooks/useAuth';
 import { fetchWhatsappAttachmentBlob, fetchWhatsappConversations, fetchWhatsappConversationById, sendWhatsappMessage } from 'api/whatsapp';
 
 // ==============================|| BMS - WHATSAPP (WEB-STYLE VIEW) ||============================== //
@@ -115,6 +116,7 @@ const getMessageAttachments = (message) => {
 };
 
 export default function Whatsapp() {
+  const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
@@ -203,9 +205,20 @@ export default function Whatsapp() {
   const handleSendMessage = async () => {
     if (!selectedConversationId || !messageText.trim()) return;
 
+    const adminUsername = user?.userName || user?.username || user?.email || '';
+
     try {
       setError('');
-      await sendWhatsappMessage(selectedConversationId, { body: messageText.trim() });
+
+      if (!adminUsername) {
+        setError('Unable to identify the logged-in admin user. Please log in again.');
+        return;
+      }
+
+      await sendWhatsappMessage(selectedConversationId, {
+        adminUsername,
+        message: messageText.trim()
+      });
       setMessageText('');
       await loadConversationDetail(selectedConversationId);
       await loadConversations(search);

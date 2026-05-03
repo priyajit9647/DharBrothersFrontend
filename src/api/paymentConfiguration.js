@@ -11,42 +11,54 @@ export async function getPaymentConfigurations(branchId) {
   });
 }
 
-export async function createPaymentConfiguration({ branchId, merchantId, aggregatorId, secretKey }) {
+export async function createPaymentConfiguration({ id = '', branchId, merchantId, aggregatorId, secretKey, percentage, active }) {
   // eslint-disable-next-line no-console
   console.log('Calling POST /api/v1/payment/config/create', {
+    id,
     branchId,
     merchantId,
     aggregatorId,
-    secretKey
+    secretKey,
+    percentage,
+    active
   });
 
   return authorizedFetch('/api/v1/payment/config/create', {
     method: 'POST',
     body: JSON.stringify({
+      id,
       branchId,
       merchantId,
       aggregatorId,
-      secretKey
+      secretKey,
+      percentage,
+      active
     })
   });
 }
 
-export async function editPaymentConfiguration(id, { branchId, merchantId, aggregatorId, secretKey }) {
+export async function editPaymentConfiguration(id, { branchId, merchantId, aggregatorId, secretKey, percentage, active }) {
   // eslint-disable-next-line no-console
   console.log(`Calling PUT /api/v1/payment/config/edit/${id}`, {
+    id,
     branchId,
     merchantId,
     aggregatorId,
-    secretKey
+    secretKey,
+    percentage,
+    active
   });
 
   return authorizedFetch(`/api/v1/payment/config/edit/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify({
+      id: String(id),
       branchId,
       merchantId,
       aggregatorId,
-      secretKey
+      secretKey,
+      percentage,
+      active
     })
   });
 }

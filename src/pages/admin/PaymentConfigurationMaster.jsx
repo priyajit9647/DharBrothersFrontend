@@ -35,7 +35,9 @@ export default function PaymentConfigurationMaster() {
   const [formValues, setFormValues] = useState({
     merchantId: '',
     aggregatorId: '',
-    secretKey: ''
+    secretKey: '',
+    percentage: '1',
+    active: 'true'
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -59,7 +61,7 @@ export default function PaymentConfigurationMaster() {
         merchantId: item.merchantId || '',
         aggregatorId: item.aggregatorId || '',
         secretKey: item.secretKey || '',
-        baseUrl: item.baseUrl || '',
+        percentage: Number(item.percentage ?? 0),
         active: item.active
       }));
       setRows(normalized);
@@ -108,11 +110,12 @@ export default function PaymentConfigurationMaster() {
 
   useEffect(() => {
     loadPaymentConfigurations(selectedBranchId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranchId]);
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '' });
+    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true' });
     setError('');
     setDialogOpen(true);
   };
@@ -122,7 +125,9 @@ export default function PaymentConfigurationMaster() {
     setFormValues({
       merchantId: row.merchantId || '',
       aggregatorId: row.aggregatorId || '',
-      secretKey: row.secretKey || ''
+      secretKey: row.secretKey || '',
+      percentage: String(row.percentage ?? '1'),
+      active: String(row.active ?? true)
     });
     setError('');
     setDialogOpen(true);
@@ -145,6 +150,8 @@ export default function PaymentConfigurationMaster() {
     const merchantId = formValues.merchantId.trim();
     const aggregatorId = formValues.aggregatorId.trim();
     const secretKey = formValues.secretKey.trim();
+    const percentage = Number(formValues.percentage);
+    const active = String(formValues.active) === 'true';
 
     if (!selectedBranchId) {
       setError('Please select a branch');
@@ -153,6 +160,11 @@ export default function PaymentConfigurationMaster() {
 
     if (!merchantId || !aggregatorId || !secretKey) {
       setError('Merchant ID, Aggregator ID and Secret Key are required');
+      return;
+    }
+
+    if (!Number.isInteger(percentage) || percentage < 1 || percentage > 100) {
+      setError('Percentage is required and must be between 1 and 100');
       return;
     }
 
@@ -165,16 +177,21 @@ export default function PaymentConfigurationMaster() {
           branchId: Number(selectedBranchId),
           merchantId,
           aggregatorId,
-          secretKey
+          secretKey,
+          percentage,
+          active
         });
 
         await loadPaymentConfigurations(selectedBranchId);
       } else {
         await createPaymentConfiguration({
+          id: '',
           branchId: Number(selectedBranchId),
           merchantId,
           aggregatorId,
-          secretKey
+          secretKey,
+          percentage,
+          active
         });
 
         await loadPaymentConfigurations(selectedBranchId);
@@ -223,12 +240,17 @@ export default function PaymentConfigurationMaster() {
 
           <MasterList
             title="Payment Configuration"
-            description="Configure payment gateway merchant credentials branch-wise. New records are persisted to the API; the grid reflects items created in this session."
+            description="Configure payment gateway credentials branch-wise, including payment percentage allocation."
             columns={[
               { id: 'branchName', label: 'Branch' },
               { id: 'configId', label: 'ID' },
               { id: 'merchantId', label: 'Merchant ID' },
               { id: 'aggregatorId', label: 'Aggregator ID' },
+              {
+                id: 'percentage',
+                label: 'Percentage',
+                render: (row) => `${row.percentage || 0}%`
+              },
               {
                 id: 'secretKey',
                 label: 'Secret Key',
@@ -260,6 +282,31 @@ export default function PaymentConfigurationMaster() {
             <TextField label="Merchant ID" value={formValues.merchantId} onChange={handleFormChange('merchantId')} fullWidth />
             <TextField label="Aggregator ID" value={formValues.aggregatorId} onChange={handleFormChange('aggregatorId')} fullWidth />
             <TextField label="Secret Key" value={formValues.secretKey} onChange={handleFormChange('secretKey')} fullWidth />
+            <FormControl fullWidth>
+              <InputLabel id="payment-config-percentage-label">Percentage</InputLabel>
+              <Select
+                labelId="payment-config-percentage-label"
+                label="Percentage"
+                value={formValues.percentage}
+                onChange={handleFormChange('percentage')}
+              >
+                {Array.from({ length: 100 }, (_, index) => {
+                  const value = String(index + 1);
+                  return (
+                    <MenuItem key={value} value={value}>
+                      {value}%
+                    </MenuItem>
+                  );
+                })}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel id="payment-config-active-label">Active</InputLabel>
+              <Select labelId="payment-config-active-label" label="Active" value={formValues.active} onChange={handleFormChange('active')}>
+                <MenuItem value="true">Active</MenuItem>
+                <MenuItem value="false">Inactive</MenuItem>
+              </Select>
+            </FormControl>
             {error && (
               <Typography variant="body2" color="error">
                 {error}

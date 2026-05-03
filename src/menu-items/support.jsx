@@ -47,6 +47,12 @@ const support = {
           title: 'Payment Details',
           type: 'item',
           url: '/admin/payment-details'
+        },
+        {
+          id: 'process-stage-assignment',
+          title: 'Stage Assignments',
+          type: 'item',
+          url: '/admin/masters/process-stage-assignments'
         }
       ]
     },
@@ -59,7 +65,7 @@ const support = {
     },
     {
       id: 'notification-templates',
-      title: 'Notification Templates',
+      title: 'Notification History',
       type: 'collapse',
       icon: icons.BellOutlined,
       children: [
@@ -94,12 +100,6 @@ const support = {
           title: 'Process Stages',
           type: 'item',
           url: '/admin/masters/process-stages'
-        },
-        {
-          id: 'process-stage-assignment',
-          title: 'Stage Assignments',
-          type: 'item',
-          url: '/admin/masters/process-stage-assignments'
         },
         {
           id: 'printing-type-master',
