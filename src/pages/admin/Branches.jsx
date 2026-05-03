@@ -6,12 +6,18 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
 import { createBranch, editBranch, getBranches, toggleBranchActive } from 'api/branch';
+
+const BRANCH_TYPE_OPTIONS = [
+  { value: 'MANUFACTURING_UNIT', label: 'Manufacturing Unit' },
+  { value: 'LOOK_AND_FEEL_STORE', label: 'Look And Feel Store' }
+];
 
 // ==============================|| BMS - BRANCHES & TEAMS (ADMIN) ||============================== //
 
@@ -25,6 +31,7 @@ export default function Branches() {
   const [formValues, setFormValues] = useState({
     code: '',
     name: '',
+    branchType: '',
     address: '',
     pincode: '',
     keyContactPersonName: '',
@@ -44,6 +51,7 @@ export default function Branches() {
             id: item.id ?? index + 1,
             name: item.name,
             code: item.code,
+            branchType: item.branchType,
             address: item.address,
             pincode: item.pincode,
             keyContactPersonName: item.keyContactPersonName,
@@ -74,6 +82,7 @@ export default function Branches() {
     setFormValues({
       code: '',
       name: '',
+      branchType: '',
       address: '',
       pincode: '',
       keyContactPersonName: '',
@@ -88,6 +97,7 @@ export default function Branches() {
     setFormValues({
       code: row.code || '',
       name: row.name || '',
+      branchType: row.branchType || '',
       address: row.address || '',
       pincode: row.pincode || '',
       keyContactPersonName: row.keyContactPersonName || '',
@@ -113,13 +123,14 @@ export default function Branches() {
   const handleSave = async () => {
     const code = formValues.code.trim();
     const name = formValues.name.trim();
+    const branchType = formValues.branchType.trim();
     const address = formValues.address.trim();
     const pincode = formValues.pincode.trim();
     const keyContactPersonName = formValues.keyContactPersonName.trim();
     const keyContactPersonPhone = formValues.keyContactPersonPhone.trim();
 
-    if (!code || !name) {
-      setError('Code and Name are required');
+    if (!code || !name || !branchType) {
+      setError('Code, Name and Branch Type are required');
       return;
     }
 
@@ -131,6 +142,7 @@ export default function Branches() {
         await editBranch(editingRow.id, {
           code,
           name,
+          branchType,
           address,
           pincode,
           keyContactPersonName,
@@ -140,6 +152,7 @@ export default function Branches() {
         await createBranch({
           code,
           name,
+          branchType,
           address,
           pincode,
           keyContactPersonName,
@@ -184,6 +197,7 @@ export default function Branches() {
             columns={[
               { id: 'name', label: 'Branch Name' },
               { id: 'code', label: 'Code' },
+              { id: 'branchType', label: 'Branch Type' },
               { id: 'address', label: 'Address' },
               { id: 'pincode', label: 'Pincode' },
               { id: 'keyContactPersonName', label: 'Key Contact Person' },
@@ -223,6 +237,19 @@ export default function Branches() {
               onChange={handleFormChange('name')}
               fullWidth
             />
+            <TextField
+              select
+              label="Branch Type"
+              value={formValues.branchType}
+              onChange={handleFormChange('branchType')}
+              fullWidth
+            >
+              {BRANCH_TYPE_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
             <TextField
               label="Address"
               value={formValues.address}

@@ -86,6 +86,12 @@ async function getWebBindingCoverMaterials() {
   });
 }
 
+async function getWebBranches() {
+  return publicFetch('/api/v1/web/master/branches/lookandfeel', {
+    method: 'GET'
+  });
+}
+
 function normalizePageTypeOptions(data) {
   if (!Array.isArray(data)) {
     return [];
@@ -120,25 +126,42 @@ function normalizeMasterOptions(data, { labelKeys = ['name', 'displayName'], val
     .filter((item) => item.label && item.value);
 }
 
+function normalizeBranchOptions(data) {
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .filter((item) => item?.active !== false)
+    .map((item, index) => ({
+      label: String(item?.name || item?.code || `Branch ${index + 1}`),
+      value: String(item?.id ?? item?.branchId ?? `${index + 1}`),
+      address: String(item?.address || ''),
+      pincode: String(item?.pincode || '')
+    }))
+    .filter((item) => item.label && item.value);
+}
+
 const INITIAL_CHECKOUT_FORM = {
   mobile: '',
   firstName: '',
   lastName: '',
   customerEmail: '',
   whatsapp: '',
-  customerAddress: '',
+  customerAddress1: '',
   customerCity: '',
   pincode: '',
   landmark: '',
   gst: '',
   universityName: '',
-  apartment: '',
+  customerAddress2: '',
   country: 'India',
   state: 'West Bengal',
   shippingMode: 'delivery',
   shippingSameAsBilling: true,
-  shippingAddress: '',
-  shippingApartment: '',
+  shippingBranchId: '',
+  shippingAddress1: '',
+  shippingAddress2: '',
   shippingCountry: 'India',
   shippingCity: '',
   shippingState: 'West Bengal',
@@ -152,29 +175,37 @@ function buildCustomerPayloadFromForm(checkoutForm) {
     customerEmail: checkoutForm.customerEmail || '',
     mobile: checkoutForm.mobile || '',
     whatsapp: checkoutForm.whatsapp || checkoutForm.mobile || '',
-    customerAddress: checkoutForm.customerAddress || '',
+    customerAddress1: checkoutForm.customerAddress1 || '',
+    customerAddress2: checkoutForm.customerAddress2 || '',
     customerCity: checkoutForm.customerCity || '',
+    country: checkoutForm.country || '',
+    state: checkoutForm.state || '',
     pincode: checkoutForm.pincode || '',
-    landmark: checkoutForm.landmark || ''
+    landmark: checkoutForm.landmark || '',
+    universityName: checkoutForm.universityName || ''
   };
 }
 
-function buildCreateOrderCustomerPayload(checkoutForm) {
-  const customerPayload = buildCustomerPayloadFromForm(checkoutForm);
+function buildShippingPayloadFromForm(checkoutForm) {
+  const customerWillCollect = checkoutForm.shippingMode === 'pickup';
+  const shippingSameAsBilling = !customerWillCollect && checkoutForm.shippingSameAsBilling;
+  const shippingAddress1 = shippingSameAsBilling ? checkoutForm.customerAddress1 : checkoutForm.shippingAddress1;
+  const shippingAddress2 = shippingSameAsBilling ? checkoutForm.customerAddress2 : checkoutForm.shippingAddress2;
+  const shippingCity = shippingSameAsBilling ? checkoutForm.customerCity : checkoutForm.shippingCity;
+  const shippingCountry = shippingSameAsBilling ? checkoutForm.country : checkoutForm.shippingCountry;
+  const shippingState = shippingSameAsBilling ? checkoutForm.state : checkoutForm.shippingState;
+  const shippingPincode = shippingSameAsBilling ? checkoutForm.pincode : checkoutForm.shippingPincode;
 
   return {
-    firstName: customerPayload.firstName,
-    lastName: customerPayload.lastName,
-    email: customerPayload.customerEmail,
-    customerEmail: customerPayload.customerEmail,
-    mobile: customerPayload.mobile,
-    whatsapp: customerPayload.whatsapp,
-    address: customerPayload.customerAddress,
-    customerAddress: customerPayload.customerAddress,
-    city: customerPayload.customerCity,
-    customerCity: customerPayload.customerCity,
-    pincode: customerPayload.pincode,
-    landmark: customerPayload.landmark
+    customerWillCollect,
+    shippingSameAsBilling,
+    shippingBranchId: customerWillCollect && checkoutForm.shippingBranchId ? Number(checkoutForm.shippingBranchId) : null,
+    shippingAddress1: customerWillCollect ? '' : shippingAddress1 || '',
+    shippingAddress2: customerWillCollect ? '' : shippingAddress2 || '',
+    shippingCountry: customerWillCollect ? '' : shippingCountry || '',
+    shippingCity: customerWillCollect ? '' : shippingCity || '',
+    shippingState: customerWillCollect ? '' : shippingState || '',
+    shippingPincode: customerWillCollect ? '' : shippingPincode || ''
   };
 }
 
@@ -196,6 +227,16 @@ function normalizeBindingCoverMaterials(data, bindingType) {
         design: item?.design ? `data:image/*;base64,${item.design}` : ''
       };
     });
+}
+
+function sanitizePaymentRedirectUrl(rawUrl) {
+  if (!rawUrl) {
+    return '';
+  }
+
+  return rawUrl
+    .replace(/(\/api\/v1\/payment\/callback)\/[^/?&#]+(?=([/?#&]|$))/gi, '$1')
+    .replace(/(%2Fapi%2Fv1%2Fpayment%2Fcallback)%2F[^%?#&]+(?=(%2F|%3F|%26|%23|$))/gi, '$1');
 }
 
 function matchesPageType(pageType, values) {
@@ -289,6 +330,9 @@ export default function PlaceOrder() {
     printColors: [],
     printingTypes: []
   });
+  const [branchOptions, setBranchOptions] = useState([]);
+  const [branchLoading, setBranchLoading] = useState(false);
+  const [branchError, setBranchError] = useState('');
   const [hardBindingCoverMaterials, setHardBindingCoverMaterials] = useState([]);
   const [softBindingCoverMaterials, setSoftBindingCoverMaterials] = useState([]);
   const [bindingMasterError, setBindingMasterError] = useState('');
@@ -354,6 +398,38 @@ export default function PlaceOrder() {
     };
 
     loadPageTypeOptions();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const loadBranchOptions = async () => {
+      setBranchLoading(true);
+      setBranchError('');
+
+      try {
+        const data = await getWebBranches();
+
+        if (!ignore) {
+          setBranchOptions(normalizeBranchOptions(data));
+        }
+      } catch (error) {
+        if (!ignore) {
+          setBranchOptions([]);
+          setBranchError(error.message || 'Failed to load branch options.');
+        }
+      } finally {
+        if (!ignore) {
+          setBranchLoading(false);
+        }
+      }
+    };
+
+    loadBranchOptions();
 
     return () => {
       ignore = true;
@@ -464,6 +540,7 @@ export default function PlaceOrder() {
     const payload = {
       totalPages: Number(pageStats[0].value || 0),
       colourPages: Number(pageStats[1].value || 0),
+      bWPages: Number(pageStats[2].value || 0),
       bwpages: Number(pageStats[2].value || 0),
       pageAndPageTypeIdMap: pageRows.reduce((accumulator, row) => {
         accumulator[row.pageNumber] = Number(row.pageTypeId);
@@ -485,7 +562,7 @@ export default function PlaceOrder() {
 
   const buildCreateOrderPayload = () => ({
     ...buildOrderEstimationPayload(),
-    customer: buildCreateOrderCustomerPayload(checkoutForm)
+    ...buildShippingPayloadFromForm(checkoutForm)
   });
 
   const shouldLoadEstimationBeforeNext = () => {
@@ -536,22 +613,37 @@ export default function PlaceOrder() {
   const handleCheckoutFieldChange = (field, value) => {
     setCheckoutForm((prev) => {
       const next = { ...prev, [field]: value };
+      const nextShippingSameAsBilling = field === 'shippingSameAsBilling' ? Boolean(value) : prev.shippingSameAsBilling;
+      const nextShippingMode = field === 'shippingMode' ? value : prev.shippingMode;
 
       if (field === 'mobile' && !prev.whatsapp) {
         next.whatsapp = value;
       }
 
+      if (field === 'shippingMode') {
+        if (value === 'pickup') {
+          next.shippingSameAsBilling = true;
+        } else if (!prev.shippingBranchId) {
+          next.shippingBranchId = '';
+        }
+      }
+
       if (field === 'shippingSameAsBilling' && value) {
-        next.shippingAddress = prev.customerAddress;
+        next.shippingAddress1 = prev.customerAddress1;
+        next.shippingAddress2 = prev.customerAddress2;
         next.shippingCity = prev.customerCity;
         next.shippingPincode = prev.pincode;
         next.shippingCountry = prev.country;
         next.shippingState = prev.state;
       }
 
-      if (prev.shippingSameAsBilling) {
-        if (field === 'customerAddress') {
-          next.shippingAddress = value;
+      if (nextShippingMode === 'delivery' && nextShippingSameAsBilling) {
+        if (field === 'customerAddress1') {
+          next.shippingAddress1 = value;
+        }
+
+        if (field === 'customerAddress2') {
+          next.shippingAddress2 = value;
         }
 
         if (field === 'customerCity') {
@@ -582,18 +674,38 @@ export default function PlaceOrder() {
       return false;
     }
 
-    if (!checkoutForm.firstName.trim() || !checkoutForm.lastName.trim()) {
-      setCheckoutError('Please enter first name and last name.');
+    if (!checkoutForm.firstName.trim()) {
+      setCheckoutError('Please enter first name.');
       return false;
     }
 
-    if (!checkoutForm.customerAddress.trim() || !checkoutForm.customerCity.trim() || !checkoutForm.pincode.trim()) {
+    if (!checkoutForm.customerEmail.trim()) {
+      setCheckoutError('Please enter email address.');
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(checkoutForm.customerEmail.trim())) {
+      setCheckoutError('Please enter a valid email address.');
+      return false;
+    }
+
+    if (!checkoutForm.customerAddress1.trim() || !checkoutForm.customerCity.trim() || !checkoutForm.pincode.trim()) {
       setCheckoutError('Please complete the billing address.');
       return false;
     }
 
+    if (checkoutForm.shippingMode === 'pickup') {
+      if (!checkoutForm.shippingBranchId) {
+        setCheckoutError('Please select a branch for collection.');
+        return false;
+      }
+
+      setCheckoutError('');
+      return true;
+    }
+
     if (checkoutForm.shippingMode === 'delivery' && !checkoutForm.shippingSameAsBilling) {
-      if (!checkoutForm.shippingAddress.trim() || !checkoutForm.shippingCity.trim() || !checkoutForm.shippingPincode.trim()) {
+      if (!checkoutForm.shippingAddress1.trim() || !checkoutForm.shippingCity.trim() || !checkoutForm.shippingPincode.trim()) {
         setCheckoutError('Please complete the shipping address.');
         return false;
       }
@@ -703,14 +815,14 @@ export default function PlaceOrder() {
 
     try {
       const uploadResponse = await uploadTempOrderFiles(buildTempUploadFormData());
-      const tempId = Number(uploadResponse?.reason);
+      const tempId = `${uploadResponse?.reason || ''}`.trim();
 
-      if (!Number.isFinite(tempId) || tempId <= 0) {
+      if (!tempId) {
         throw new Error('Invalid temp order id received from upload-temp API.');
       }
 
       const attachResponse = await attachOrder(tempId, buildCreateOrderPayload());
-      const paymentUrl = `${attachResponse?.reason || ''}`.trim();
+      const paymentUrl = sanitizePaymentRedirectUrl(`${attachResponse?.reason || ''}`.trim());
 
       if (!paymentUrl) {
         throw new Error('Payment redirect URL was not returned by attach-order API.');
@@ -820,6 +932,9 @@ export default function PlaceOrder() {
                   summary={orderSummary}
                   checkoutForm={checkoutForm}
                   checkoutError={checkoutError}
+                  branchOptions={branchOptions}
+                  branchLoading={branchLoading}
+                  branchError={branchError}
                   onFieldChange={handleCheckoutFieldChange}
                 />
               )}
@@ -2878,7 +2993,7 @@ function OrderSummaryStep({ summary, loading, error }) {
   );
 }
 
-function CheckoutStep({ summary, checkoutForm, checkoutError, onFieldChange }) {
+function CheckoutStep({ summary, checkoutForm, checkoutError, branchOptions, branchLoading, branchError, onFieldChange }) {
   const theme = useTheme();
   const border = `1px solid ${alpha(theme.palette.secondary.main, 0.16)}`;
   const cardShadow = theme.vars.customShadows?.z1 || '0 8px 30px rgba(0, 0, 0, 0.06)';
@@ -2933,11 +3048,11 @@ function CheckoutStep({ summary, checkoutForm, checkoutError, onFieldChange }) {
               </Grid>
               <Grid item xs={12}>
                 <FieldLabel>Address</FieldLabel>
-                <TextField fullWidth value={checkoutForm.customerAddress} onChange={(event) => onFieldChange('customerAddress', event.target.value)} sx={inputSx} />
+                <TextField fullWidth value={checkoutForm.customerAddress1} onChange={(event) => onFieldChange('customerAddress1', event.target.value)} sx={inputSx} />
               </Grid>
               <Grid item xs={12}>
                 <FieldLabel>Apartment, suite, etc. (optional)</FieldLabel>
-                <TextField fullWidth value={checkoutForm.apartment} onChange={(event) => onFieldChange('apartment', event.target.value)} sx={inputSx} />
+                <TextField fullWidth value={checkoutForm.customerAddress2} onChange={(event) => onFieldChange('customerAddress2', event.target.value)} sx={inputSx} />
               </Grid>
               <Grid item xs={12}>
                 <FieldLabel>Country</FieldLabel>
@@ -2977,11 +3092,11 @@ function CheckoutStep({ summary, checkoutForm, checkoutError, onFieldChange }) {
                   <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
                     <Grid item xs={12}>
                       <FieldLabel>Address</FieldLabel>
-                      <TextField fullWidth value={checkoutForm.shippingAddress} onChange={(event) => onFieldChange('shippingAddress', event.target.value)} sx={inputSx} />
+                      <TextField fullWidth value={checkoutForm.shippingAddress1} onChange={(event) => onFieldChange('shippingAddress1', event.target.value)} sx={inputSx} />
                     </Grid>
                     <Grid item xs={12}>
                       <FieldLabel>Apartment, suite, etc. (optional)</FieldLabel>
-                      <TextField fullWidth value={checkoutForm.shippingApartment} onChange={(event) => onFieldChange('shippingApartment', event.target.value)} sx={inputSx} />
+                      <TextField fullWidth value={checkoutForm.shippingAddress2} onChange={(event) => onFieldChange('shippingAddress2', event.target.value)} sx={inputSx} />
                     </Grid>
                     <Grid item xs={12}>
                       <FieldLabel>Country</FieldLabel>
@@ -3002,7 +3117,28 @@ function CheckoutStep({ summary, checkoutForm, checkoutError, onFieldChange }) {
                   </Grid>
                 ) : null}
               </>
-            ) : null}
+            ) : (
+              <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
+                <Grid item xs={12}>
+                  <FieldLabel>Select Branch</FieldLabel>
+                  <TextField
+                    select
+                    fullWidth
+                    value={checkoutForm.shippingBranchId}
+                    onChange={(event) => onFieldChange('shippingBranchId', event.target.value)}
+                    sx={inputSx}
+                    disabled={branchLoading || !branchOptions.length}
+                    helperText={branchError || (branchLoading ? 'Loading branches...' : '')}
+                  >
+                    {branchOptions.map((branch) => (
+                      <MenuItem key={branch.value} value={branch.value}>
+                        {branch.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
+              </Grid>
+            )}
 
             {checkoutError ? (
               <Typography color="error" sx={{ mt: 2, fontSize: '0.85rem' }}>

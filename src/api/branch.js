@@ -6,6 +6,7 @@ import { authorizedFetch } from './auth';
 //   id: number, // e.g. 9007199254740991 (Number.MAX_SAFE_INTEGER)
 //   name: string,
 //   code: string,
+//   branchType: 'MANUFACTURING_UNIT' | 'LOOK_AND_FEEL_STORE',
 //   address: string,
 //   pincode: string,
 //   keyContactPersonName: string,
@@ -21,11 +22,12 @@ export async function getBranches() {
   });
 }
 
-export async function createBranch({ name, code, address, pincode, keyContactPersonName, keyContactPersonPhone }) {
+export async function createBranch({ name, code, branchType, address, pincode, keyContactPersonName, keyContactPersonPhone }) {
   // eslint-disable-next-line no-console
   console.log('Calling POST /api/v1/master/branch/create', {
     name,
     code,
+    branchType,
     address,
     pincode,
     keyContactPersonName,
@@ -33,7 +35,7 @@ export async function createBranch({ name, code, address, pincode, keyContactPer
   });
   return authorizedFetch('/api/v1/master/branch/create', {
     method: 'POST',
-    body: JSON.stringify({ name, code, address, pincode, keyContactPersonName, keyContactPersonPhone })
+    body: JSON.stringify({ name, code, branchType, address, pincode, keyContactPersonName, keyContactPersonPhone })
   });
 }
 
@@ -45,11 +47,12 @@ export async function getBranchById(id) {
   });
 }
 
-export async function editBranch(id, { name, code, address, pincode, keyContactPersonName, keyContactPersonPhone }) {
+export async function editBranch(id, { name, code, branchType, address, pincode, keyContactPersonName, keyContactPersonPhone }) {
   // eslint-disable-next-line no-console
   console.log(`Calling PUT /api/v1/master/branch/edit/${id}`, {
     name,
     code,
+    branchType,
     address,
     pincode,
     keyContactPersonName,
@@ -57,7 +60,7 @@ export async function editBranch(id, { name, code, address, pincode, keyContactP
   });
   return authorizedFetch(`/api/v1/master/branch/edit/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ name, code, address, pincode, keyContactPersonName, keyContactPersonPhone })
+    body: JSON.stringify({ name, code, branchType, address, pincode, keyContactPersonName, keyContactPersonPhone })
   });
 }
 

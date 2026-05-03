@@ -69,18 +69,37 @@ export default function OrderPaymentCallback() {
                 </Stack>
               </Box>
 
+              <Box
+                sx={{
+                  width: '100%',
+                  p: 2.5,
+                  bgcolor: alpha(theme.palette.info.main, 0.05),
+                  border: `1px solid ${alpha(theme.palette.info.main, 0.16)}`
+                }}
+              >
+                <Stack spacing={1.25}>
+                  <Typography sx={{ fontWeight: 600 }}>Customer portal access</Typography>
+                  <Typography sx={{ color: 'text.secondary', lineHeight: 1.8 }}>
+                    You can log in to your customer portal using your registered mobile number or email and verify access with OTP.
+                  </Typography>
+                  <Typography sx={{ color: 'text.secondary', lineHeight: 1.8 }}>
+                    Inside the portal you can check the latest order status, payment state and order progress{paymentStatus.isFailure ? ', and retry the payment again if this payment attempt failed.' : '.'}
+                  </Typography>
+                </Stack>
+              </Box>
+
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                 {paymentStatus.isFailure ? (
                   <Button component={RouterLink} to="/customer" variant="contained" sx={{ borderRadius: 0 }}>
-                    Login to Customer Portal
+                    Login and Retry Payment
                   </Button>
                 ) : (
-                  <Button component={RouterLink} to="/order" variant="contained" sx={{ borderRadius: 0 }}>
-                    Back to Order Page
+                  <Button component={RouterLink} to="/customer" variant="contained" sx={{ borderRadius: 0 }}>
+                    Track in Customer Portal
                   </Button>
                 )}
-                <Button component={RouterLink} to="/customer" variant="outlined" sx={{ borderRadius: 0 }}>
-                  Open Customer Portal
+                <Button component={RouterLink} to="/order" variant="outlined" sx={{ borderRadius: 0 }}>
+                  Back to Order Page
                 </Button>
               </Stack>
 
@@ -150,6 +169,8 @@ function CallbackHero() {
 }
 
 function getPaymentStatus(queryEntries) {
+  const resultValue =
+    queryEntries.find(([key]) => key.toLowerCase() === 'result')?.[1]?.trim().toLowerCase() || '';
   const values = queryEntries.map(([key, value]) => `${key}=${value}`.toLowerCase());
   const combined = values.join(' ');
 
@@ -159,6 +180,37 @@ function getPaymentStatus(queryEntries) {
 
   const hasWord = (words) => words.some((word) => combined.includes(word));
 
+  if (resultValue === 'failed') {
+    return {
+      badgeLabel: 'Payment Failed',
+      badgeColor: 'error',
+      title: 'Your payment was not completed',
+      description:
+        'The payment gateway returned a failed response for this order. Your order is not confirmed as paid yet.',
+      infoTitle: 'What you should do next',
+      infoText:
+        'Log in to your customer portal using your registered mobile number or email, verify with OTP, check the order status and make the payment again from the portal.',
+      secondaryText: 'If the amount was deducted but this page still shows a failure, contact Dhar Brothers support before retrying the payment.',
+      accent: '#d32f2f',
+      isFailure: true
+    };
+  }
+
+  if (resultValue === 'success') {
+    return {
+      badgeLabel: 'Payment Success',
+      badgeColor: 'success',
+      title: 'Your payment was received successfully',
+      description: 'The payment gateway returned a successful response. Dhar Brothers can now continue processing your order.',
+      infoTitle: 'What happens next',
+      infoText:
+        'You can log in to your customer portal using your registered mobile number or email and OTP to check the latest order and payment status at any time.',
+      secondaryText: '',
+      accent: '#2e7d32',
+      isFailure: false
+    };
+  }
+
   if (hasWord(failureWords)) {
     return {
       badgeLabel: 'Payment Failed',
@@ -167,7 +219,8 @@ function getPaymentStatus(queryEntries) {
       description:
         'The payment gateway returned a failed or cancelled response for this order. Your order is not confirmed as paid yet.',
       infoTitle: 'What you should do next',
-      infoText: 'Log in to your customer portal to review the order and start the payment again from the pending payment section.',
+      infoText:
+        'Log in to your customer portal using your registered mobile number or email, verify with OTP, review the order status and start the payment again from the pending payment section.',
       secondaryText: 'If the amount was deducted but this page still shows a failure, contact Dhar Brothers support before retrying the payment.',
       accent: '#d32f2f',
       isFailure: true
@@ -181,7 +234,8 @@ function getPaymentStatus(queryEntries) {
       title: 'Your payment was received successfully',
       description: 'The payment gateway returned a successful response. Dhar Brothers can now continue processing your order.',
       infoTitle: 'What happens next',
-      infoText: 'You can keep this page for reference or log in to the customer portal later to track the order and future updates.',
+      infoText:
+        'You can keep this page for reference or log in to the customer portal later using your registered mobile number or email and OTP to track the order and future updates.',
       secondaryText: '',
       accent: '#2e7d32',
       isFailure: false
