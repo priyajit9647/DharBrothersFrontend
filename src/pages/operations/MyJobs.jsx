@@ -1,47 +1,156 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import Grid from '@mui/material/Grid';
-import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+
+import MasterList from 'sections/admin/masters/MasterList';
 import Button from '@mui/material/Button';
+import { getJobList, completeMyJob } from 'api/myJobs';
+import { useAuth } from 'hooks/useAuth';
 
-import MainCard from 'components/MainCard';
-
-// ==============================|| BMS - MY JOBS (STAFF VIEW) ||============================== //
+// ==============================|| MY JOBS ||============================== //
 
 export default function MyJobs() {
+  const { user } = useAuth();
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [completingId, setCompletingId] = useState(null);
+
+  const loadJobs = useCallback(async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      const data = await getJobList(user?.id);
+      const items = Array.isArray(data) ? data : data?.items || data?.data || [];
+      setJobs(items);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load jobs', err);
+      setError(err?.message || 'Failed to load jobs');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  const handleComplete = async (id) => {
+    if (!id) return;
+    try {
+      setCompletingId(id);
+      setError('');
+      await completeMyJob(id);
+      await loadJobs();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to complete job', err);
+      setError(err?.message || 'Failed to complete job');
+    } finally {
+      setCompletingId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      loadJobs();
+    }
+  }, [loadJobs, user?.id]);
+
+  const pagedRows = useMemo(() => {
+    const start = page * rowsPerPage;
+    const end = start + rowsPerPage;
+    return jobs.slice(start, end);
+  }, [page, rowsPerPage, jobs]);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleString();
+  };
+
+  const getCustomerName = (customer) => {
+    if (!customer) return '';
+    return customer.name || customer.customerName || '';
+  };
+
   return (
-    <Grid container rowSpacing={3} columnSpacing={2.75}>
-      <Grid item xs={12}>
-        <Typography variant="h5">My Jobs</Typography>
-        <Typography variant="body2" color="text.secondary">
-          List of jobs assigned to the logged-in staff member. Simple actions to move stages, log delays and mark completion.
-        </Typography>
-      </Grid>
-
-      <Grid item xs={12} md={8}>
-        <MainCard title="Assigned Jobs" contentSX={{ p: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Table-style list with columns for Job ID, Customer, Current Stage, Due Time, and Delay Reason.
-          </Typography>
-          <Button variant="contained" color="primary" size="small">
-            Example: Mark Selected as Completed
-          </Button>
-        </MainCard>
-      </Grid>
-
-      <Grid item xs={12} md={4}>
-        <Stack spacing={2}>
-          <MainCard title="Today&apos;s Targets" contentSX={{ p: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Summary of jobs due today vs completed, to guide staff focus.
+    <>
+      <Grid container sx={{ width: '100%', flexGrow: 1 }}>
+        <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
+          {error && (
+            <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+              {error}
             </Typography>
-          </MainCard>
-          <MainCard title="Recent Delays Logged" contentSX={{ p: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Quick list of delay reasons recently submitted by this staff member.
-            </Typography>
-          </MainCard>
-        </Stack>
+          )}
+          <MasterList
+            title="My Jobs"
+            description="View the list of jobs assigned to you."
+            columns={[
+              { id: 'orderId', label: 'Order ID' },
+              { id: 'documentId', label: 'Document ID' },
+              { id: 'stage', label: 'Stage' },
+              {
+                id: 'customer',
+                label: 'Customer',
+                render: (row) => getCustomerName(row.customer)
+              },
+              {
+                id: 'dueTime',
+                label: 'Due Time',
+                format: (value) => formatDate(value)
+              },
+              {
+                id: 'completed',
+                label: 'Completed',
+                align: 'center',
+                format: (value) => (value ? 'Yes' : 'No')
+              },
+              {
+                id: 'completedAt',
+                label: 'Completed At',
+                format: (value) => formatDate(value)
+              },
+              { id: 'delayNote', label: 'Delay Note' },
+              {
+                id: 'delayedAt',
+                label: 'Delayed At',
+                format: (value) => formatDate(value)
+              }
+,
+              {
+                id: 'actions',
+                label: 'Actions',
+                align: 'center',
+                render: (row) => (
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="small"
+                    onClick={() => handleComplete(row.id)}
+                    disabled={loading || completingId === row.id}
+                  >
+                    {completingId === row.id ? 'Completing...' : 'Complete'}
+                  </Button>
+                )
+              }
+            ]}
+            rows={pagedRows}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            totalCount={jobs.length}
+            onPageChange={setPage}
+            onRowsPerPageChange={(value) => {
+              setRowsPerPage(value);
+              setPage(0);
+            }}
+            loading={loading}
+            hideCreateButton
+            showActiveColumn={false}
+            showActionsColumn={false}
+          />
+        </Grid>
       </Grid>
-    </Grid>
+    </>
   );
 }
