@@ -40,7 +40,7 @@ function normalizeJobListResponse(payload) {
  * @returns {Promise<MyJob[]>}
  */
 export async function getJobList(userId) {
-  const query = userId ? `?${new URLSearchParams({ userid: userId }).toString()}` : '';
+  const query = userId ? `?${new URLSearchParams({ userId: userId }).toString()}` : '';
 
   const response = await authorizedFetch(`/api/v1/my-jobs/job-list${query}`, {
     method: 'GET'

@@ -11,7 +11,7 @@ import { useAuth } from 'hooks/useAuth';
 // ==============================|| MY JOBS ||============================== //
 
 export default function MyJobs() {
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,12 +19,32 @@ export default function MyJobs() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [completingId, setCompletingId] = useState(null);
 
-  const loadJobs = useCallback(async () => {
+  const loadJobs = useCallback(async (uid) => {
     setLoading(true);
     setError('');
 
     try {
-      const data = await getJobList(user?.id);
+      // Determine effective userId to send — backend requires `userId` param
+      let effectiveUid = uid || user?.id || user?.userId || user?.uid || null;
+
+      if (!effectiveUid && accessToken) {
+        try {
+          // Decode token payload for common fields.
+          const { parseJwt } = require('utils/authTokens');
+          const payload = parseJwt(accessToken);
+          if (payload) {
+            effectiveUid = payload.userId || payload.user_id || payload.sub || payload.uid || payload.id || null;
+          }
+        } catch (err) {
+          // ignore token parse errors
+        }
+      }
+
+      if (!effectiveUid) {
+        throw new Error('User ID not available for job list request');
+      }
+
+      const data = await getJobList(effectiveUid);
       const items = Array.isArray(data) ? data : data?.items || data?.data || [];
       setJobs(items);
     } catch (err) {
@@ -34,7 +54,7 @@ export default function MyJobs() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user, accessToken]);
 
   const handleComplete = async (id) => {
     if (!id) return;
@@ -53,9 +73,8 @@ export default function MyJobs() {
   };
 
   useEffect(() => {
-    if (user?.id) {
-      loadJobs();
-    }
+    // Always attempt to load jobs on mount; pass user id when available
+    loadJobs(user?.id);
   }, [loadJobs, user?.id]);
 
   const pagedRows = useMemo(() => {
