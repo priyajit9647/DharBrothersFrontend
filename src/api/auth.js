@@ -20,7 +20,7 @@ export async function loginApi({ email, password }) {
   let data;
   try {
     data = await response.json();
-  } catch (e) {
+  } catch {
     throw new Error('Unable to parse server response');
   }
 
@@ -86,7 +86,7 @@ export async function refreshTokenApi(refreshToken) {
   let data;
   try {
     data = await response.json();
-  } catch (e) {
+  } catch {
     throw new Error('Unable to parse server response');
   }
 
@@ -102,6 +102,20 @@ export async function refreshTokenApi(refreshToken) {
   return data;
 }
 
+function getAuthStateFromLocalStorage() {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = window.localStorage.getItem('dharbrothers-auth');
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 // Generic helper for authenticated API calls.
 // Usage: authorizedFetch('/api/v1/secure-endpoint', { method: 'GET' })
 export async function authorizedFetch(path, options = {}) {
@@ -109,8 +123,9 @@ export async function authorizedFetch(path, options = {}) {
     throw new Error('API base URL is not configured');
   }
 
-  let accessToken = getAccessTokenFromCookies();
-  const refreshToken = getRefreshTokenFromCookies();
+  const localAuth = getAuthStateFromLocalStorage();
+  let accessToken = getAccessTokenFromCookies() || localAuth?.accessToken || null;
+  const refreshToken = getRefreshTokenFromCookies() || localAuth?.refreshToken || null;
 
   // If there is no access token or it is expired, but a refresh
   // token exists, attempt to obtain a new access token via the
@@ -119,7 +134,7 @@ export async function authorizedFetch(path, options = {}) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
-    } catch (error) {
+    } catch {
       clearAuthCookies();
       throw new Error('Session expired. Please login again.');
     }
@@ -149,15 +164,34 @@ export async function authorizedFetch(path, options = {}) {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  let response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers
   });
 
+  if (response.status === 401 && refreshToken) {
+    try {
+      const refreshed = await refreshTokenApi(refreshToken);
+      const nextAccessToken = refreshed?.accessToken;
+      if (nextAccessToken) {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+          ...options,
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${nextAccessToken}`
+          }
+        });
+      }
+    } catch {
+      clearAuthCookies();
+      throw new Error('Session expired. Please login again.');
+    }
+  }
+
   let data;
   try {
     data = await response.json();
-  } catch (e) {
+  } catch {
     data = null;
   }
 
@@ -176,14 +210,15 @@ export async function authorizedFetchRaw(path, options = {}) {
     throw new Error('API base URL is not configured');
   }
 
-  let accessToken = getAccessTokenFromCookies();
-  const refreshToken = getRefreshTokenFromCookies();
+  const localAuth = getAuthStateFromLocalStorage();
+  let accessToken = getAccessTokenFromCookies() || localAuth?.accessToken || null;
+  const refreshToken = getRefreshTokenFromCookies() || localAuth?.refreshToken || null;
 
   if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
-    } catch (error) {
+    } catch {
       clearAuthCookies();
       throw new Error('Session expired. Please login again.');
     }
@@ -210,17 +245,36 @@ export async function authorizedFetchRaw(path, options = {}) {
     }
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  let response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers
   });
+
+  if (response.status === 401 && refreshToken) {
+    try {
+      const refreshed = await refreshTokenApi(refreshToken);
+      const nextAccessToken = refreshed?.accessToken;
+      if (nextAccessToken) {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+          ...options,
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${nextAccessToken}`
+          }
+        });
+      }
+    } catch {
+      clearAuthCookies();
+      throw new Error('Session expired. Please login again.');
+    }
+  }
 
   if (!response.ok) {
     let message = 'Request failed';
     try {
       const data = await response.json();
       message = data?.message || data?.error || message;
-    } catch (e) {
+    } catch {
       // ignore JSON parse errors for non-JSON responses
     }
     throw new Error(message);
