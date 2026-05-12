@@ -29,6 +29,7 @@ const NotificationEmail = Loadable(lazy(() => import('pages/admin/NotificationEm
 const WhatsappNotifications = Loadable(lazy(() => import('pages/admin/WhatsappNotifications')));
 const InAppNotifications = Loadable(lazy(() => import('pages/admin/InAppNotifications')));
 const SystemSettings = Loadable(lazy(() => import('pages/admin/Settings')));
+const Template = Loadable(lazy(() => import('pages/admin/Template')));
 const ProcessStageMaster = Loadable(lazy(() => import('pages/admin/masters/ProcessStageMaster')));
 const ProcessStageAssignment = Loadable(lazy(() => import('pages/admin/masters/ProcessStageAssignment')));
 const PrintingTypeMaster = Loadable(lazy(() => import('pages/admin/masters/PrintingTypeMaster')));
@@ -42,6 +43,9 @@ const PrintingRateMaster = Loadable(lazy(() => import('pages/admin/masters/Print
 const OtherChargeMaster = Loadable(lazy(() => import('pages/admin/masters/OtherChargeMaster')));
 const BindingRateMaster = Loadable(lazy(() => import('pages/admin/masters/BindingRateMaster')));
 const PaymentConfigurationMaster = Loadable(lazy(() => import('pages/admin/PaymentConfigurationMaster')));
+const EmailTemplate = Loadable(lazy(() => import('pages/admin/templates/EmailTemplate')));
+const WhatsappTemplate = Loadable(lazy(() => import('pages/admin/templates/WhatsappTemplate')));
+const InAppTemplate = Loadable(lazy(() => import('pages/admin/templates/InAppTemplate')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -124,6 +128,27 @@ const MainRoutes = {
         {
           path: 'documents',
           element: <DocumentVersionController />
+        },
+        {
+          path: 'template',
+          children: [
+            {
+              path: '',
+              element: <Template />
+            },
+            {
+              path: 'email',
+              element: <EmailTemplate />
+            },
+            {
+              path: 'whatsapp',
+              element: <WhatsappTemplate />
+            },
+            {
+              path: 'in-app',
+              element: <InAppTemplate />
+            }
+          ]
         },
         {
           path: 'users',

@@ -162,6 +162,32 @@ const support = {
           url: '/admin/masters/binding-rates'
         }
       ]
+    },
+    {
+      id: 'template',
+      title: 'Template',
+      type: 'collapse',
+      icon: icons.DatabaseOutlined,
+      children: [
+        {
+          id: 'email-template',
+          title: 'Email Template',
+          type: 'item',
+          url: '/admin/template/email'
+        },
+        {
+          id: 'whatsapp-template',
+          title: 'WhatsApp Template',
+          type: 'item',
+          url: '/admin/template/whatsapp'
+        },
+        {
+          id: 'inapp-template',
+          title: 'In-App Template',
+          type: 'item',
+          url: '/admin/template/in-app'
+        }
+      ]
     }
   ]
 };
