@@ -22,7 +22,7 @@ import { Formik } from 'formik';
 // project imports
 import IconButton from 'components/@extended/IconButton';
 import AnimateButton from 'components/@extended/AnimateButton';
-import { loginApi } from 'api/auth';
+import { loginApi, getUserProfile } from 'api/auth';
 import { useAuth } from 'hooks/useAuth';
 import { setAuthCookies } from 'utils/authTokens';
 
@@ -37,7 +37,7 @@ export default function AuthLogin({ isDemo = false }) {
 
   const [showPassword, setShowPassword] = React.useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, updateUser } = useAuth();
   const handleClickShowPassword = () => {
     setShowPassword(!showPassword);
   };
@@ -82,6 +82,15 @@ export default function AuthLogin({ isDemo = false }) {
                 email: values.email
               }
             });
+
+            // Fetch user profile after login
+            try {
+              const profileData = await getUserProfile();
+              updateUser(profileData);
+            } catch (profileError) {
+              console.error('Failed to fetch user profile:', profileError);
+              // Continue with login even if profile fetch fails
+            }
 
             setStatus({ success: true, error: null });
             navigate('/dashboard/default', { replace: true });

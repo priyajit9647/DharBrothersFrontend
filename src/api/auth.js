@@ -298,3 +298,7 @@ export async function authorizedFetchRaw(path, options = {}) {
   return response;
 }
 
+export async function getUserProfile() {
+  return authorizedFetch('/api/v1/user/me/profile');
+}
+

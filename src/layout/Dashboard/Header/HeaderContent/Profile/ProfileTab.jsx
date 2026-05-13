@@ -6,7 +6,6 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 
 // assets
-import EditOutlined from '@ant-design/icons/EditOutlined';
 import ProfileOutlined from '@ant-design/icons/ProfileOutlined';
 import LogoutOutlined from '@ant-design/icons/LogoutOutlined';
 import UserOutlined from '@ant-design/icons/UserOutlined';
@@ -14,16 +13,10 @@ import WalletOutlined from '@ant-design/icons/WalletOutlined';
 
 // ==============================|| HEADER PROFILE - PROFILE TAB ||============================== //
 
-export default function ProfileTab({ handleLogout }) {
+export default function ProfileTab({ handleLogout, onViewProfile }) {
   return (
     <List component="nav" sx={{ p: 0, '& .MuiListItemIcon-root': { minWidth: 32 } }}>
-      <ListItemButton>
-        <ListItemIcon>
-          <EditOutlined />
-        </ListItemIcon>
-        <ListItemText primary="Edit Profile" />
-      </ListItemButton>
-      <ListItemButton>
+      <ListItemButton onClick={onViewProfile}>
         <ListItemIcon>
           <UserOutlined />
         </ListItemIcon>
@@ -52,4 +45,4 @@ export default function ProfileTab({ handleLogout }) {
   );
 }
 
-ProfileTab.propTypes = { handleLogout: PropTypes.func };
+ProfileTab.propTypes = { handleLogout: PropTypes.func, onViewProfile: PropTypes.func };
