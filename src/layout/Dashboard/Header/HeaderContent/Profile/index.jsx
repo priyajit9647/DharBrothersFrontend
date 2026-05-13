@@ -16,6 +16,15 @@ import Tabs from '@mui/material/Tabs';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
 
 // project imports
 import ProfileTab from './ProfileTab';
@@ -54,6 +63,10 @@ export default function Profile() {
   const theme = useTheme();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const handleOpenProfile = () => setProfileOpen(true);
+  const handleCloseProfile = () => setProfileOpen(false);
 
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -181,7 +194,7 @@ export default function Profile() {
                     </Tabs>
                   </Box>
                   <TabPanel value={value} index={0} dir={theme.direction}>
-                    <ProfileTab handleLogout={handleLogout} />
+                    <ProfileTab handleLogout={handleLogout} onViewProfile={handleOpenProfile} />
                   </TabPanel>
                   <TabPanel value={value} index={1} dir={theme.direction}>
                     <SettingTab />
@@ -192,6 +205,48 @@ export default function Profile() {
           </Transitions>
         )}
       </Popper>
+      <Dialog open={profileOpen} onClose={handleCloseProfile} fullWidth maxWidth="xs">
+        <DialogTitle>Profile</DialogTitle>
+        <DialogContent dividers>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Avatar alt="profile user" src={avatar1} sx={{ width: 64, height: 64 }} />
+            <Stack>
+              <Typography variant="h6">{user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.userName || 'User'}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {user?.roleName || 'User'}
+              </Typography>
+            </Stack>
+          </Stack>
+
+          <List sx={{ mt: 2 }}>
+            {user?.userName && (
+              <ListItem>
+                <ListItemText primary="Username" secondary={user.userName} />
+              </ListItem>
+            )}
+            {user?.email && (
+              <ListItem>
+                <ListItemText primary="Email" secondary={user.email} />
+              </ListItem>
+            )}
+            {user?.mobile && (
+              <ListItem>
+                <ListItemText primary="Mobile" secondary={user.mobile} />
+              </ListItem>
+            )}
+            <ListItem>
+              <ListItemText primary="WhatsApp" secondary={user?.whatsapp || 'Not provided'} />
+            </ListItem>
+            <Divider />
+            <ListItem>
+              <ListItemText primary="Branch" secondary={user?.branchName || 'Not provided'} />
+            </ListItem>
+          </List>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseProfile}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
