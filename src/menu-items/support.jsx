@@ -166,28 +166,9 @@ const support = {
     {
       id: 'template',
       title: 'Template',
-      type: 'collapse',
+      type: 'item',
       icon: icons.DatabaseOutlined,
-      children: [
-        {
-          id: 'email-template',
-          title: 'Email Template',
-          type: 'item',
-          url: '/admin/template/email'
-        },
-        {
-          id: 'whatsapp-template',
-          title: 'WhatsApp Template',
-          type: 'item',
-          url: '/admin/template/whatsapp'
-        },
-        {
-          id: 'inapp-template',
-          title: 'In-App Template',
-          type: 'item',
-          url: '/admin/template/in-app'
-        }
-      ]
+      url: '/admin/template'
     }
   ]
 };

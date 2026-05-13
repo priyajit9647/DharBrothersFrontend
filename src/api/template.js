@@ -6,10 +6,27 @@ import { authorizedFetch } from './auth';
 
 export async function getEmailTemplates() {
   // eslint-disable-next-line no-console
-  console.log('Calling GET /api/v1/template/email/list');
-  return authorizedFetch('/api/v1/template/email/list', {
+  console.log('Calling GET /api/v1/template/notification/list');
+  const data = await authorizedFetch('/api/v1/template/notification/list', {
     method: 'GET'
   });
+
+  // Support APIs that return either an array or an object with a `data` array.
+  const list = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+
+  return list.map((item, index) => ({
+    id: item.id ?? index + 1,
+    templateName: item.templateName ?? item.name ?? item.emailSubject ?? `Template ${index + 1}`,
+    subject: item.subject ?? item.emailSubject ?? '',
+    emailBody: item.emailBody ?? item.body ?? '',
+    recipients: item.recipients ?? '',
+    isActive: item.isActive ?? item.active ?? false,
+    branchId: item.branchId ?? null,
+    processStageId: item.processStageId ?? null,
+    default: item.default ?? false,
+    // keep original payload for advanced usages
+    _raw: item
+  }));
 }
 
 export async function createEmailTemplate({
@@ -20,14 +37,14 @@ export async function createEmailTemplate({
   isActive
 }) {
   // eslint-disable-next-line no-console
-  console.log('Calling POST /api/v1/template/email/create', {
+  console.log('Calling POST /api/v1/template/notification/create', {
     templateName,
     templateCode,
     subject,
     body,
     isActive
   });
-  return authorizedFetch('/api/v1/template/email/create', {
+  return authorizedFetch('/api/v1/template/notification/create', {
     method: 'POST',
     body: JSON.stringify({
       templateName,
@@ -47,14 +64,14 @@ export async function editEmailTemplate(id, {
   isActive
 }) {
   // eslint-disable-next-line no-console
-  console.log(`Calling PUT /api/v1/template/email/edit/${id}`, {
+  console.log(`Calling PUT /api/v1/template/notification/edit/${id}`, {
     templateName,
     templateCode,
     subject,
     body,
     isActive
   });
-  return authorizedFetch(`/api/v1/template/email/edit/${id}`, {
+  return authorizedFetch(`/api/v1/template/notification/edit/${id}`, {
     method: 'PUT',
     body: JSON.stringify({
       templateName,
@@ -68,16 +85,16 @@ export async function editEmailTemplate(id, {
 
 export async function toggleEmailTemplateActive(id, active) {
   // eslint-disable-next-line no-console
-  console.log(`Calling PATCH /api/v1/template/email/disable/${id}/${active}`);
-  return authorizedFetch(`/api/v1/template/email/disable/${id}/${active}`, {
+  console.log(`Calling PATCH /api/v1/template/notification/disable/${id}/${active}`);
+  return authorizedFetch(`/api/v1/template/notification/disable/${id}/${active}`, {
     method: 'PATCH'
   });
 }
 
 export async function deleteEmailTemplate(id) {
   // eslint-disable-next-line no-console
-  console.log(`Calling DELETE /api/v1/template/email/${id}`);
-  return authorizedFetch(`/api/v1/template/email/${id}`, {
+  console.log(`Calling DELETE /api/v1/template/notification/${id}`);
+  return authorizedFetch(`/api/v1/template/notification/${id}`, {
     method: 'DELETE'
   });
 }
