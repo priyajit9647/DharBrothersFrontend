@@ -53,7 +53,7 @@ function a11yProps(index) {
 export default function Profile() {
   const theme = useTheme();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const anchorRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -127,9 +127,9 @@ export default function Profile() {
                         <Stack direction="row" sx={{ gap: 1.25, alignItems: 'center' }}>
                           <Avatar alt="profile user" src={avatar1} sx={{ width: 32, height: 32 }} />
                           <Stack>
-                            <Typography variant="h6">John Doe</Typography>
+                            <Typography variant="h6">{user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.userName || 'User'}</Typography>
                             <Typography variant="body2" color="text.secondary">
-                              UI/UX Designer
+                              {user?.roleName || 'User'}
                             </Typography>
                           </Stack>
                         </Stack>

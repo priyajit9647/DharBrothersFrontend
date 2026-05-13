@@ -25,6 +25,13 @@ export function AuthProvider({ children }) {
     });
   };
 
+  const updateUser = (userData) => {
+    setState((prevState) => ({
+      ...prevState,
+      user: { ...prevState.user, ...userData }
+    }));
+  };
+
   const logout = () => {
     clearAuthCookies();
     resetState();
@@ -37,6 +44,7 @@ export function AuthProvider({ children }) {
       ...state,
       isAuthenticated,
       login,
+      updateUser,
       logout
     }),
     [state, isAuthenticated]

@@ -11,13 +11,13 @@ import AuthWrapper from 'sections/auth/AuthWrapper';
 import AuthLogin from 'sections/auth/AuthLogin';
 import { useAuth } from 'hooks/useAuth';
 import { isTokenExpired, getRefreshTokenFromCookies, setAuthCookies } from 'utils/authTokens';
-import { refreshTokenApi } from 'api/auth';
+import { refreshTokenApi, getUserProfile } from 'api/auth';
 
 // ================================|| JWT - LOGIN ||================================ //
 
 export default function Login() {
   const navigate = useNavigate();
-  const { accessToken, refreshToken, login } = useAuth();
+  const { accessToken, refreshToken, login, updateUser } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +55,15 @@ export default function Login() {
             email: data.email
           }
         });
+
+        // Fetch user profile after token refresh
+        try {
+          const profileData = await getUserProfile();
+          updateUser(profileData);
+        } catch (profileError) {
+          console.error('Failed to fetch user profile:', profileError);
+          // Continue even if profile fetch fails
+        }
 
         navigate('/dashboard/default', { replace: true });
       } catch (error) {
