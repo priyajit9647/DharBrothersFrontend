@@ -71,3 +71,73 @@ export async function toggleBranchActive(id, active) {
     method: 'PATCH'
   });
 }
+
+export async function createNotificationTemplate(payload) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Payload must be an object');
+  }
+
+  const {
+    branchId,
+    processStageId,
+    emailSubject,
+    emailBody,
+    whatsappTemplateCode,
+    whatsappBody,
+    inAppBody,
+    isActive
+  } = payload;
+
+  if (
+    branchId == null ||
+    processStageId == null ||
+    !emailSubject ||
+    !emailBody ||
+    !whatsappTemplateCode ||
+    !whatsappBody ||
+    !inAppBody ||
+    isActive == null
+  ) {
+    throw new Error('All notification template fields are required');
+  }
+
+  // eslint-disable-next-line no-console
+  console.log('Calling POST /api/branch/notification-template', payload);
+  return authorizedFetch('/api/branch/notification-template', {
+    method: 'POST',
+    body: JSON.stringify({
+      branchId,
+      processStageId,
+      emailSubject,
+      emailBody,
+      whatsappTemplateCode,
+      whatsappBody,
+      inAppBody,
+      isActive
+    })
+  });
+}
+
+export async function getNotificationTemplate(branchId, processStageId) {
+  if (branchId == null || processStageId == null) {
+    throw new Error('branchId and processStageId are required');
+  }
+
+  // eslint-disable-next-line no-console
+  console.log(`Calling GET /api/branch/${branchId}/notification-template/${processStageId}`);
+  return authorizedFetch(`/api/branch/${branchId}/notification-template/${processStageId}`, {
+    method: 'GET'
+  });
+}
+
+export async function deleteNotificationTemplate(branchId, processStageId) {
+  if (branchId == null || processStageId == null) {
+    throw new Error('branchId and processStageId are required');
+  }
+
+  // eslint-disable-next-line no-console
+  console.log(`Calling DELETE /api/branch/${branchId}/notification-template/${processStageId}`);
+  return authorizedFetch(`/api/branch/${branchId}/notification-template/${processStageId}`, {
+    method: 'DELETE'
+  });
+}

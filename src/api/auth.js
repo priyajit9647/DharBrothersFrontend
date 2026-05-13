@@ -64,6 +64,21 @@ export async function publicFetch(path, options = {}) {
 
   if (!response.ok) {
     const message = data?.message || data?.error || 'Request failed';
+    // Try to include more details for server (5xx) errors to aid debugging
+    if (response.status >= 500) {
+      try {
+        const text = await response.text();
+        // include a concise snippet of response body
+        const snippet = (text || '').slice(0, 1000);
+        // log full server response to console for debugging
+        // eslint-disable-next-line no-console
+        console.error('Server error', { url: `${API_BASE_URL}${path}`, status: response.status, body: text });
+        throw new Error(`${message} (status ${response.status}) — ${snippet}`);
+      } catch (e) {
+        throw new Error(`${message} (status ${response.status})`);
+      }
+    }
+
     throw new Error(message);
   }
 

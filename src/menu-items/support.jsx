@@ -162,6 +162,13 @@ const support = {
           url: '/admin/masters/binding-rates'
         }
       ]
+    },
+    {
+      id: 'template',
+      title: 'Template',
+      type: 'item',
+      icon: icons.DatabaseOutlined,
+      url: '/admin/template'
     }
   ]
 };
