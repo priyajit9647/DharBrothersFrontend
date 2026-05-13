@@ -11,21 +11,21 @@ export async function getProcessStages() {
   });
 }
 
-export async function createProcessStage({ code, stageName, sequenceNo }) {
+export async function createProcessStage({ code, stageName, sequenceNo, active = true }) {
   // eslint-disable-next-line no-console
-  console.log('Calling POST /api/v1/master/process-stage/create', { code, stageName, sequenceNo });
+  console.log('Calling POST /api/v1/master/process-stage/create', { code, stageName, sequenceNo, active });
   return authorizedFetch('/api/v1/master/process-stage/create', {
     method: 'POST',
-    body: JSON.stringify({ code, stageName, sequenceNo })
+    body: JSON.stringify({ code, stageName, sequenceNo, active })
   });
 }
 
-export async function editProcessStage(id, { code, stageName, sequenceNo }) {
+export async function editProcessStage(id, { code, stageName, sequenceNo, active = true }) {
   // eslint-disable-next-line no-console
-  console.log(`Calling PUT /api/v1/master/process-stage/edit/${id}`, { code, stageName, sequenceNo });
+  console.log(`Calling PUT /api/v1/master/process-stage/edit/${id}`, { code, stageName, sequenceNo, active });
   return authorizedFetch(`/api/v1/master/process-stage/edit/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ code, stageName, sequenceNo })
+    body: JSON.stringify({ code, stageName, sequenceNo, active })
   });
 }
 

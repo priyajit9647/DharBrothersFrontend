@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Dialog from '@mui/material/Dialog';
@@ -6,21 +6,18 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
-import Select from '@mui/material/Select';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 
 import MainCard from 'components/MainCard';
 import MasterList from 'sections/admin/masters/MasterList';
-import { getBranches } from 'api/branch';
+import { createTemplateNotification, getTemplateNotificationList } from 'api/admin/template/notification';
 import { getProcessStages } from 'api/processStage';
-import { createNotificationTemplate } from 'api/branch';
 
 // ==============================|| ADMIN - TEMPLATE PAGE ||============================== //
 
@@ -35,7 +32,6 @@ export default function Template() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [formValues, setFormValues] = useState({
-    branchId: '',
     processStageId: '',
     emailSubject: '',
     emailBody: '',
@@ -45,26 +41,8 @@ export default function Template() {
     isActive: true
   });
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      setError('');
-
-      try {
-        const branchData = await getBranches();
-        const stageData = await getProcessStages();
-
-        setBranches(Array.isArray(branchData) ? branchData : branchData?.items || branchData?.data || []);
-        setProcessStages(Array.isArray(stageData) ? stageData : stageData?.items || stageData?.data || []);
-      } catch (err) {
-        setError(err?.message || 'Failed to load branch or stage data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+  // Removed automatic calls to master branch/process-stage list APIs to avoid backend hits from this page.
+  // If you want pre-filled branch or stage options, provide them here or via a different admin page.
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -72,9 +50,42 @@ export default function Template() {
     return rows.slice(start, end);
   }, [page, rowsPerPage, rows]);
 
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await getTemplateNotificationList();
+        if (!mounted) return;
+        const list = Array.isArray(data) ? data : data?.items || data?.data || [];
+        const normalized = list.map((item) => ({
+          id: item.id,
+          branchId: item.branchId,
+          branchName: item.branchId ? String(item.branchId) : '',
+          processStageId: item.processStageId,
+          processStageName: item.processStageName,
+          emailSubject: item.emailSubject,
+          emailBody: item.emailBody,
+          whatsappTemplateCode: item.whatsappTemplateCode,
+          whatsappBody: item.whatsappBody,
+          inAppBody: item.inAppBody,
+          isActive: item.isActive,
+          default: item.default
+        }));
+        setRows(normalized);
+      } catch (e) {
+        // keep existing rows and show error in UI via state
+        setError(e?.message || 'Failed to load templates');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
+
   const openCreateDialog = () => {
     setFormValues({
-      branchId: '',
       processStageId: '',
       emailSubject: '',
       emailBody: '',
@@ -86,6 +97,22 @@ export default function Template() {
     setError('');
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const data = await getProcessStages();
+        if (!mounted) return;
+        const list = Array.isArray(data) ? data : data?.items || data?.data || [];
+        setProcessStages(list);
+      } catch (e) {
+        // ignore — dropdown will be empty
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   const handleCloseDialog = () => {
     if (saving) return;
@@ -99,18 +126,18 @@ export default function Template() {
 
   const handleSave = async () => {
     const payload = {
-      branchId: Number(formValues.branchId),
       processStageId: Number(formValues.processStageId),
       emailSubject: formValues.emailSubject.trim(),
       emailBody: formValues.emailBody.trim(),
       whatsappTemplateCode: formValues.whatsappTemplateCode.trim(),
       whatsappBody: formValues.whatsappBody.trim(),
       inAppBody: formValues.inAppBody.trim(),
-      isActive: Boolean(formValues.isActive)
+      isActive: Boolean(formValues.isActive),
+      dynamicData: ''
     };
 
-    if (!payload.branchId || !payload.processStageId || !payload.emailSubject || !payload.emailBody || !payload.whatsappTemplateCode || !payload.whatsappBody || !payload.inAppBody) {
-      setError('All fields are required');
+    if (!payload.processStageId || !payload.emailSubject || !payload.emailBody) {
+      setError('ProcessStage, email subject and email body are required');
       return;
     }
 
@@ -118,15 +145,13 @@ export default function Template() {
     setError('');
 
     try {
-      const resp = await createNotificationTemplate(payload);
-      const branch = branches.find((b) => Number(b.id) === payload.branchId);
-      const stage = processStages.find((s) => Number(s.id) === payload.processStageId);
+      const resp = await createTemplateNotification(payload);
+      const processStageName = String(payload.processStageId);
 
       setRows((prev) => [
         {
-          id: resp?.branchId ?? Date.now(),
-          branchName: branch?.name || String(payload.branchId),
-          processStageName: stage?.stageName || String(payload.processStageId),
+          id: resp?.id ?? Date.now(),
+          processStageName,
           emailSubject: payload.emailSubject,
           whatsappTemplateCode: payload.whatsappTemplateCode,
           active: payload.isActive
@@ -156,8 +181,36 @@ export default function Template() {
             columns={[
               { id: 'branchName', label: 'Branch' },
               { id: 'processStageName', label: 'Process Stage' },
-              { id: 'emailSubject', label: 'Email Subject' },
-              { id: 'whatsappTemplateCode', label: 'WhatsApp Template' }
+              {
+                id: 'email',
+                label: 'Email (Subject + Body)',
+                sx: { whiteSpace: 'normal', maxWidth: 480 },
+                render: (r) => (
+                  <div>
+                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 600 }}>{r.emailSubject}</Typography>
+                    <Typography sx={{ whiteSpace: 'pre-wrap', fontSize: '0.95rem', color: 'text.secondary' }}>{r.emailBody}</Typography>
+                  </div>
+                )
+              },
+              {
+                id: 'whatsapp',
+                label: 'WhatsApp (Template + Body)',
+                sx: { whiteSpace: 'normal', maxWidth: 420 },
+                render: (r) => (
+                  <div>
+                    <Typography sx={{ fontSize: '0.95rem', fontWeight: 600 }}>{r.whatsappTemplateCode}</Typography>
+                    <Typography sx={{ whiteSpace: 'pre-wrap', fontSize: '0.95rem', color: 'text.secondary' }}>{r.whatsappBody}</Typography>
+                  </div>
+                )
+              },
+              {
+                id: 'inApp',
+                label: 'In-App Notification',
+                sx: { whiteSpace: 'normal', maxWidth: 420 },
+                render: (r) => (
+                  <Typography sx={{ whiteSpace: 'pre-wrap', fontSize: '0.95rem', color: 'text.secondary' }}>{r.inAppBody}</Typography>
+                )
+              }
             ]}
             rows={pagedRows}
             page={page}
@@ -178,37 +231,17 @@ export default function Template() {
         <DialogTitle>Create Notification Template</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <FormControl fullWidth>
-              <InputLabel id="branch-select-label">Branch</InputLabel>
-              <Select
-                labelId="branch-select-label"
-                label="Branch"
-                value={formValues.branchId}
-                onChange={handleFormChange('branchId')}
-              >
-                {branches.map((branch) => (
-                  <MenuItem key={branch.id} value={branch.id}>
-                    {branch.name || branch.code || branch.id}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth>
-              <InputLabel id="stage-select-label">Process Stage</InputLabel>
-              <Select
-                labelId="stage-select-label"
-                label="Process Stage"
-                value={formValues.processStageId}
-                onChange={handleFormChange('processStageId')}
-              >
-                {processStages.map((stage) => (
-                  <MenuItem key={stage.id} value={stage.id}>
-                    {stage.stageName || stage.code || stage.id}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Select
+              value={formValues.processStageId}
+              onChange={handleFormChange('processStageId')}
+              displayEmpty
+              fullWidth
+            >
+              <MenuItem value="">Select Process Stage</MenuItem>
+              {processStages.map((ps) => (
+                <MenuItem key={ps.id} value={ps.id}>{ps.stageName || ps.code || ps.id}</MenuItem>
+              ))}
+            </Select>
 
             <TextField
               label="Email Subject"
