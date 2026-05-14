@@ -15,6 +15,7 @@ const OrdersIntake = Loadable(lazy(() => import('pages/operations/Orders')));
 const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')));
 const Whatsapp = Loadable(lazy(() => import('pages/operations/Whatsapp')));
 const Email = Loadable(lazy(() => import('pages/operations/Email')));
+const CustomerPortal = Loadable(lazy(() => import('pages/customer/Portal')));
 
 // render - BMS Admin & Insights
 const ReportsOverview = Loadable(lazy(() => import('pages/reports/Overview')));
@@ -94,6 +95,15 @@ const MainRoutes = {
     {
       path: 'delivery',
       element: <DeliveryDispatch />
+    },
+    {
+      path: 'customer',
+      children: [
+        {
+          path: 'portal',
+          element: <CustomerPortal />
+        }
+      ]
     },
     // Reports & Insights
     {
