@@ -1,4 +1,4 @@
-import { authorizedFetch } from 'api/auth';
+import { authorizedFetch, publicFetch } from 'api/auth';
 
 // ==============================|| CUSTOMER PORTAL API CLIENT (PLACEHOLDER) ||============================== //
 // These helpers describe the intended backend contract for the one-time customer portal.
@@ -9,6 +9,14 @@ export async function requestCustomerOtp({ orderReference, contact }) {
   return authorizedFetch('/api/v1/customer-portal/request-otp', {
     method: 'POST',
     body: JSON.stringify({ orderReference, contact })
+  });
+}
+
+// Customer login for the storefront/portal using orderId, mobileNumber and otp
+export async function customerLogin({ orderId, mobileNumber, otp }) {
+  return publicFetch('/api/v1/auth/customer/login', {
+    method: 'POST',
+    body: JSON.stringify({ orderId, mobileNumber, otp })
   });
 }
 
