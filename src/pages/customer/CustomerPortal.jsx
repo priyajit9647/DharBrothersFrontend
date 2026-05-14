@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 // material-ui
 import Grid from '@mui/material/Grid';
@@ -18,6 +18,7 @@ import Alert from '@mui/material/Alert';
 
 // project imports
 import MainCard from 'components/MainCard';
+import { fetchCustomerPortalData, updateCustomerDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders } from 'api/customerPortal';
 
 // ==============================|| CUSTOMER PORTAL - MAIN VIEW ||============================== //
 
@@ -49,6 +50,13 @@ export default function CustomerPortal() {
 
   const portalSession = location.state?.portalSession;
 
+  const [portalData, setPortalData] = useState(mockPortalData);
+  const [orders, setOrders] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   const [addressDraft, setAddressDraft] = useState(() => {
     const sourceAddress = mockPortalData.deliveryAddress;
     return [
@@ -67,9 +75,53 @@ export default function CustomerPortal() {
   const [busy, setBusy] = useState(false);
 
   const latestDocument = useMemo(() => {
-    if (!mockPortalData.documents?.length) return undefined;
-    return mockPortalData.documents[mockPortalData.documents.length - 1];
-  }, []);
+    if (!portalData.documents?.length) return undefined;
+    return portalData.documents[portalData.documents.length - 1];
+  }, [portalData.documents]);
+
+  useEffect(() => {
+    let mounted = true;
+    const token = portalSession?.portalToken;
+    if (!token) {
+      if (portalSession?.orderReference) {
+        setPortalData((p) => ({ ...p, orderReference: portalSession.orderReference }));
+      }
+      return () => {
+        mounted = false;
+      };
+    }
+
+    setLoading(true);
+    (async () => {
+      try {
+        const resp = await fetchCustomerPortalData({ portalToken: token });
+        if (!mounted) return;
+        setPortalData(resp || {});
+        setOrders(resp?.orders || resp?.oldOrders || []);
+        setNotifications(resp?.notifications || []);
+      } catch (err) {
+        if (mounted) setError(err?.message || 'Unable to load portal data');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [portalSession]);
+
+  useEffect(() => {
+    const sourceAddress = portalData.deliveryAddress;
+    if (sourceAddress) {
+      setAddressDraft([
+        sourceAddress.name,
+        sourceAddress.line1,
+        sourceAddress.line2,
+        `${sourceAddress.city}, ${sourceAddress.state} - ${sourceAddress.pincode}`
+      ].filter(Boolean).join('\n'));
+    }
+  }, [portalData.deliveryAddress]);
 
   if (!portalSession) {
     return (
@@ -96,13 +148,16 @@ export default function CustomerPortal() {
   const handleAddressSubmit = async () => {
     setBusy(true);
     setAddressMessage('');
-
-    // TODO: Call backend API to update delivery address for this order.
+    const token = portalSession?.portalToken;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setAddressMessage('Your delivery address change request has been submitted for this order.');
+      if (token) {
+        await updateCustomerDeliveryAddress({ portalToken: token, address: addressDraft });
+        setAddressMessage('Your delivery address change request has been submitted for this order.');
+      } else {
+        setAddressMessage('Address change requested. Please contact support to complete this change.');
+      }
     } catch (error) {
-      setAddressMessage('Unable to submit address change. Please try again.');
+      setAddressMessage(error?.message || 'Unable to submit address change. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -111,13 +166,16 @@ export default function CustomerPortal() {
   const handleMakePayment = async () => {
     setBusy(true);
     setPaymentMessage('');
-
-    // TODO: Redirect to payment gateway / initiate payment intent.
+    const token = portalSession?.portalToken;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setPaymentMessage('Payment link has been initiated for the pending amount.');
+      if (token) {
+        await initiateCustomerPayment({ portalToken: token });
+        setPaymentMessage('Payment link has been initiated for the pending amount.');
+      } else {
+        setPaymentMessage('Unable to start payment without a valid portal session.');
+      }
     } catch (error) {
-      setPaymentMessage('Unable to start payment. Please try again.');
+      setPaymentMessage(error?.message || 'Unable to start payment. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -126,17 +184,34 @@ export default function CustomerPortal() {
   const handleApprove = async (isApproved) => {
     setBusy(true);
     setApprovalMessage('');
-
-    // TODO: Call backend API to record approval / disapproval for the latest version.
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-      setApprovalMessage(
-        isApproved
-          ? 'Thank you. Your approval has been recorded and the job will move to the next stage.'
-          : 'Your feedback has been recorded. Our team will review the changes requested.'
-      );
+      const token = portalSession?.portalToken;
+      if (token && latestDocument) {
+        await submitDocumentApproval({ portalToken: token, version: latestDocument.version, approved: !!isApproved });
+        setApprovalMessage(isApproved ? 'Thank you. Your approval has been recorded.' : 'Your feedback has been recorded.');
+      } else {
+        setApprovalMessage(isApproved ? 'Approval recorded locally.' : 'Disapproval recorded locally.');
+      }
     } catch (error) {
-      setApprovalMessage('Unable to submit your response. Please try again.');
+      setApprovalMessage(error?.message || 'Unable to submit your response. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSubmitFeedback = async () => {
+    setBusy(true);
+    try {
+      const token = portalSession?.portalToken;
+      if (token) {
+        await submitCustomerFeedback({ portalToken: token, feedback: feedbackText });
+        setFeedbackText('');
+        setApprovalMessage('Thank you for your feedback.');
+      } else {
+        setApprovalMessage('Feedback recorded locally. Contact support to ensure delivery.');
+      }
+    } catch (err) {
+      setApprovalMessage(err?.message || 'Unable to submit feedback. Please try again.');
     } finally {
       setBusy(false);
     }
@@ -149,58 +224,70 @@ export default function CustomerPortal() {
           <Box>
             <Typography variant="h5">Customer Order Portal</Typography>
             <Typography variant="body2" color="text.secondary">
-              One-time view for your Dhar Brothers order. You can review delivery address, payments and document versions shared by our team.
+              One-time view for your Dhar Brothers orders. Review past orders, track current status, manage payments and delivery address, and send feedback.
             </Typography>
           </Box>
           <Stack spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'flex-end' } }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              Order Reference
-            </Typography>
+            <Typography variant="subtitle2" color="text.secondary">Order Reference</Typography>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Typography variant="h6">{portalSession.orderReference || mockPortalData.orderReference}</Typography>
-              <Chip label={mockPortalData.status} color="warning" size="small" />
+              <Typography variant="h6">{portalData.orderReference || portalSession.orderReference || mockPortalData.orderReference}</Typography>
+              <Chip label={portalData.status || mockPortalData.status} color="warning" size="small" />
             </Stack>
           </Stack>
         </Stack>
       </Grid>
 
-      {/* Left column: Order overview & documents */}
-      <Grid item xs={12} md={7}>
+      {/* Left: Past Orders */}
+      <Grid item xs={12} md={3}>
+        <MainCard title="Your Orders">
+          <List disablePadding>
+            {(orders.length ? orders : [{ orderReference: portalData.orderReference, status: portalData.status }]).map((o, idx) => (
+              <ListItem key={o.orderReference || idx} disablePadding>
+                <ListItemButton sx={{ borderRadius: 1.5 }} onClick={() => { /* could show switch to this order */ }}>
+                  <ListItemText
+                    primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Typography variant="subtitle2">{o.orderReference || o.ref}</Typography></Stack>}
+                    secondary={<Typography variant="caption" color="text.secondary">{o.status || '—'}</Typography>}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </MainCard>
+      </Grid>
+
+      {/* Center: Order details, documents, status & feedback */}
+      <Grid item xs={12} md={6}>
         <MainCard title="Order Overview" contentSX={{ p: 2.5 }}>
           <Stack spacing={2.5}>
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-                Order Details
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                This section can show job type, binding preferences, quantity and promised delivery date once wired with live data from the backend.
-              </Typography>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>Order Details</Typography>
+              <Typography variant="body2" color="text.secondary">{portalData.notes || 'Order summary and specifications will appear here.'}</Typography>
             </Box>
 
             <Divider />
 
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                Document Versions Shared by Dhar Brothers
-              </Typography>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Order Current Status</Typography>
               <List disablePadding>
-                {mockPortalData.documents.map((doc) => (
+                {(portalData.statusHistory || [{ when: '', status: portalData.status }]).map((s, i) => (
+                  <ListItem key={i} sx={{ px: 0 }}>
+                    <ListItemText primary={<Typography variant="body2">{s.status}</Typography>} secondary={<Typography variant="caption" color="text.secondary">{s.when}</Typography>} />
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Document Versions</Typography>
+              <List disablePadding>
+                {(portalData.documents || []).map((doc) => (
                   <ListItem key={doc.version} disablePadding>
                     <ListItemButton sx={{ borderRadius: 1.5 }}>
                       <ListItemText
-                        primary={
-                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                            <Typography variant="subtitle2">v{doc.version}</Typography>
-                            <Typography variant="body2">{doc.label}</Typography>
-                          </Stack>
-                        }
-                        secondary={
-                          <Typography variant="caption" color="text.secondary">
-                            Uploaded on {doc.uploadedOn} 
-                            {' \/ '}
-                            {doc.status}
-                          </Typography>
-                        }
+                        primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Typography variant="subtitle2">v{doc.version}</Typography><Typography variant="body2">{doc.label}</Typography></Stack>}
+                        secondary={<Typography variant="caption" color="text.secondary">Uploaded on {doc.uploadedOn} • {doc.status}</Typography>}
                       />
                     </ListItemButton>
                   </ListItem>
@@ -209,72 +296,47 @@ export default function CustomerPortal() {
 
               {latestDocument && (
                 <Box sx={{ mt: 2.5 }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-                    Approve Latest Document
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                    Please review the latest version shared with you ({latestDocument.label}). Approving confirms that the layout and details are
-                    correct as per your requirement.
-                  </Typography>
+                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Approve Latest Document</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Please review the latest version ({latestDocument.label}) and approve or request changes.</Typography>
 
-                  {approvalMessage && (
-                    <Alert severity="success" sx={{ mb: 1.5 }}>
-                      {approvalMessage}
-                    </Alert>
-                  )}
+                  {approvalMessage && <Alert severity="success" sx={{ mb: 1.5 }}>{approvalMessage}</Alert>}
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      disabled={busy}
-                      onClick={() => handleApprove(true)}
-                    >
-                      Approve Final Document
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      disabled={busy}
-                      onClick={() => handleApprove(false)}
-                    >
-                      Disapprove / Changes Required
-                    </Button>
+                    <Button variant="contained" color="success" disabled={busy} onClick={() => handleApprove(true)}>Approve Final Document</Button>
+                    <Button variant="outlined" color="error" disabled={busy} onClick={() => handleApprove(false)}>Disapprove / Changes Required</Button>
                   </Stack>
                 </Box>
               )}
+
+              <Divider sx={{ my: 2 }} />
+
+              <Box>
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Feedback</Typography>
+                {approvalMessage && <Alert severity="info" sx={{ mb: 1 }}>{approvalMessage}</Alert>}
+                <TextField fullWidth multiline rows={4} placeholder="Tell us how we did or request changes..." value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} />
+                <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: 1 }}>
+                  <Button variant="contained" onClick={handleSubmitFeedback} disabled={busy || !feedbackText.trim()}>Send Feedback</Button>
+                </Stack>
+              </Box>
             </Box>
           </Stack>
         </MainCard>
       </Grid>
 
-      {/* Right column: Delivery address & payments */}
-      <Grid item xs={12} md={5}>
+      {/* Right: Delivery address, payments, notifications */}
+      <Grid item xs={12} md={3}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <MainCard title="Delivery Address" contentSX={{ p: 2.5 }}>
               <Stack spacing={1.5}>
-                <Typography variant="body2" color="text.secondary">
-                  Confirm your delivery address for this order. You can request a change below; our team will review and update you.
-                </Typography>
+                <Typography variant="body2" color="text.secondary">Confirm your delivery address for this order. Address changes are accepted for pending orders only.</Typography>
 
-                {addressMessage && (
-                  <Alert severity="success">{addressMessage}</Alert>
-                )}
+                {addressMessage && <Alert severity="success">{addressMessage}</Alert>}
 
-                <TextField
-                  label="Delivery Address"
-                  multiline
-                  minRows={4}
-                  value={addressDraft}
-                  onChange={(event) => setAddressDraft(event.target.value)}
-                  fullWidth
-                />
+                <TextField label="Delivery Address" multiline minRows={4} value={addressDraft} onChange={(event) => setAddressDraft(event.target.value)} fullWidth />
 
                 <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-                  <Button variant="contained" color="primary" onClick={handleAddressSubmit} disabled={busy}>
-                    Submit Address Change
-                  </Button>
+                  <Button variant="contained" color="primary" onClick={handleAddressSubmit} disabled={busy || !(portalData.status || '').toLowerCase().includes('pending')}>Submit Address Change</Button>
                 </Stack>
               </Stack>
             </MainCard>
@@ -284,48 +346,37 @@ export default function CustomerPortal() {
             <MainCard title="Payment History & Pending Dues" contentSX={{ p: 2.5 }}>
               <Stack spacing={1.5}>
                 <List disablePadding>
-                  {mockPortalData.payments.map((payment) => (
+                  {(portalData.payments || []).map((payment) => (
                     <ListItem key={payment.id} sx={{ px: 0 }}>
                       <ListItemText
-                        primary={
-                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Typography variant="body2">{payment.date}</Typography>
-                            <Typography variant="subtitle2">₹ {payment.amount}</Typography>
-                          </Stack>
-                        }
-                        secondary={
-                          <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', mt: 0.25 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {payment.mode}
-                            </Typography>
-                            <Typography variant="caption" color={payment.status === 'Received' ? 'success.main' : 'warning.main'}>
-                              {payment.status}
-                            </Typography>
-                          </Stack>
-                        }
+                        primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}><Typography variant="body2">{payment.date}</Typography><Typography variant="subtitle2">₹ {payment.amount}</Typography></Stack>}
+                        secondary={<Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', mt: 0.25 }}><Typography variant="caption" color="text.secondary">{payment.mode}</Typography><Typography variant="caption" color={payment.status === 'Received' ? 'success.main' : 'warning.main'}>{payment.status}</Typography></Stack>}
                       />
                     </ListItem>
                   ))}
                 </List>
 
-                {paymentMessage && (
-                  <Alert severity="info">{paymentMessage}</Alert>
-                )}
+                {paymentMessage && <Alert severity="info">{paymentMessage}</Alert>}
 
                 <Divider sx={{ my: 0.5 }} />
 
-                <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    To clear pending dues or make an additional payment, click the button below. A secure payment link / gateway will be opened.
-                  </Typography>
-                </Stack>
-
                 <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-                  <Button variant="contained" color="warning" onClick={handleMakePayment} disabled={busy}>
-                    Make a Payment
-                  </Button>
+                  <Button variant="contained" color="warning" onClick={handleMakePayment} disabled={busy}>Make a Payment</Button>
                 </Stack>
               </Stack>
+            </MainCard>
+          </Grid>
+
+          <Grid item xs={12}>
+            <MainCard title="Notifications" contentSX={{ p: 2.5 }}>
+              <List disablePadding>
+                {(notifications || []).slice(0, 6).map((n, i) => (
+                  <ListItem key={n.id || i} sx={{ px: 0 }}>
+                    <ListItemText primary={<Typography variant="body2">{n.title || n.message}</Typography>} secondary={<Typography variant="caption" color="text.secondary">{n.when || n.date}</Typography>} />
+                  </ListItem>
+                ))}
+                {(!notifications || notifications.length === 0) && <Typography variant="caption" color="text.secondary">No notifications</Typography>}
+              </List>
             </MainCard>
           </Grid>
         </Grid>

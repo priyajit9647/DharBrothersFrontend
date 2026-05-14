@@ -55,3 +55,24 @@ export async function submitDocumentApproval({ portalToken, version, approved })
     body: JSON.stringify({ portalToken, version, approved })
   });
 }
+
+export async function fetchCustomerOrders({ portalToken }) {
+  return authorizedFetch('/api/v1/customer-portal/orders', {
+    method: 'POST',
+    body: JSON.stringify({ portalToken })
+  });
+}
+
+export async function fetchCustomerNotifications({ portalToken }) {
+  return authorizedFetch('/api/v1/customer-portal/notifications', {
+    method: 'POST',
+    body: JSON.stringify({ portalToken })
+  });
+}
+
+export async function submitCustomerFeedback({ portalToken, feedback }) {
+  return authorizedFetch('/api/v1/customer-portal/feedback', {
+    method: 'POST',
+    body: JSON.stringify({ portalToken, feedback })
+  });
+}

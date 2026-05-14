@@ -15,6 +15,7 @@ import Stack from '@mui/material/Stack';
 import Logo from 'components/logo';
 import AuthFooter from 'components/cards/AuthFooter';
 import AuthBackground from 'sections/auth/AuthBackground';
+import { customerLogin } from 'api/customerPortal';
 
 // ==============================|| CUSTOMER PORTAL - OTP ENTRY ||============================== //
 
@@ -38,16 +39,22 @@ export default function CustomerPortalEntry() {
       setError('Please enter your Order ID and registered email / mobile.');
       return;
     }
-
-    // TODO: Integrate with backend OTP request API.
-    // For now we simulate success and move to the verify step.
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const resp = await customerLogin({ orderId: orderReference.trim(), mobileNumber: contact.trim() });
+
+      // If backend returned a portal/session/token, open portal immediately.
+      if (resp && (resp.portalToken || resp.token || resp.accessToken || resp.portalSession)) {
+        const portalSession = resp.portalSession || { portalToken: resp.portalToken || resp.token || resp.accessToken, orderReference: orderReference.trim(), contact: contact.trim() };
+        navigate('/customer/portal', { state: { portalSession }, replace: true });
+        return;
+      }
+
+      // Otherwise assume OTP was sent and continue to verification step.
       setStep('verify');
-      setInfo('An OTP has been sent to your registered contact. Please enter it below to continue.');
+      setInfo(resp?.message || 'An OTP has been sent to your registered contact. Please enter it below to continue.');
     } catch (e) {
-      setError('Unable to request OTP. Please try again.');
+      setError(e?.message || 'Unable to request OTP. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -61,21 +68,27 @@ export default function CustomerPortalEntry() {
       setError('Please enter the OTP you received.');
       return;
     }
-
-    // TODO: Integrate with backend OTP verify API.
-    // For now we simulate a successful verification and navigate to the portal.
     setLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const resp = await customerLogin({ orderId: orderReference.trim(), mobileNumber: contact.trim(), otp: otp.trim() });
 
-      const portalSession = {
-        orderReference: orderReference.trim(),
-        contact: contact.trim()
-      };
+      // If backend returns portal/session/token, navigate to portal
+      if (resp && (resp.portalToken || resp.token || resp.accessToken || resp.portalSession)) {
+        const portalSession = resp.portalSession || { portalToken: resp.portalToken || resp.token || resp.accessToken, orderReference: orderReference.trim(), contact: contact.trim() };
+        navigate('/customer/portal', { state: { portalSession }, replace: true });
+        return;
+      }
 
-      navigate('/customer/portal', { state: { portalSession }, replace: true });
-    } catch (e) {
+      // Some backends may simply return success — open portal with order details
+      if (resp && (resp.success || resp.message)) {
+        const portalSession = { orderReference: orderReference.trim(), contact: contact.trim() };
+        navigate('/customer/portal', { state: { portalSession }, replace: true });
+        return;
+      }
+
       setError('Invalid or expired OTP. Please request a new one.');
+    } catch (e) {
+      setError(e?.message || 'Invalid or expired OTP. Please request a new one.');
     } finally {
       setLoading(false);
     }
