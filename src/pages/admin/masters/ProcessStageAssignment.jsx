@@ -34,7 +34,7 @@ export default function ProcessStageAssignment() {
   const [editingRow, setEditingRow] = useState(null);
 
   const [selectedBranchId, setSelectedBranchId] = useState('');
-  const [selectedStageId, setSelectedStageId] = useState('');
+  const [selectedStageIds, setSelectedStageIds] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [noOfDays, setNoOfDays] = useState('');
 
@@ -132,7 +132,7 @@ export default function ProcessStageAssignment() {
   const openCreateDialog = () => {
     setEditingRow(null);
     setSelectedBranchId('');
-    setSelectedStageId('');
+    setSelectedStageIds([]);
     setSelectedUserId('');
     setNoOfDays('');
     setError('');
@@ -142,7 +142,9 @@ export default function ProcessStageAssignment() {
   const openEditDialog = (row) => {
     setEditingRow(row);
     setSelectedBranchId(String(row.branchId || ''));
-    setSelectedStageId(String(row.stageId || ''));
+    // support row.stageId being a single id or an array
+    const stageIdsFromRow = row.stageId == null ? [] : Array.isArray(row.stageId) ? row.stageId.map(String) : [String(row.stageId)];
+    setSelectedStageIds(stageIdsFromRow);
     setSelectedUserId(String(row.userId || ''));
     setNoOfDays(row.noOfDays || '');
     setError('');
@@ -156,7 +158,7 @@ export default function ProcessStageAssignment() {
 
   const handleSave = async () => {
     const branchId = Number(selectedBranchId);
-    const stageId = Number(selectedStageId);
+    const stageIds = Array.isArray(selectedStageIds) ? selectedStageIds.map((s) => Number(s)) : [Number(selectedStageIds)];
     const userId = String(selectedUserId).trim();
     const daysNum = Number(String(noOfDays).trim());
 
@@ -164,8 +166,8 @@ export default function ProcessStageAssignment() {
       setError('Please select a branch');
       return;
     }
-    if (!selectedStageId || Number.isNaN(stageId)) {
-      setError('Please select a valid process stage');
+    if (!selectedStageIds || selectedStageIds.length === 0 || stageIds.some((s) => Number.isNaN(s))) {
+      setError('Please select at least one valid process stage');
       return;
     }
     if (!userId) {
@@ -182,9 +184,9 @@ export default function ProcessStageAssignment() {
       setError('');
 
       if (editingRow?.id) {
-        await editProcessStageAssignment(editingRow.id, { stageId, userId, noOfDays: daysNum, branchId });
+        await editProcessStageAssignment(editingRow.id, { stageId: stageIds, userId, noOfDays: daysNum, branchId });
       } else {
-        await createProcessStageAssignment({ stageId, userId, noOfDays: daysNum, branchId });
+        await createProcessStageAssignment({ stageId: stageIds, userId, noOfDays: daysNum, branchId });
       }
       await loadAssignments();
       setDialogOpen(false);
@@ -258,8 +260,21 @@ export default function ProcessStageAssignment() {
               <Select
                 labelId="stage-label"
                 label="Process Stage"
-                value={selectedStageId}
-                onChange={(e) => setSelectedStageId(e.target.value)}
+                multiple
+                value={selectedStageIds}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSelectedStageIds(typeof value === 'string' ? value.split(',') : value);
+                }}
+                renderValue={(selected) => {
+                  const sel = Array.isArray(selected) ? selected : [selected];
+                  return sel
+                    .map((id) => {
+                      const s = stages.find((st) => String(st.id) === String(id));
+                      return s ? (s.stageName || s.code || `Stage ${s.id}`) : id;
+                    })
+                    .join(', ');
+                }}
               >
                 {stages.map((stage) => (
                   <MenuItem key={stage.id} value={String(stage.id)}>
