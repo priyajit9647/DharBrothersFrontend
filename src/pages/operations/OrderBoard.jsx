@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
-import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -15,7 +14,7 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 
 import MainCard from 'components/MainCard';
-import Dot from 'components/@extended/Dot';
+// Dot component removed (unused)
 
 // icons
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
@@ -42,16 +41,6 @@ function OrdersTableHead() {
   );
 }
 
-function JobStatus({ statusTone }) {
-  let tone = statusTone || 'primary';
-  return (
-    <Stack direction="row" sx={{ gap: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Dot color={tone} />
-      <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>{tone}</Typography>
-    </Stack>
-  );
-}
-
 function renderOrderId(order) {
   return order.orderId ?? order.orderNo ?? order.id ?? order.code ?? '—';
 }
@@ -68,11 +57,12 @@ function paymentStatusColor(status) {
 export default function OrderBoard() {
   const [stages, setStages] = useState([]);
   const [ordersByStage, setOrdersByStage] = useState({});
+  const [pendingOrders, setPendingOrders] = useState([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [anchorEl, setAnchorEl] = useState(null);
-  const [activeRow, setActiveRow] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -82,7 +72,7 @@ export default function OrderBoard() {
       setError('');
       try {
         const ps = await getProcessStages();
-        const normalized = Array.isArray(ps) ? ps.map((s) => (typeof s === 'string' ? s : s.stageName ?? s.name)).filter(Boolean) : [];
+        const normalized = Array.isArray(ps) ? ps.map((s) => (typeof s === 'string' ? s : (s.stageName ?? s.name))).filter(Boolean) : [];
         if (!mounted) return;
         setStages(normalized);
 
@@ -97,6 +87,17 @@ export default function OrderBoard() {
             }
           })
         );
+
+        // Fetch explicit admin pending orders list (ORDER-PENDING)
+        setPendingLoading(true);
+        try {
+          const pending = await getOrdersByStatus('ORDER-PENDING');
+          if (mounted) setPendingOrders(Array.isArray(pending) ? pending : []);
+        } catch (e) {
+          console.warn('Failed to load ORDER-PENDING:', e?.message || e);
+        } finally {
+          if (mounted) setPendingLoading(false);
+        }
 
         if (!mounted) return;
         const map = {};
@@ -119,14 +120,12 @@ export default function OrderBoard() {
     };
   }, []);
 
-  const handleActionClick = (event, row) => {
+  const handleActionClick = (event /* row */) => {
     setAnchorEl(event.currentTarget);
-    setActiveRow(row);
   };
 
   const handleMenuClose = () => {
     setAnchorEl(null);
-    setActiveRow(null);
   };
 
   return (
@@ -160,6 +159,83 @@ export default function OrderBoard() {
 
       {!loading && !error && (
         <>
+          <Grid item xs={12}>
+            <MainCard content={false} sx={{ mb: 2 }}>
+              <Box sx={{ p: 2 }}>
+                <Typography variant="h6">Recent Pending Orders</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Admin pending queue (ORDER-PENDING)
+                </Typography>
+              </Box>
+
+              {pendingLoading ? (
+                <Box sx={{ p: 3 }}>Loading pending orders...</Box>
+              ) : (
+                <TableContainer sx={{ px: 2 }}>
+                  <Table size="small" aria-labelledby={`orders-pending`} sx={{ tableLayout: 'fixed' }}>
+                    <OrdersTableHead />
+                    <TableBody>
+                      {pendingOrders && pendingOrders.length > 0 ? (
+                        pendingOrders.slice(0, 12).map((order) => (
+                          <TableRow
+                            hover
+                            tabIndex={-1}
+                            key={renderOrderId(order)}
+                            sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                          >
+                            <TableCell>
+                              <IconButton size="small" onClick={(e) => handleActionClick(e, order)}>
+                                <EllipsisOutlined style={{ fontSize: '1rem' }} />
+                              </IconButton>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="subtitle2">
+                                {order.firstName || order.lastName
+                                  ? `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim()
+                                  : (order.customer?.name ?? order.customerName ?? '—')}
+                              </Typography>
+                              {(order.customerPhone || order.customerEmail) && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {[order.customerPhone, order.customerEmail].filter(Boolean).join(' • ')}
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">{order.orderStageName ?? order.stageName ?? order.stage ?? 'Pending'}</Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2">
+                                {order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              <Chip
+                                label={order.paymentStatus ?? '—'}
+                                color={paymentStatusColor(order.paymentStatus)}
+                                size="small"
+                                variant={paymentStatusColor(order.paymentStatus) === 'default' ? 'outlined' : 'filled'}
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6}>
+                            <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                              No pending orders
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </MainCard>
+          </Grid>
           {stages.map((stageName) => {
             const group = ordersByStage[stageName] || { items: [], error: null };
             const rows = group.items || [];
@@ -178,7 +254,12 @@ export default function OrderBoard() {
                       <OrdersTableHead />
                       <TableBody>
                         {rows.map((order) => (
-                          <TableRow hover tabIndex={-1} key={renderOrderId(order)} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                          <TableRow
+                            hover
+                            tabIndex={-1}
+                            key={renderOrderId(order)}
+                            sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                          >
                             <TableCell>
                               <IconButton size="small" onClick={(e) => handleActionClick(e, order)}>
                                 <EllipsisOutlined style={{ fontSize: '1rem' }} />
@@ -188,19 +269,32 @@ export default function OrderBoard() {
                               <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
                             </TableCell>
                             <TableCell>
-                              <Typography variant="subtitle2">{(order.firstName || order.lastName) ? `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim() : (order.customer?.name ?? order.customerName ?? '—')}</Typography>
+                              <Typography variant="subtitle2">
+                                {order.firstName || order.lastName
+                                  ? `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim()
+                                  : (order.customer?.name ?? order.customerName ?? '—')}
+                              </Typography>
                               {(order.customerPhone || order.customerEmail) && (
-                                <Typography variant="caption" color="text.secondary">{[order.customerPhone, order.customerEmail].filter(Boolean).join(' • ')}</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {[order.customerPhone, order.customerEmail].filter(Boolean).join(' • ')}
+                                </Typography>
                               )}
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2">{order.orderStageName ?? order.stageName ?? order.stage ?? stageName}</Typography>
                             </TableCell>
                             <TableCell align="right">
-                              <Typography variant="body2">{order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}</Typography>
+                              <Typography variant="body2">
+                                {order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}
+                              </Typography>
                             </TableCell>
                             <TableCell align="center">
-                              <Chip label={order.paymentStatus ?? '—'} color={paymentStatusColor(order.paymentStatus)} size="small" variant={paymentStatusColor(order.paymentStatus) === 'default' ? 'outlined' : 'filled'} />
+                              <Chip
+                                label={order.paymentStatus ?? '—'}
+                                color={paymentStatusColor(order.paymentStatus)}
+                                size="small"
+                                variant={paymentStatusColor(order.paymentStatus) === 'default' ? 'outlined' : 'filled'}
+                              />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -208,7 +302,13 @@ export default function OrderBoard() {
                     </Table>
                   </TableContainer>
 
-                  <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleMenuClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  >
                     <MenuItem onClick={handleMenuClose}>View Order</MenuItem>
                     <MenuItem onClick={handleMenuClose}>Assign</MenuItem>
                     <MenuItem onClick={handleMenuClose}>Edit</MenuItem>
