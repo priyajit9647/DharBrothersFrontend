@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-// material-ui
+
 import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -11,86 +14,44 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
-// third-party
-import { NumericFormat } from 'react-number-format';
-
-// project imports
-import Dot from 'components/@extended/Dot';
-
-function createData(tracking_no, name, fat, carbs, protein) {
-  return { tracking_no, name, fat, carbs, protein };
-}
-
-const rows = [
-  createData(84564564, 'Camera Lens', 40, 2, 40570),
-  createData(98764564, 'Laptop', 300, 0, 180139),
-  createData(98756325, 'Mobile', 355, 1, 90989),
-  createData(98652366, 'Handset', 50, 1, 10239),
-  createData(13286564, 'Computer Accessories', 100, 1, 83348),
-  createData(86739658, 'TV', 99, 0, 410780),
-  createData(13256498, 'Keyboard', 125, 2, 70999),
-  createData(98753263, 'Mouse', 89, 2, 10570),
-  createData(98753275, 'Desktop', 185, 1, 98063),
-  createData(98753291, 'Chair', 100, 0, 14001)
-];
-
-function descendingComparator(a, b, orderBy) {
-  if (b[orderBy] < a[orderBy]) {
-    return -1;
-  }
-  if (b[orderBy] > a[orderBy]) {
-    return 1;
-  }
-  return 0;
-}
-
-function getComparator(order, orderBy) {
-  return order === 'desc' ? (a, b) => descendingComparator(a, b, orderBy) : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
-function stableSort(array, comparator) {
-  const stabilizedThis = array.map((el, index) => [el, index]);
-  stabilizedThis.sort((a, b) => {
-    const order = comparator(a[0], b[0]);
-    if (order !== 0) {
-      return order;
-    }
-    return a[1] - b[1];
-  });
-  return stabilizedThis.map((el) => el[0]);
-}
+import { getRecentOrders } from 'api/orders';
 
 const headCells = [
   {
-    id: 'tracking_no',
+    id: 'order_no',
     align: 'left',
     disablePadding: false,
-    label: 'Tracking No.'
+    label: 'Order #'
   },
   {
-    id: 'name',
-    align: 'left',
-    disablePadding: true,
-    label: 'Product Name'
-  },
-  {
-    id: 'fat',
-    align: 'right',
-    disablePadding: false,
-    label: 'Total Order'
-  },
-  {
-    id: 'carbs',
+    id: 'order_name',
     align: 'left',
     disablePadding: false,
-
+    label: 'Order Name'
+  },
+  {
+    id: 'status',
+    align: 'center',
+    disablePadding: false,
     label: 'Status'
   },
   {
-    id: 'protein',
+    id: 'quantity',
     align: 'right',
     disablePadding: false,
-    label: 'Total Amount'
+    label: 'Qty'
+  },
+  {
+    id: 'amount',
+    align: 'right',
+    disablePadding: false,
+    label: 'Amount'
+  },
+  {
+    id: 'createdDate',
+    align: 'left',
+    disablePadding: false,
+    label: 'Created'
   }
 ];
 
@@ -115,41 +76,120 @@ function OrderTableHead({ order, orderBy }) {
   );
 }
 
-function OrderStatus({ status }) {
-  let color;
-  let title;
+function getStatusMeta(status) {
+  const normalized = String(status ?? '').toUpperCase();
 
-  switch (status) {
-    case 0:
-      color = 'warning';
-      title = 'Pending';
-      break;
-    case 1:
-      color = 'success';
-      title = 'Approved';
-      break;
-    case 2:
-      color = 'error';
-      title = 'Rejected';
-      break;
-    default:
-      color = 'primary';
-      title = 'None';
+  if (normalized.includes('PENDING')) {
+    return { color: 'warning', label: 'Pending' };
   }
 
-  return (
-    <Stack direction="row" sx={{ gap: 1, alignItems: 'center' }}>
-      <Dot color={color} />
-      <Typography>{title}</Typography>
-    </Stack>
-  );
+  if (normalized.includes('COMPLETED')) {
+    return { color: 'success', label: 'Completed' };
+  }
+
+  if (normalized.includes('DELIVERED')) {
+    return { color: 'info', label: 'Delivered' };
+  }
+
+  if (normalized.includes('READY')) {
+    return { color: 'primary', label: 'Ready for Dispatch' };
+  }
+
+  if (normalized.includes('CANCEL') || normalized.includes('FAILED') || normalized.includes('REJECTED')) {
+    return { color: 'error', label: 'Failed' };
+  }
+
+  return { color: 'default', label: status ? String(status) : 'Unknown' };
+}
+
+function getOrderId(order) {
+  return order?.trackingNumber ?? order?.orderId ?? order?.orderNo ?? order?.id ?? order?.code ?? 'N/A';
+}
+
+function getOrderLabel(order) {
+  return order?.orderName ?? order?.title ?? order?.name ?? 'N/A';
+}
+
+function getStatusLabel(order) {
+  return order?.status ?? order?.stage ?? order?.orderStageName ?? 'Unknown';
+}
+
+function getQuantity(order) {
+  return order?.totalQuantity ?? order?.quantity ?? '—';
+}
+
+function formatAmount(amount) {
+  if (amount == null || amount === '') {
+    return '—';
+  }
+
+  const value = Number(amount);
+  if (!Number.isFinite(value)) {
+    return `₹${String(amount)}`;
+  }
+
+  return `₹${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDate(value) {
+  if (!value) {
+    return '—';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short'
+  }).format(date);
 }
 
 // ==============================|| ORDER TABLE ||============================== //
 
 export default function OrderTable() {
-  const order = 'asc';
-  const orderBy = 'tracking_no';
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    const loadRecentOrders = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const data = await getRecentOrders({
+          page: 0,
+          size: 10,
+          sort: ['createdDate,DESC']
+        });
+
+        if (!active) return;
+
+        setOrders(Array.isArray(data) ? data : []);
+      } catch (fetchError) {
+        if (!active) return;
+
+        console.error(fetchError);
+        setError('Failed to load recent orders');
+        setOrders([]);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadRecentOrders();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <Box>
@@ -163,34 +203,74 @@ export default function OrderTable() {
           '& td, & th': { whiteSpace: 'nowrap' }
         }}
       >
-        <Table aria-labelledby="tableTitle">
-          <OrderTableHead order={order} orderBy={orderBy} />
+        <Table aria-labelledby="recent-orders-table">
+          <OrderTableHead order="asc" orderBy="order_no" />
           <TableBody>
-            {stableSort(rows, getComparator(order, orderBy)).map((row, index) => {
-              const labelId = `enhanced-table-checkbox-${index}`;
+            {loading && (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <Stack alignItems="center" justifyContent="center" sx={{ py: 3 }}>
+                    <CircularProgress size={24} />
+                    <Typography color="text.secondary" sx={{ mt: 1 }}>
+                      Loading recent orders...
+                    </Typography>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            )}
 
-              return (
-                <TableRow
-                  hover
-                  role="checkbox"
-                  sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                  tabIndex={-1}
-                  key={row.tracking_no}
-                >
-                  <TableCell component="th" id={labelId} scope="row">
-                    <Link color="secondary">{row.tracking_no}</Link>
-                  </TableCell>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell align="right">{row.fat}</TableCell>
-                  <TableCell>
-                    <OrderStatus status={row.carbs} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <NumericFormat value={row.protein} displayType="text" thousandSeparator prefix="$" />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {!loading && error && (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <Typography color="error">{error}</Typography>
+                </TableCell>
+              </TableRow>
+            )}
+
+            {!loading && !error && orders.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <Typography color="text.secondary">No recent orders found.</Typography>
+                </TableCell>
+              </TableRow>
+            )}
+
+            {!loading &&
+              !error &&
+              orders.map((row, index) => {
+                const labelId = `recent-order-row-${index}`;
+                const statusMeta = getStatusMeta(getStatusLabel(row));
+
+                return (
+                  <TableRow
+                    hover
+                    role="checkbox"
+                    sx={{
+                      '&:last-child td, &:last-child th': { border: 0 },
+                      '&:hover': { backgroundColor: 'action.hover' }
+                    }}
+                    tabIndex={-1}
+                    key={`${getOrderId(row)}-${index}`}
+                  >
+                    <TableCell component="th" id={labelId} scope="row">
+                      <Link color="secondary" underline="hover">
+                        {getOrderId(row)}
+                      </Link>
+                    </TableCell>
+                    <TableCell sx={{ maxWidth: 240, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <Typography variant="body2" noWrap>
+                        {getOrderLabel(row)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
+                      <Chip label={statusMeta.label} color={statusMeta.color} size="small" variant="soft" />
+                    </TableCell>
+                    <TableCell align="right">{getQuantity(row)}</TableCell>
+                    <TableCell align="right">{formatAmount(row.totalAmount ?? row.amount ?? row.netAmount)}</TableCell>
+                    <TableCell>{formatDate(row.createdDate ?? row.createdAt ?? row.orderDate)}</TableCell>
+                  </TableRow>
+                );
+              })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -199,5 +279,3 @@ export default function OrderTable() {
 }
 
 OrderTableHead.propTypes = { order: PropTypes.any, orderBy: PropTypes.string };
-
-OrderStatus.propTypes = { status: PropTypes.number };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 // material-ui
 import Avatar from '@mui/material/Avatar';
@@ -7,15 +7,12 @@ import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
 
 // project imports
 import MainCard from 'components/MainCard';
@@ -23,42 +20,145 @@ import AnalyticEcommerce from 'components/cards/statistics/AnalyticEcommerce';
 import MonthlyBarChart from 'sections/dashboard/default/MonthlyBarChart';
 import ReportAreaChart from 'sections/dashboard/default/ReportAreaChart';
 import UniqueVisitorCard from 'sections/dashboard/default/UniqueVisitorCard';
-import SaleReportCard from 'sections/dashboard/default/SaleReportCard';
 import OrdersTable from 'sections/dashboard/default/OrdersTable';
+import { getDashboardKpis } from 'api/dashboard';
+import { useAuth } from 'hooks/useAuth';
+import { formatLabel } from 'utils/formatLabel';
 
 // assets
+import CarryOutOutlined from '@ant-design/icons/CarryOutOutlined';
+import CheckCircleOutlined from '@ant-design/icons/CheckCircleOutlined';
+import ExclamationCircleOutlined from '@ant-design/icons/ExclamationCircleOutlined';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
-import GiftOutlined from '@ant-design/icons/GiftOutlined';
-import MessageOutlined from '@ant-design/icons/MessageOutlined';
-import SettingOutlined from '@ant-design/icons/SettingOutlined';
+import TruckOutlined from '@ant-design/icons/TruckOutlined';
 
 import avatar1 from 'assets/images/users/avatar-1.png';
 import avatar2 from 'assets/images/users/avatar-2.png';
 import avatar3 from 'assets/images/users/avatar-3.png';
 import avatar4 from 'assets/images/users/avatar-4.png';
 
-// avatar style
-const avatarSX = {
-  width: 36,
-  height: 36,
-  fontSize: '1rem'
-};
-
-// action style
-const actionSX = {
-  mt: 0.75,
-  ml: 1,
-  top: 'auto',
-  right: 'auto',
-  alignSelf: 'flex-start',
-  transform: 'none'
-};
-
 // ==============================|| DASHBOARD - DEFAULT ||============================== //
 
 export default function DashboardDefault() {
   const [orderMenuAnchor, setOrderMenuAnchor] = useState(null);
   const [analyticsMenuAnchor, setAnalyticsMenuAnchor] = useState(null);
+  const [kpiCards, setKpiCards] = useState([]);
+  const [kpiLoading, setKpiLoading] = useState(true);
+  const [kpiError, setKpiError] = useState('');
+  const { user } = useAuth();
+
+  const branchId = useMemo(() => user?.branchId ?? user?.branch?.id ?? user?.branch?.branchId ?? user?.profile?.branchId ?? null, [user]);
+
+  const fallbackCards = useMemo(
+    () => [
+      {
+        key: 'openJobs',
+        title: 'Open Jobs',
+        count: '—',
+        percentage: undefined,
+        subtitle: 'Currently active production jobs',
+        color: 'primary',
+        accent: 'primary',
+        icon: CarryOutOutlined,
+        isLoss: false
+      },
+      {
+        key: 'delayedJobs',
+        title: 'Delayed Jobs',
+        count: '—',
+        percentage: undefined,
+        subtitle: 'Jobs exceeding expected delivery timelines',
+        color: 'warning',
+        accent: 'warning',
+        icon: ExclamationCircleOutlined,
+        isLoss: true
+      },
+      {
+        key: 'completedJobs',
+        title: 'Jobs Completed',
+        count: '—',
+        percentage: undefined,
+        subtitle: 'Successfully completed binding orders',
+        color: 'success',
+        accent: 'success',
+        icon: CheckCircleOutlined,
+        isLoss: false
+      },
+      {
+        key: 'readyForDispatch',
+        title: 'Ready for Dispatch',
+        count: '—',
+        percentage: undefined,
+        subtitle: 'Orders ready for shipment and dispatch',
+        color: 'secondary',
+        accent: 'secondary',
+        icon: TruckOutlined,
+        isLoss: false
+      }
+    ],
+    []
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const loadKpis = async () => {
+      setKpiLoading(true);
+      setKpiError('');
+
+      try {
+        const data = await getDashboardKpis({ branchId });
+        if (!active) return;
+
+        setKpiCards(Array.isArray(data) ? data : []);
+      } catch (fetchError) {
+        if (!active) return;
+
+        setKpiError(fetchError?.message || 'Failed to load dashboard KPIs');
+        setKpiCards([]);
+      } finally {
+        if (active) {
+          setKpiLoading(false);
+        }
+      }
+    };
+
+    loadKpis();
+
+    return () => {
+      active = false;
+    };
+  }, [branchId]);
+
+  const cardConfig = useMemo(() => {
+    const cardByKey = new Map(kpiCards.map((card) => [String(card.key || card.title || '').toLowerCase(), card]));
+
+    const aliases = {
+      openJobs: ['openjobs', 'open jobs', 'open', 'openedjobs'],
+      delayedJobs: ['delayedjobs', 'delayed jobs', 'delay', 'delayed'],
+      completedJobs: ['completedjobs', 'jobs completed', 'completed', 'done'],
+      readyForDispatch: ['readyfordispatch', 'ready for dispatch', 'dispatch', 'ready']
+    };
+
+    return fallbackCards.map((fallback) => {
+      const found =
+        cardByKey.get(fallback.key.toLowerCase()) || aliases[fallback.key].map((alias) => cardByKey.get(alias)).find(Boolean) || null;
+
+      const resolvedTitle = formatLabel(found?.title ?? found?.key ?? fallback.title ?? fallback.key);
+
+      return {
+        ...fallback,
+        title: resolvedTitle,
+        count: found?.count ?? fallback.count,
+        percentage: found?.percentage ?? fallback.percentage,
+        isLoss: found?.isLoss ?? fallback.isLoss,
+        subtitle: formatLabel(found?.extra ?? fallback.subtitle ?? ''),
+        color: found?.color ?? fallback.color,
+        accent: fallback.accent,
+        icon: fallback.icon
+      };
+    });
+  }, [fallbackCards, kpiCards]);
 
   const handleOrderMenuClick = (event) => {
     setOrderMenuAnchor(event.currentTarget);
@@ -82,18 +182,28 @@ export default function DashboardDefault() {
         <Typography variant="body2" color="text.secondary">
           Overview of jobs, delays, material usage and delivery performance across branches.
         </Typography>
+        {kpiError && (
+          <Typography variant="caption" color="error">
+            {kpiError}
+          </Typography>
+        )}
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Open Jobs" count="128" percentage={12.3} extra="+18 today" />
+        <AnalyticEcommerce {...cardConfig[0]} count={kpiLoading ? '—' : String(cardConfig[0]?.count ?? '—')} />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Delayed Jobs" count="9" percentage={4.5} isLoss color="error" extra="SLA alerts" />
+        <AnalyticEcommerce
+          {...cardConfig[1]}
+          count={kpiLoading ? '—' : String(cardConfig[1]?.count ?? '—')}
+          isLoss={cardConfig[1]?.isLoss}
+          color={cardConfig[1]?.color}
+        />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Jobs Completed" count="94" percentage={27.4} extra="Today" />
+        <AnalyticEcommerce {...cardConfig[2]} count={kpiLoading ? '—' : String(cardConfig[2]?.count ?? '—')} />
       </Grid>
       <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-        <AnalyticEcommerce title="Ready for Dispatch" count="23" percentage={8.1} extra="Across branches" />
+        <AnalyticEcommerce {...cardConfig[3]} count={kpiLoading ? '—' : String(cardConfig[3]?.count ?? '—')} />
       </Grid>
       <Grid sx={{ display: { sm: 'none', md: 'block', lg: 'none' } }} size={{ md: 8 }} />
       {/* row 2 */}
@@ -108,14 +218,6 @@ export default function DashboardDefault() {
           <Grid />
         </Grid>
         <MainCard sx={{ mt: 2 }} content={false}>
-          <Box sx={{ p: 3, pb: 0 }}>
-            <Stack sx={{ gap: 2 }}>
-              <Typography variant="h6" color="text.secondary">
-                Jobs processed this week
-              </Typography>
-              <Typography variant="h3">642</Typography>
-            </Stack>
-          </Box>
           <MonthlyBarChart />
         </MainCard>
       </Grid>
@@ -191,94 +293,7 @@ export default function DashboardDefault() {
         </MainCard>
       </Grid>
       {/* row 4 */}
-      <Grid size={{ xs: 12, md: 7, lg: 8 }}>
-        <SaleReportCard />
-      </Grid>
       <Grid size={{ xs: 12, md: 5, lg: 4 }}>
-        <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Grid>
-            <Typography variant="h5">Transaction History</Typography>
-          </Grid>
-          <Grid />
-        </Grid>
-        <MainCard sx={{ mt: 2 }} content={false}>
-          <List
-            component="nav"
-            sx={{
-              px: 0,
-              py: 0,
-              '& .MuiListItemButton-root': {
-                py: 1.5,
-                px: 2,
-                '& .MuiAvatar-root': avatarSX,
-                '& .MuiListItemSecondaryAction-root': { ...actionSX, position: 'relative' }
-              }
-            }}
-          >
-            <ListItem
-              component={ListItemButton}
-              divider
-              secondaryAction={
-                <Stack sx={{ alignItems: 'flex-end' }}>
-                  <Typography variant="subtitle1" noWrap>
-                    + $1,430
-                  </Typography>
-                  <Typography variant="h6" color="secondary" noWrap>
-                    78%
-                  </Typography>
-                </Stack>
-              }
-            >
-              <ListItemAvatar>
-                <Avatar sx={{ color: 'success.main', bgcolor: 'success.lighter' }}>
-                  <GiftOutlined />
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText primary={<Typography variant="subtitle1">Order #002434</Typography>} secondary="Today, 2:00 AM" />
-            </ListItem>
-            <ListItem
-              component={ListItemButton}
-              divider
-              secondaryAction={
-                <Stack sx={{ alignItems: 'flex-end' }}>
-                  <Typography variant="subtitle1" noWrap>
-                    + $302
-                  </Typography>
-                  <Typography variant="h6" color="secondary" noWrap>
-                    8%
-                  </Typography>
-                </Stack>
-              }
-            >
-              <ListItemAvatar>
-                <Avatar sx={{ color: 'primary.main', bgcolor: 'primary.lighter' }}>
-                  <MessageOutlined />
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText primary={<Typography variant="subtitle1">Order #984947</Typography>} secondary="5 August, 1:45 PM" />
-            </ListItem>
-            <ListItem
-              component={ListItemButton}
-              secondaryAction={
-                <Stack sx={{ alignItems: 'flex-end' }}>
-                  <Typography variant="subtitle1" noWrap>
-                    + $682
-                  </Typography>
-                  <Typography variant="h6" color="secondary" noWrap>
-                    16%
-                  </Typography>
-                </Stack>
-              }
-            >
-              <ListItemAvatar>
-                <Avatar sx={{ color: 'error.main', bgcolor: 'error.lighter' }}>
-                  <SettingOutlined />
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText primary={<Typography variant="subtitle1">Order #988784</Typography>} secondary="7 hours ago" />
-            </ListItem>
-          </List>
-        </MainCard>
         <MainCard sx={{ mt: 2 }}>
           <Stack sx={{ gap: 3 }}>
             <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
