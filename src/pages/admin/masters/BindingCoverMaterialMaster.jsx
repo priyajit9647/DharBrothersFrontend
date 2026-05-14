@@ -120,6 +120,14 @@ export default function BindingCoverMaterialMaster() {
       return;
     }
 
+    // On create (not editing), require an uploaded design image
+    if (!editingRow) {
+      if (!formValues.designFile) {
+        setError('Design image is required for create');
+        return;
+      }
+    }
+
     setSaving(true);
     setError('');
 
@@ -307,7 +315,7 @@ export default function BindingCoverMaterialMaster() {
           <Button onClick={handleCloseDialog} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={handleSave} variant="contained" disabled={saving}>
+          <Button onClick={handleSave} variant="contained" disabled={saving || (!editingRow && !formValues.designFile)}>
             {saving ? 'Saving...' : 'Save'}
           </Button>
         </DialogActions>
