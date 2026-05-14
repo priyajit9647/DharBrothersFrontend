@@ -23,6 +23,7 @@ import { Formik } from 'formik';
 import IconButton from 'components/@extended/IconButton';
 import AnimateButton from 'components/@extended/AnimateButton';
 import { loginApi, getUserProfile } from 'api/auth';
+import { requestPermissionAndRegister } from 'firebase/messaging';
 import { useAuth } from 'hooks/useAuth';
 import { setAuthCookies } from 'utils/authTokens';
 
@@ -90,6 +91,25 @@ export default function AuthLogin({ isDemo = false }) {
             } catch (profileError) {
               console.error('Failed to fetch user profile:', profileError);
               // Continue with login even if profile fetch fails
+            }
+
+            // Ask for push notifications permission on first login
+            try {
+              if (!localStorage.getItem('pushPrompted')) {
+                const allow = window.confirm('Enable push notifications to receive order updates?');
+                localStorage.setItem('pushPrompted', '1');
+                if (allow) {
+                  try {
+                    await requestPermissionAndRegister();
+                  } catch (e) {
+                    // non-fatal
+                    // eslint-disable-next-line no-console
+                    console.error('Push registration failed', e);
+                  }
+                }
+              }
+            } catch (e) {
+              // ignore
             }
 
             setStatus({ success: true, error: null });
