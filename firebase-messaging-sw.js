@@ -34,7 +34,7 @@ messaging.onBackgroundMessage(function(payload) {
 
   const notificationOptions = {
     body: body,
-    icon: icon || '/assets/images/logos/logoBird.png',
+    icon: icon || '/src/assets/images/users/logo/hader-logo.png',
     data: {
       url: url || '/' // custom URL to open when clicked
     }

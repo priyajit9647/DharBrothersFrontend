@@ -16,7 +16,7 @@ import Switch from '@mui/material/Switch';
 
 import MainCard from 'components/MainCard';
 import MasterList from 'sections/admin/masters/MasterList';
-import { createTemplateNotification, getTemplateNotificationList } from 'api/admin/template/notification';
+import { createTemplateNotification, getTemplateNotificationList, getTemplateNotificationById, editTemplateNotification } from 'api/admin/template/notification';
 import { getProcessStages } from 'api/processStage';
 
 // ==============================|| ADMIN - TEMPLATE PAGE ||============================== //
@@ -38,8 +38,10 @@ export default function Template() {
     whatsappTemplateCode: '',
     whatsappBody: '',
     inAppBody: '',
-    isActive: true
+    isActive: true,
+    dynamicData: ''
   });
+  const [editingId, setEditingId] = useState(null);
 
   // Removed automatic calls to master branch/process-stage list APIs to avoid backend hits from this page.
   // If you want pre-filled branch or stage options, provide them here or via a different admin page.
@@ -85,6 +87,7 @@ export default function Template() {
   }, []);
 
   const openCreateDialog = () => {
+    setEditingId(null);
     setFormValues({
       processStageId: '',
       emailSubject: '',
@@ -92,10 +95,37 @@ export default function Template() {
       whatsappTemplateCode: '',
       whatsappBody: '',
       inAppBody: '',
-      isActive: true
+      isActive: true,
+      dynamicData: ''
     });
     setError('');
     setDialogOpen(true);
+  };
+
+  const openEditDialog = async (row) => {
+    if (!row?.id) return;
+    setError('');
+    try {
+      setLoading(true);
+      const full = await getTemplateNotificationById(row.id);
+      const fv = {
+        processStageId: (full.processStageId ?? full.processStage) || '',
+        emailSubject: full.emailSubject ?? '',
+        emailBody: full.emailBody ?? '',
+        whatsappTemplateCode: full.whatsappTemplateCode ?? '',
+        whatsappBody: full.whatsappBody ?? '',
+        inAppBody: full.inAppBody ?? '',
+        isActive: typeof full.isActive === 'boolean' ? full.isActive : true,
+        dynamicData: full.dynamicData ?? ''
+      };
+      setFormValues(fv);
+      setEditingId(row.id);
+      setDialogOpen(true);
+    } catch (e) {
+      setError(e?.message || 'Failed to load template for edit');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -117,6 +147,7 @@ export default function Template() {
   const handleCloseDialog = () => {
     if (saving) return;
     setDialogOpen(false);
+    setEditingId(null);
   };
 
   const handleFormChange = (field) => (event) => {
@@ -133,7 +164,7 @@ export default function Template() {
       whatsappBody: formValues.whatsappBody.trim(),
       inAppBody: formValues.inAppBody.trim(),
       isActive: Boolean(formValues.isActive),
-      dynamicData: ''
+      dynamicData: formValues.dynamicData ? String(formValues.dynamicData) : ''
     };
 
     if (!payload.processStageId || !payload.emailSubject || !payload.emailBody) {
@@ -145,20 +176,32 @@ export default function Template() {
     setError('');
 
     try {
-      const resp = await createTemplateNotification(payload);
-      const processStageName = String(payload.processStageId);
+      if (editingId) {
+        await editTemplateNotification(editingId, payload);
+      } else {
+        await createTemplateNotification(payload);
+      }
 
-      setRows((prev) => [
-        {
-          id: resp?.id ?? Date.now(),
-          processStageName,
-          emailSubject: payload.emailSubject,
-          whatsappTemplateCode: payload.whatsappTemplateCode,
-          active: payload.isActive
-        },
-        ...prev
-      ]);
+      // reload list to reflect changes
+      const data = await getTemplateNotificationList();
+      const list = Array.isArray(data) ? data : data?.items || data?.data || [];
+      const normalized = list.map((item) => ({
+        id: item.id,
+        branchId: item.branchId,
+        branchName: item.branchId ? String(item.branchId) : '',
+        processStageId: item.processStageId,
+        processStageName: item.processStageName,
+        emailSubject: item.emailSubject,
+        emailBody: item.emailBody,
+        whatsappTemplateCode: item.whatsappTemplateCode,
+        whatsappBody: item.whatsappBody,
+        inAppBody: item.inAppBody,
+        isActive: item.isActive,
+        default: item.default
+      }));
+      setRows(normalized);
       setDialogOpen(false);
+      setEditingId(null);
     } catch (err) {
       setError(err?.message || 'Failed to create notification template');
     } finally {
@@ -222,13 +265,15 @@ export default function Template() {
               setPage(0);
             }}
             onCreate={openCreateDialog}
+            onEdit={(row) => openEditDialog(row)}
+            showActiveColumn={false}
             loading={loading}
           />
         </Grid>
       </Grid>
 
       <Dialog open={dialogOpen} onClose={handleCloseDialog} fullWidth maxWidth="md">
-        <DialogTitle>Create Notification Template</DialogTitle>
+        <DialogTitle>{editingId ? 'Edit Notification Template' : 'Create Notification Template'}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <Select
@@ -301,7 +346,7 @@ export default function Template() {
             Cancel
           </Button>
           <Button variant="contained" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? 'Saving...' : editingId ? 'Update' : 'Save'}
           </Button>
         </DialogActions>
       </Dialog>

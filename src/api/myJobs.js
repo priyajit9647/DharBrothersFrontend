@@ -128,12 +128,15 @@ export async function updateMyJob(id, payload) {
  * @param {string|number} id - The job ID
  * @returns {Promise<{message?: string, reason?: string, code?: string, accessToken?: string, refreshToken?: string}>}
  */
-export async function completeMyJob(id) {
+export async function completeMyJob(id, remark) {
   if (!id) {
     throw new Error('Job ID is required');
   }
 
-  return authorizedFetch(`/api/v1/my-jobs/${encodeURIComponent(String(id))}/complete`, {
+  const basePath = `/api/v1/my-jobs/${encodeURIComponent(String(id))}/complete`;
+  const path = remark != null && String(remark).length > 0 ? `${basePath}/${encodeURIComponent(String(remark))}` : basePath;
+
+  return authorizedFetch(path, {
     method: 'PUT'
   });
 }

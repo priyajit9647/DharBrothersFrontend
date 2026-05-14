@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
 
 import MasterList from 'sections/admin/masters/MasterList';
 import Button from '@mui/material/Button';
@@ -18,6 +23,10 @@ export default function MyJobs() {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [completingId, setCompletingId] = useState(null);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [selectedCompleteId, setSelectedCompleteId] = useState(null);
+  const [remark, setRemark] = useState('');
+  const [remarkError, setRemarkError] = useState('');
 
   const loadJobs = useCallback(async (uid) => {
     setLoading(true);
@@ -56,18 +65,49 @@ export default function MyJobs() {
     }
   }, [user, accessToken]);
 
-  const handleComplete = async (id) => {
+  const openCompleteDialog = (id) => {
     if (!id) return;
+    setSelectedCompleteId(id);
+    setRemark('');
+    setRemarkError('');
+    setCompleteDialogOpen(true);
+  };
+
+  const handleCloseCompleteDialog = () => {
+    // prevent closing while a completion request is active for this job
+    if (completingId && completingId === selectedCompleteId) return;
+    setCompleteDialogOpen(false);
+    setSelectedCompleteId(null);
+    setRemark('');
+    setRemarkError('');
+  };
+
+  const handleSubmitRemark = async () => {
+    if (!selectedCompleteId) return;
+    const r = String(remark || '').trim();
+    if (!r) {
+      setRemarkError('Please enter a remark');
+      return;
+    }
+
     try {
-      setCompletingId(id);
+      setCompletingId(selectedCompleteId);
+      setRemarkError('');
       setError('');
-      await completeMyJob(id);
+      await completeMyJob(selectedCompleteId, r);
       await loadJobs();
+      // on success close dialog and clear selected id/remark
+      setCompleteDialogOpen(false);
+      setSelectedCompleteId(null);
+      setRemark('');
+      setRemarkError('');
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to complete job', err);
+      setRemarkError(err?.message || 'Failed to complete job');
       setError(err?.message || 'Failed to complete job');
     } finally {
+      // always clear completing flag; keep selectedCompleteId/remark so user can retry or cancel
       setCompletingId(null);
     }
   };
@@ -146,7 +186,7 @@ export default function MyJobs() {
                     variant="contained"
                     color="primary"
                     size="small"
-                    onClick={() => handleComplete(row.id)}
+                    onClick={() => openCompleteDialog(row.id)}
                     disabled={loading || completingId === row.id}
                   >
                     {completingId === row.id ? 'Completing...' : 'Complete'}
@@ -170,6 +210,29 @@ export default function MyJobs() {
           />
         </Grid>
       </Grid>
+        <Dialog open={completeDialogOpen} onClose={handleCloseCompleteDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>Mark Job Complete</DialogTitle>
+          <DialogContent>
+            <TextField
+              label="Remark"
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              fullWidth
+              multiline
+              minRows={3}
+              error={Boolean(remarkError)}
+              helperText={remarkError}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseCompleteDialog} disabled={completingId === selectedCompleteId}>
+              Cancel
+            </Button>
+            <Button variant="contained" onClick={handleSubmitRemark} disabled={completingId === selectedCompleteId}>
+              {completingId === selectedCompleteId ? 'Completing...' : 'Submit'}
+            </Button>
+          </DialogActions>
+        </Dialog>
     </>
   );
 }
