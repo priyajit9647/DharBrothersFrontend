@@ -18,8 +18,8 @@ const utilities = {
   type: 'group',
   children: [
     {
-      id: 'jobs-board',
-      title: 'Jobs Board',
+      id: 'order-board',
+      title: 'Order Board',
       type: 'item',
       url: '/jobs',
       icon: icons.ProjectOutlined

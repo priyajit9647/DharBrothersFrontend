@@ -9,7 +9,7 @@ import RequireAuth from './RequireAuth';
 const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')));
 
 // render - BMS Operations
-const JobsBoard = Loadable(lazy(() => import('pages/operations/JobsBoard')));
+const OrderBoard = Loadable(lazy(() => import('pages/operations/OrderBoard')));
 const MyJobs = Loadable(lazy(() => import('pages/operations/MyJobs')));
 const OrdersIntake = Loadable(lazy(() => import('pages/operations/Orders')));
 const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')));
@@ -73,7 +73,7 @@ const MainRoutes = {
     // Operations
     {
       path: 'jobs',
-      element: <JobsBoard />
+      element: <OrderBoard />
     },
     {
       path: 'my-jobs',
