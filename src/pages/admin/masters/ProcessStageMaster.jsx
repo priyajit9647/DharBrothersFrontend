@@ -33,13 +33,21 @@ export default function ProcessStageMaster() {
     try {
       const data = await getProcessStages();
       const normalized = Array.isArray(data)
-        ? data.map((item, index) => ({
-            id: item.id ?? index + 1,
-            code: item.code,
-            stageName: item.stageName,
-            sequenceNo: item.sequenceNo,
-            active: item.active
-          }))
+        ? data.map((item, index) => {
+            const code = item.code || '';
+            const protectedCodes = ['ORDER-PENDING', 'DOCUMENT-MODIFI'];
+            const isProtected = protectedCodes.includes(code);
+            return {
+              id: item.id ?? index + 1,
+              code,
+              stageName: item.stageName,
+              sequenceNo: item.sequenceNo,
+              active: item.active,
+              // flags used by MasterList to disable edit/toggle UI
+              disableEdit: isProtected,
+              disableToggle: isProtected
+            };
+          })
         : [];
       setRows(normalized);
     } catch (e) {
@@ -67,6 +75,7 @@ export default function ProcessStageMaster() {
   };
 
   const openEditDialog = (row) => {
+    if (row?.disableEdit) return; // protected rows are not editable
     setEditingRow(row);
     setFormValues({
       code: row.code || '',
@@ -120,6 +129,7 @@ export default function ProcessStageMaster() {
   };
 
   const handleToggleActive = async (row, active) => {
+    if (row?.disableToggle) return; // protected rows cannot be toggled
     // Optimistic UI update
     setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, active } : item)));
 

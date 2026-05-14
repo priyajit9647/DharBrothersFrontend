@@ -129,8 +129,12 @@ function MasterList({
                       <Switch
                         size="small"
                         checked={!!row.active}
-                        onChange={(event) => onToggleActive && onToggleActive(row, event.target.checked)}
+                        onChange={(event) => {
+                          if (row?.disableToggle) return;
+                          onToggleActive && onToggleActive(row, event.target.checked);
+                        }}
                         color="primary"
+                        disabled={!!row.disableToggle}
                       />
                     </TableCell>
                   )}
@@ -142,6 +146,7 @@ function MasterList({
                           color="primary"
                           onClick={() => onEdit && onEdit(row)}
                           aria-label="Edit"
+                          disabled={!!row.disableEdit}
                         >
                           <EditTwoTone style={{ fontSize: 18 }} />
                         </IconButton>
