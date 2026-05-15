@@ -18,7 +18,16 @@ import Alert from '@mui/material/Alert';
 
 // project imports
 import MainCard from 'components/MainCard';
-import { fetchCustomerPortalData, updateCustomerDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders } from 'api/customerPortal';
+import { fetchCustomerPortalData, updateCustomerDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders, listCustomerOrders, getCustomerOrder, changeOrderDeliveryAddress, changeOrderPickupBranch, listWebBranches } from 'api/customerPortal';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Snackbar from '@mui/material/Snackbar';
 
 // ==============================|| CUSTOMER PORTAL - MAIN VIEW ||============================== //
 
@@ -43,7 +52,6 @@ const mockPortalData = {
     { version: 3, label: 'Final Layout v3', uploadedOn: '22 Mar 2026', status: 'Awaiting Approval' }
   ]
 };
-
 export default function CustomerPortal() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -56,17 +64,28 @@ export default function CustomerPortal() {
   const [feedbackText, setFeedbackText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [orderListLoading, setOrderListLoading] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [orderLoading, setOrderLoading] = useState(false);
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [branchDialogOpen, setBranchDialogOpen] = useState(false);
+  const [selectedPickupBranchId, setSelectedPickupBranchId] = useState(null);
+  const [addressErrors, setAddressErrors] = useState({});
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
   const [addressDraft, setAddressDraft] = useState(() => {
-    const sourceAddress = mockPortalData.deliveryAddress;
-    return [
-      sourceAddress.name,
-      sourceAddress.line1,
-      sourceAddress.line2,
-      `${sourceAddress.city}, ${sourceAddress.state} - ${sourceAddress.pincode}`
-    ]
-      .filter(Boolean)
-      .join('\n');
+    const sa = mockPortalData.deliveryAddress || {};
+    return {
+      shippingAddress1: sa.line1 || sa.address || '',
+      shippingAddress2: sa.line2 || '',
+      shippingCity: sa.city || '',
+      shippingState: sa.state || '',
+      shippingCountry: sa.country || '',
+      shippingPincode: sa.pincode || ''
+    };
   });
 
   const [addressMessage, setAddressMessage] = useState('');
@@ -111,15 +130,42 @@ export default function CustomerPortal() {
     };
   }, [portalSession]);
 
+  // Fetch simple list of orders (customer-facing) when portal session present
+  useEffect(() => {
+    let mounted = true;
+    if (!portalSession) return undefined;
+
+    (async () => {
+      try {
+        setOrderListLoading(true);
+        const list = await listCustomerOrders();
+        if (!mounted) return;
+        setOrders(Array.isArray(list) ? list : []);
+      } catch (err) {
+        // non-fatal; keep existing orders if any
+        // eslint-disable-next-line no-console
+        console.error('Unable to fetch customer orders', err);
+      } finally {
+        if (mounted) setOrderListLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [portalSession]);
+
   useEffect(() => {
     const sourceAddress = portalData.deliveryAddress;
     if (sourceAddress) {
-      setAddressDraft([
-        sourceAddress.name,
-        sourceAddress.line1,
-        sourceAddress.line2,
-        `${sourceAddress.city}, ${sourceAddress.state} - ${sourceAddress.pincode}`
-      ].filter(Boolean).join('\n'));
+      setAddressDraft({
+        shippingAddress1: sourceAddress.line1 || sourceAddress.address || '',
+        shippingAddress2: sourceAddress.line2 || '',
+        shippingCity: sourceAddress.city || '',
+        shippingState: sourceAddress.state || '',
+        shippingCountry: sourceAddress.country || '',
+        shippingPincode: sourceAddress.pincode || ''
+      });
     }
   }, [portalData.deliveryAddress]);
 
@@ -134,7 +180,7 @@ export default function CustomerPortal() {
                 This one-time customer portal link has expired or was opened directly. Please return to the original message and request a new OTP.
               </Typography>
               <Box>
-                <Button variant="contained" color="primary" onClick={() => navigate('/customer', { replace: true })}>
+                <Button variant="contained" color="primary" onClick={() => navigate('/customer', { replace: true })} sx={{ borderRadius: '999px', textTransform: 'none', px: 2 }}>
                   Back to Customer Login
                 </Button>
               </Box>
@@ -146,18 +192,129 @@ export default function CustomerPortal() {
   }
 
   const handleAddressSubmit = async () => {
+    // validate structured address fields
+    const errors = {};
+    if (!addressDraft.shippingAddress1 || !addressDraft.shippingAddress1.trim()) errors.shippingAddress1 = 'Address is required';
+    if (!addressDraft.shippingCity || !addressDraft.shippingCity.trim()) errors.shippingCity = 'City is required';
+    if (!addressDraft.shippingPincode || !addressDraft.shippingPincode.trim()) errors.shippingPincode = 'Pincode is required';
+    setAddressErrors(errors);
+    if (Object.keys(errors).length) {
+      setSnackbarSeverity('error');
+      setSnackbarMessage('Please fix address errors before submitting');
+      setSnackbarOpen(true);
+      return;
+    }
+
     setBusy(true);
     setAddressMessage('');
     const token = portalSession?.portalToken;
     try {
-      if (token) {
-        await updateCustomerDeliveryAddress({ portalToken: token, address: addressDraft });
+      if (selectedOrder) {
+        const id = selectedOrder.orderId || selectedOrder.orderReference || selectedOrder.ref;
+        await changeOrderDeliveryAddress(id, { ...addressDraft });
         setAddressMessage('Your delivery address change request has been submitted for this order.');
+        setSnackbarSeverity('success');
+        setSnackbarMessage('Address change submitted');
+        setSnackbarOpen(true);
+        // refresh selected order and orders list
+        const refreshed = await getCustomerOrder(id);
+        setSelectedOrder(refreshed);
+        try {
+          const list = await listCustomerOrders();
+          setOrders(Array.isArray(list) ? list : []);
+        } catch (e) {
+          // ignore
+        }
+      } else if (token) {
+        // fallback for portal-level address update (server expects a single string)
+        const joined = [addressDraft.shippingAddress1, addressDraft.shippingAddress2, `${addressDraft.shippingCity} ${addressDraft.shippingState || ''} ${addressDraft.shippingPincode || ''}`].filter(Boolean).join('\n');
+        await updateCustomerDeliveryAddress({ portalToken: token, address: joined });
+        setAddressMessage('Your delivery address change request has been submitted for this order.');
+        setSnackbarSeverity('success');
+        setSnackbarMessage('Address change submitted');
+        setSnackbarOpen(true);
       } else {
         setAddressMessage('Address change requested. Please contact support to complete this change.');
       }
     } catch (error) {
       setAddressMessage(error?.message || 'Unable to submit address change. Please try again.');
+      setSnackbarSeverity('error');
+      setSnackbarMessage(error?.message || 'Unable to submit address change');
+      setSnackbarOpen(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleSelectOrder = async (o) => {
+    const id = o?.orderId || o?.orderReference || o?.ref || o;
+    if (!id) return;
+    setOrderLoading(true);
+    setSelectedOrder(null);
+    try {
+      const resp = await getCustomerOrder(id);
+      setSelectedOrder(resp);
+      // Populate structured address fields from response if available
+      setAddressDraft({
+        shippingAddress1: resp?.shippingAddress1 || resp?.shippingAddress || resp?.address || '',
+        shippingAddress2: resp?.shippingAddress2 || '',
+        shippingCity: resp?.shippingCity || '',
+        shippingState: resp?.shippingState || '',
+        shippingCountry: resp?.shippingCountry || '',
+        shippingPincode: resp?.shippingPincode || resp?.pincode || ''
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Unable to load order', err);
+      setApprovalMessage(err?.message || 'Unable to load order details');
+    } finally {
+      setOrderLoading(false);
+    }
+  };
+
+  const openBranchDialog = async () => {
+    setBranchesLoading(true);
+    setBranchDialogOpen(true);
+    try {
+      const list = await listWebBranches();
+      const filtered = (Array.isArray(list) ? list : []).filter((b) => b.branchType === 'LOOK_AND_FEEL_STORE');
+      setBranches(filtered);
+      setSelectedPickupBranchId((selectedOrder && (selectedOrder.pickupBranchId || selectedOrder.pickupBranch)) || null);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Unable to fetch branches', err);
+      setApprovalMessage(err?.message || 'Unable to fetch branches');
+    } finally {
+      setBranchesLoading(false);
+    }
+  };
+
+  const handleSubmitPickupBranch = async () => {
+    if (!selectedOrder) return;
+    const id = selectedOrder.orderId || selectedOrder.orderReference || selectedOrder.ref;
+    if (!id) return;
+    setBusy(true);
+    try {
+      await changeOrderPickupBranch(id, { pickupBranchId: selectedPickupBranchId });
+      setApprovalMessage('Pickup branch updated successfully.');
+      const refreshed = await getCustomerOrder(id);
+      setSelectedOrder(refreshed);
+      // refresh orders list
+      try {
+        const list = await listCustomerOrders();
+        setOrders(Array.isArray(list) ? list : []);
+      } catch (e) {
+        // ignore
+      }
+      setBranchDialogOpen(false);
+      setSnackbarSeverity('success');
+      setSnackbarMessage('Pickup branch updated');
+      setSnackbarOpen(true);
+    } catch (err) {
+      setApprovalMessage(err?.message || 'Unable to update pickup branch');
+      setSnackbarSeverity('error');
+      setSnackbarMessage(err?.message || 'Unable to update pickup branch');
+      setSnackbarOpen(true);
     } finally {
       setBusy(false);
     }
@@ -217,48 +374,81 @@ export default function CustomerPortal() {
     }
   };
 
+  const showSnackbar = (message, severity = 'success') => {
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+    setSnackbarOpen(true);
+  };
+
   return (
-    <Grid container rowSpacing={3} columnSpacing={2.75} sx={{ py: 4 }}>
-      <Grid item xs={12}>
-        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-          <Box>
-            <Typography variant="h5">Customer Order Portal</Typography>
-            <Typography variant="body2" color="text.secondary">
-              One-time view for your Dhar Brothers orders. Review past orders, track current status, manage payments and delivery address, and send feedback.
-            </Typography>
-          </Box>
-          <Stack spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'flex-end' } }}>
-            <Typography variant="subtitle2" color="text.secondary">Order Reference</Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Typography variant="h6">{portalData.orderReference || portalSession.orderReference || mockPortalData.orderReference}</Typography>
-              <Chip label={portalData.status || mockPortalData.status} color="warning" size="small" />
+    <Box sx={{ backgroundColor: 'grey.100', minHeight: '100vh', px: { xs: 2, sm: 4 }, py: 6 }}>
+      <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}>
+        <Grid container rowSpacing={3} columnSpacing={2.75} sx={{ py: 0 }}>
+          <Grid item xs={12}>
+            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 800 }}>Customer Order Portal</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  One-time view for your Dhar Brothers orders. Review past orders, track current status, manage payments and delivery address, and send feedback.
+                </Typography>
+              </Box>
+              <Stack spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'flex-end' } }}>
+                <Typography variant="subtitle2" color="text.secondary">Order Reference</Typography>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <Chip label={portalData.orderReference || portalSession.orderReference || mockPortalData.orderReference} color="warning" size="small" sx={{ fontWeight: 800, borderRadius: '999px' }} />
+                  <Chip label={portalData.status || mockPortalData.status} color="warning" size="small" sx={{ fontWeight: 700 }} />
+                </Stack>
+              </Stack>
             </Stack>
-          </Stack>
-        </Stack>
-      </Grid>
+          </Grid>
 
       {/* Left: Past Orders */}
       <Grid item xs={12} md={3}>
         <MainCard title="Your Orders">
           <List disablePadding>
-            {(orders.length ? orders : [{ orderReference: portalData.orderReference, status: portalData.status }]).map((o, idx) => (
-              <ListItem key={o.orderReference || idx} disablePadding>
-                <ListItemButton sx={{ borderRadius: 1.5 }} onClick={() => { /* could show switch to this order */ }}>
-                  <ListItemText
-                    primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Typography variant="subtitle2">{o.orderReference || o.ref}</Typography></Stack>}
-                    secondary={<Typography variant="caption" color="text.secondary">{o.status || '—'}</Typography>}
-                  />
-                </ListItemButton>
-              </ListItem>
-            ))}
+            {(orders.length ? orders : [{ orderReference: portalData.orderReference, status: portalData.status }]).map((o, idx) => {
+              const id = o.orderId || o.orderReference || o.ref;
+              const isSelected = selectedOrder && (selectedOrder.orderId === id || selectedOrder.orderReference === id);
+              return (
+                <ListItem key={id || idx} disablePadding>
+                  <ListItemButton sx={{ borderRadius: 1.5 }} selected={isSelected} onClick={() => handleSelectOrder(o)}>
+                    <ListItemText
+                      primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Typography variant="subtitle2">{id}</Typography></Stack>}
+                      secondary={<Typography variant="caption" color="text.secondary">{o.currentStage || o.status || '—'}</Typography>}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
           </List>
         </MainCard>
       </Grid>
 
       {/* Center: Order details, documents, status & feedback */}
       <Grid item xs={12} md={6}>
-        <MainCard title="Order Overview" contentSX={{ p: 2.5 }}>
+        <MainCard title={selectedOrder ? 'Order Details' : 'Order Overview'} contentSX={{ p: 2.5 }}>
           <Stack spacing={2.5}>
+            {orderLoading && <Box><Typography>Loading order...</Typography></Box>}
+            {selectedOrder && !orderLoading && (
+              <Box sx={{ p: 1, bgcolor: 'grey.0', borderRadius: 1 }}>
+                <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>{selectedOrder.orderId}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Stage: {selectedOrder.currentStage || '—'}</Typography>
+                <Typography variant="body2" color="text.secondary">Expected delivery: {selectedOrder.expectedDeliveryDate || '—'}</Typography>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="subtitle2">Shipping Address</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>{selectedOrder.shippingAddress || '—'}</Typography>
+                </Box>
+                <Box sx={{ mt: 1 }}>
+                  <Typography variant="subtitle2">Pickup Branch</Typography>
+                  <Typography variant="body2" color="text.secondary">{selectedOrder.branchName || selectedOrder.pickupBranchName || '—'}</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                  <Button variant="contained" size="small" sx={{ borderRadius: '999px', textTransform: 'none' }} onClick={() => { setAddressDraft(selectedOrder.shippingAddress || ''); }}>Edit Shipping Address</Button>
+                  <Button variant="outlined" size="small" sx={{ borderRadius: '999px', textTransform: 'none' }} onClick={openBranchDialog}>Pick up from branch</Button>
+                </Box>
+              </Box>
+            )}
+
             <Box>
               <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>Order Details</Typography>
               <Typography variant="body2" color="text.secondary">{portalData.notes || 'Order summary and specifications will appear here.'}</Typography>
@@ -302,8 +492,8 @@ export default function CustomerPortal() {
                   {approvalMessage && <Alert severity="success" sx={{ mb: 1.5 }}>{approvalMessage}</Alert>}
 
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
-                    <Button variant="contained" color="success" disabled={busy} onClick={() => handleApprove(true)}>Approve Final Document</Button>
-                    <Button variant="outlined" color="error" disabled={busy} onClick={() => handleApprove(false)}>Disapprove / Changes Required</Button>
+                    <Button variant="contained" color="success" disabled={busy} onClick={() => handleApprove(true)} sx={{ borderRadius: '999px', textTransform: 'none', px: 2 }}>Approve Final Document</Button>
+                    <Button variant="outlined" color="error" disabled={busy} onClick={() => handleApprove(false)} sx={{ borderRadius: '999px', textTransform: 'none' }}>Disapprove / Changes Required</Button>
                   </Stack>
                 </Box>
               )}
@@ -315,7 +505,7 @@ export default function CustomerPortal() {
                 {approvalMessage && <Alert severity="info" sx={{ mb: 1 }}>{approvalMessage}</Alert>}
                 <TextField fullWidth multiline rows={4} placeholder="Tell us how we did or request changes..." value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} />
                 <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: 1 }}>
-                  <Button variant="contained" onClick={handleSubmitFeedback} disabled={busy || !feedbackText.trim()}>Send Feedback</Button>
+                  <Button variant="contained" onClick={handleSubmitFeedback} disabled={busy || !feedbackText.trim()} sx={{ borderRadius: '999px', textTransform: 'none', px: 2 }}>Send Feedback</Button>
                 </Stack>
               </Box>
             </Box>
@@ -336,7 +526,7 @@ export default function CustomerPortal() {
                 <TextField label="Delivery Address" multiline minRows={4} value={addressDraft} onChange={(event) => setAddressDraft(event.target.value)} fullWidth />
 
                 <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-                  <Button variant="contained" color="primary" onClick={handleAddressSubmit} disabled={busy || !(portalData.status || '').toLowerCase().includes('pending')}>Submit Address Change</Button>
+                  <Button variant="contained" color="primary" onClick={handleAddressSubmit} disabled={busy || (!(selectedOrder) && !(portalData.status || '').toLowerCase().includes('pending'))} sx={{ borderRadius: '999px', textTransform: 'none' }}>Submit Address Change</Button>
                 </Stack>
               </Stack>
             </MainCard>
@@ -361,7 +551,7 @@ export default function CustomerPortal() {
                 <Divider sx={{ my: 0.5 }} />
 
                 <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-                  <Button variant="contained" color="warning" onClick={handleMakePayment} disabled={busy}>Make a Payment</Button>
+                  <Button variant="contained" color="warning" onClick={handleMakePayment} disabled={busy} sx={{ borderRadius: '999px', textTransform: 'none' }}>Make a Payment</Button>
                 </Stack>
               </Stack>
             </MainCard>
@@ -382,5 +572,38 @@ export default function CustomerPortal() {
         </Grid>
       </Grid>
     </Grid>
+      <Dialog open={branchDialogOpen} onClose={() => setBranchDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Select Pickup Branch</DialogTitle>
+        <DialogContent>
+          {branchesLoading ? (
+            <Typography>Loading branches...</Typography>
+          ) : (
+            <FormControl fullWidth sx={{ mt: 1 }}>
+              <InputLabel id="pickup-branch-label">Branch</InputLabel>
+              <Select
+                labelId="pickup-branch-label"
+                value={selectedPickupBranchId ?? ''}
+                label="Branch"
+                onChange={(e) => setSelectedPickupBranchId(e.target.value)}
+              >
+                {branches.map((b) => (
+                  <MenuItem key={b.id} value={b.id}>{b.name} — {b.address}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBranchDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleSubmitPickupBranch} disabled={busy || !selectedPickupBranchId}>Submit</Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar open={snackbarOpen} autoHideDuration={4000} onClose={() => setSnackbarOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
+      </Box>
+    </Box>
   );
 }

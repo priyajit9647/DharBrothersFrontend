@@ -76,3 +76,62 @@ export async function submitCustomerFeedback({ portalToken, feedback }) {
     body: JSON.stringify({ portalToken, feedback })
   });
 }
+
+// ==============================|| CUSTOMER ORDERS (PUBLIC/CLIENT) ||============================== //
+
+/**
+ * List customer orders
+ * Endpoint: GET /api/v1/customer/orders/list
+ */
+export async function listCustomerOrders() {
+  return authorizedFetch('/api/v1/customer/orders/list', {
+    method: 'GET'
+  });
+}
+
+/**
+ * Get single order details
+ * Endpoint: GET /api/v1/customer/orders/{orderId}
+ */
+export async function getCustomerOrder(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET'
+  });
+}
+
+/**
+ * Change delivery address for an order
+ * Endpoint: POST /api/v1/customer/orders/{orderId}/change-delivery-address
+ * Body: { shippingAddress1, shippingAddress2, shippingCity, shippingState, shippingCountry, shippingPincode }
+ */
+export async function changeOrderDeliveryAddress(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}/change-delivery-address`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Change pickup branch for an order
+ * Endpoint: POST /api/v1/customer/orders/{orderId}/change-pickup-branch-location
+ * Body: { pickupBranchId }
+ */
+export async function changeOrderPickupBranch(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}/change-pickup-branch-location`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
+ * Fetch branches for pickup selection
+ * Endpoint: GET /api/v1/web/master/branches
+ */
+export async function listWebBranches() {
+  return authorizedFetch('/api/v1/web/master/branches', {
+    method: 'GET'
+  });
+}
