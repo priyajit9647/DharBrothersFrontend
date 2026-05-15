@@ -22,6 +22,7 @@ import ReportAreaChart from 'sections/dashboard/default/ReportAreaChart';
 import UniqueVisitorCard from 'sections/dashboard/default/UniqueVisitorCard';
 import OrdersTable from 'sections/dashboard/default/OrdersTable';
 import { getDashboardKpis } from 'api/dashboard';
+import PlacementTypeAnalytics, { defaultData as placementDefault } from 'components/cards/PlacementTypeAnalytics';
 import { useAuth } from 'hooks/useAuth';
 import { formatLabel } from 'utils/formatLabel';
 
@@ -219,6 +220,9 @@ export default function DashboardDefault() {
         </Grid>
         <MainCard sx={{ mt: 2 }} content={false}>
           <MonthlyBarChart />
+        </MainCard>
+        <MainCard sx={{ mt: 2 }} content={false}>
+          <PlacementTypeAnalytics data={placementDefault} />
         </MainCard>
       </Grid>
       {/* row 3 */}
