@@ -33,7 +33,7 @@ const headCells = [
     id: 'status',
     align: 'center',
     disablePadding: false,
-    label: 'Status'
+    label: 'Payment Status'
   },
   {
     id: 'quantity',
@@ -111,7 +111,7 @@ function getOrderLabel(order) {
 }
 
 function getStatusLabel(order) {
-  return order?.status ?? order?.stage ?? order?.orderStageName ?? 'Unknown';
+  return order?.paymentStatus ?? order?.paymentState ?? order?.status ?? order?.stage ?? order?.orderStageName ?? 'Unknown';
 }
 
 function getQuantity(order) {
