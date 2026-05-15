@@ -23,6 +23,7 @@ import UniqueVisitorCard from 'sections/dashboard/default/UniqueVisitorCard';
 import OrdersTable from 'sections/dashboard/default/OrdersTable';
 import { getDashboardKpis } from 'api/dashboard';
 import PlacementAnalyticsCard, { defaultData as placementDefault } from 'components/analytics/PlacementAnalyticsCard';
+import JobInHandCard from 'components/cards/JobInHandCard';
 import { useAuth } from 'hooks/useAuth';
 import { formatLabel } from 'utils/formatLabel';
 
@@ -293,6 +294,10 @@ export default function DashboardDefault() {
           </List>
           <ReportAreaChart />
         </MainCard>
+      </Grid>
+      {/* Job in Hand analytics card */}
+      <Grid size={{ xs: 12 }}>
+        <JobInHandCard />
       </Grid>
       {/* row 4 */}
       <Grid size={{ xs: 12, md: 5, lg: 4 }}>
