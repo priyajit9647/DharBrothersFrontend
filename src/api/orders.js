@@ -82,3 +82,76 @@ export async function getRecentOrders(params = {}) {
 
 // Backwards-compatible alias
 export const getOrdersByStage = getOrdersByStatus;
+
+/**
+ * Fetch shipping address QR as base64 string for a given orderId
+ * Endpoint: /api/v1/orders/{orderId}/shipping-address-qr/base64
+ * Uses authorizedFetchRaw because the endpoint may return plain text or binary.
+ * @param {string} orderId
+ * @returns {Promise<string|object>} base64 string or parsed JSON
+ */
+export async function getOrderShippingAddressQrBase64(orderId) {
+  console.log('[API.getOrderShippingAddressQrBase64] Called with orderId:', orderId);
+  if (!orderId) throw new Error('orderId is required');
+
+  try {
+    const res = await authorizedFetchRaw(`/api/v1/orders/${encodeURIComponent(String(orderId))}/shipping-address-qr/base64`, {
+      method: 'GET'
+    });
+
+    console.log('[API.getOrderShippingAddressQrBase64] Response received, status:', res.status);
+    // Try to parse as text first. The server may return plain base64 or a JSON wrapper.
+    const text = await res.text();
+    console.log('[API.getOrderShippingAddressQrBase64] Response text length:', text?.length);
+    try {
+      const parsed = JSON.parse(text);
+      console.log('[API.getOrderShippingAddressQrBase64] Parsed as JSON, keys:', Object.keys(parsed || {}));
+      // prefer common property names
+      return parsed?.data || parsed?.base64 || parsed?.content || parsed;
+    } catch (e) {
+      console.log('[API.getOrderShippingAddressQrBase64] Not JSON, returning raw text');
+      return text;
+    }
+  } catch (e) {
+    console.error('[API.getOrderShippingAddressQrBase64] Error:', e);
+    throw e;
+  }
+}
+
+/**
+ * Fetch shipping address QR as binary PNG and return base64 string (without data: prefix)
+ * Endpoint: /api/v1/orders/{orderId}/shipping-address-qr
+ * @param {string} orderId
+ * @returns {Promise<string>} base64-encoded PNG content
+ */
+export async function getOrderShippingAddressQr(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+
+  const res = await authorizedFetchRaw(`/api/v1/orders/${encodeURIComponent(String(orderId))}/shipping-address-qr`, {
+    method: 'GET',
+    headers: {
+      Accept: 'image/png'
+    }
+  });
+
+  // read as blob then convert to base64
+  const blob = await res.blob();
+
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => {
+      reader.abort();
+      reject(new Error('Failed to read QR image'));
+    };
+    reader.onload = () => {
+      const dataUrl = reader.result; // e.g. data:image/png;base64,....
+      if (typeof dataUrl === 'string') {
+        const idx = dataUrl.indexOf(',');
+        resolve(idx >= 0 ? dataUrl.substring(idx + 1) : dataUrl);
+      } else {
+        reject(new Error('Unexpected QR image data'));
+      }
+    };
+    reader.readAsDataURL(blob);
+  });
+}

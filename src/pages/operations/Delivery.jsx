@@ -14,12 +14,19 @@ import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 
 import MainCard from 'components/MainCard';
 
 import { getProcessStages } from 'api/processStage';
 import { getOrdersByStatus } from 'api/orders';
+import ShippingQrModal from 'components/ShippingQrModal';
 
 // ==============================|| OPERATIONS - DELIVERY (Order Board) ||============================== //
 
@@ -35,6 +42,12 @@ function paymentStatusColor(status) {
 function StageCard({ title, rows = [] }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeRow, setActiveRow] = useState(null);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const [qrError, setQrError] = useState('');
+  const [qrOrderId, setQrOrderId] = useState(null);
+  const [qrOrder, setQrOrder] = useState(null);
 
   const handleMenuOpen = (event, row) => {
     setAnchorEl(event.currentTarget);
@@ -62,6 +75,18 @@ function StageCard({ title, rows = [] }) {
     // TODO: open edit dialog
     console.log('Edit order', activeRow);
     handleMenuClose();
+  };
+
+  const handleShowQr = async (order) => {
+    console.log('[Delivery.StageCard.handleShowQr] QR button clicked, order:', order);
+    const id = order?.orderId ?? order?.id ?? order?.orderNo ?? order?.code;
+    console.log('[Delivery.StageCard.handleShowQr] Order id:', id);
+    setQrOrder(order);
+  };
+
+  const handleCloseQr = () => {
+    console.log('[Delivery.StageCard.handleCloseQr] Closing QR modal');
+    setQrOrder(null);
   };
 
   return (
@@ -93,37 +118,61 @@ function StageCard({ title, rows = [] }) {
                 <TableCell sx={{ width: 300, fontWeight: 700 }}>ORDER #</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>CUSTOMER</TableCell>
                 <TableCell sx={{ width: 180, fontWeight: 700 }}>STAGE</TableCell>
-                <TableCell align="right" sx={{ width: 120, fontWeight: 700 }}>AMOUNT</TableCell>
-                <TableCell align="center" sx={{ width: 140, fontWeight: 700 }}>PAYMENT</TableCell>
+                <TableCell align="right" sx={{ width: 120, fontWeight: 700 }}>
+                  AMOUNT
+                </TableCell>
+                <TableCell align="center" sx={{ width: 140, fontWeight: 700 }}>
+                  PAYMENT
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center">
-                    <Typography variant="body2" color="text.secondary">No orders</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      No orders
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((r, _idx) => (
                   <TableRow key={r.orderId || `${title}-${_idx}`} hover>
                     <TableCell>
-                      <IconButton size="small" onClick={(e) => handleMenuOpen(e, r)} aria-controls={`row-menu-${_idx}`} aria-haspopup="true">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleMenuOpen(e, r)}
+                        aria-controls={`row-menu-${_idx}`}
+                        aria-haspopup="true"
+                      >
                         <EllipsisOutlined style={{ fontSize: '0.9rem' }} />
                       </IconButton>
+                      {/* show QR button for ready-to-dispatch rows */}
+                      {['READY_TO_DISPATCH', 'READY-TO-DISPATCH', 'READY_FOR_DISPATCH'].includes(String(r.stage).toUpperCase()) && (
+                        <>
+                          {console.log('[Delivery.StageCard] QR button showing for order:', r.orderId, 'stage:', r.stage)}
+                          <IconButton size="small" onClick={() => handleShowQr(r)} title="Show QR" sx={{ ml: 0.5 }}>
+                            <Typography variant="caption">QR</Typography>
+                          </IconButton>
+                        </>
+                      )}
                     </TableCell>
                     <TableCell sx={{ maxWidth: 300, wordBreak: 'break-word' }}>
                       <Typography sx={{ fontSize: '0.95rem' }}>{r.orderId}</Typography>
                     </TableCell>
                     <TableCell sx={{ maxWidth: 420 }}>
                       <Typography sx={{ fontSize: '0.95rem', fontWeight: 600 }}>{r.customerName}</Typography>
-                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>{[r.customerContact, r.customerEmail].filter(Boolean).join(' • ')}</Typography>
+                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                        {[r.customerContact, r.customerEmail].filter(Boolean).join(' • ')}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography sx={{ fontSize: '0.95rem' }}>{r.stage}</Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography sx={{ fontSize: '0.95rem' }}>{Number.isFinite(Number(r.amount)) ? Number(r.amount).toFixed(2) : '—'}</Typography>
+                      <Typography sx={{ fontSize: '0.95rem' }}>
+                        {Number.isFinite(Number(r.amount)) ? Number(r.amount).toFixed(2) : '—'}
+                      </Typography>
                     </TableCell>
                     <TableCell align="center">
                       <Chip label={String(r.payment ?? '—').toUpperCase()} color={paymentStatusColor(r.payment)} size="small" />
@@ -147,6 +196,7 @@ function StageCard({ title, rows = [] }) {
           <MenuItem onClick={handleAssign}>Assign</MenuItem>
           <MenuItem onClick={handleEdit}>Edit</MenuItem>
         </Menu>
+        {qrOrder && <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} />}
       </MainCard>
     </Box>
   );
@@ -171,7 +221,9 @@ function JobsStyleCard({ title, rows = [] }) {
       <MainCard sx={{ width: '100%' }} content={false}>
         <Box sx={{ p: 2 }}>
           <Typography variant="h6">{title}</Typography>
-          <Typography variant="caption" color="text.secondary">{rows.length} orders</Typography>
+          <Typography variant="caption" color="text.secondary">
+            {rows.length} orders
+          </Typography>
         </Box>
 
         <TableContainer sx={{ width: '100%', overflowX: 'auto', display: 'block', maxWidth: '100%', px: 2 }}>
@@ -183,15 +235,21 @@ function JobsStyleCard({ title, rows = [] }) {
                 <TableCell sx={{ width: '20%' }}>ORDER #</TableCell>
                 <TableCell sx={{ width: '20%' }}>CUSTOMER</TableCell>
                 <TableCell sx={{ width: '20%' }}>STAGE</TableCell>
-                <TableCell align="right" sx={{ width: '20%' }}>AMOUNT</TableCell>
-                <TableCell align="center" sx={{ width: '20%' }}>PAYMENT</TableCell>
+                <TableCell align="right" sx={{ width: '20%' }}>
+                  AMOUNT
+                </TableCell>
+                <TableCell align="center" sx={{ width: '20%' }}>
+                  PAYMENT
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center">
-                    <Typography variant="body2" color="text.secondary">No orders</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      No orders
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -207,13 +265,17 @@ function JobsStyleCard({ title, rows = [] }) {
                     </TableCell>
                     <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <Typography sx={{ fontSize: '0.95rem', fontWeight: 600 }}>{r.customerName}</Typography>
-                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>{[r.customerContact, r.customerEmail].filter(Boolean).join(' • ')}</Typography>
+                      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary' }}>
+                        {[r.customerContact, r.customerEmail].filter(Boolean).join(' • ')}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography sx={{ fontSize: '0.95rem' }}>{r.stage}</Typography>
                     </TableCell>
                     <TableCell align="right">
-                      <Typography sx={{ fontSize: '0.95rem' }}>{Number.isFinite(Number(r.amount)) ? Number(r.amount).toFixed(2) : '—'}</Typography>
+                      <Typography sx={{ fontSize: '0.95rem' }}>
+                        {Number.isFinite(Number(r.amount)) ? Number(r.amount).toFixed(2) : '—'}
+                      </Typography>
                     </TableCell>
                     <TableCell align="center">
                       <Chip label={String(r.payment ?? '—').toUpperCase()} color={paymentStatusColor(r.payment)} size="small" />
@@ -225,7 +287,13 @@ function JobsStyleCard({ title, rows = [] }) {
           </Table>
         </TableContainer>
 
-        <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose} anchorOrigin={{ vertical: 'top', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }}>
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleMenuClose}
+          anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
           <MenuItem onClick={handleMenuClose}>View Order</MenuItem>
           <MenuItem onClick={handleMenuClose}>Assign</MenuItem>
           <MenuItem onClick={handleMenuClose}>Edit</MenuItem>
@@ -251,7 +319,7 @@ export default function DeliveryDispatch() {
         const excluded = new Set(['document-modifi', 'rfrfrf']);
         const stageNames = Array.isArray(ps)
           ? ps
-              .map((s) => (typeof s === 'string' ? s : s.stageName ?? s.name))
+              .map((s) => (typeof s === 'string' ? s : (s.stageName ?? s.name)))
               .filter(Boolean)
               .map((n) => String(n).trim())
               .filter((n) => !excluded.has(n.toLowerCase()))
@@ -262,17 +330,25 @@ export default function DeliveryDispatch() {
             try {
               const data = await getOrdersByStatus(stageName);
               const items = Array.isArray(data) ? data : (data?.items ?? data?.data ?? []);
+              console.log('[Delivery.load] Stage:', stageName, 'orders count:', items.length);
               const rows = items.map((o) => ({
                 orderId: o.orderId ?? o.orderNo ?? o.id ?? o.code ?? '',
-                customerName: o.customer?.name ?? ((`${o.firstName ?? ''} ${o.lastName ?? ''}`).trim() || o.customerName || '—'),
+                customerName: o.customer?.name ?? (`${o.firstName ?? ''} ${o.lastName ?? ''}`.trim() || o.customerName || '—'),
                 customerContact: o.customerPhone ?? o.customer?.phone ?? o.customerContact ?? '',
                 customerEmail: o.customerEmail ?? o.customer?.email ?? o.email ?? '',
                 stage: o.orderStageName ?? o.stageName ?? o.stage ?? stageName,
                 amount: Number(o.totalAmount ?? o.amount ?? o.grandTotal ?? 0),
                 payment: o.paymentStatus ?? o.payment ?? '—'
               }));
+              console.log(
+                '[Delivery.load] Stage:',
+                stageName,
+                'mapped rows:',
+                rows.map((r) => ({ id: r.orderId, stage: r.stage }))
+              );
               return { name: stageName, rows };
             } catch (e) {
+              console.error('[Delivery.load] Error loading stage:', stageName, e);
               return { name: stageName, rows: [] };
             }
           })
@@ -313,7 +389,6 @@ export default function DeliveryDispatch() {
       <Grid item xs={12} sx={{ px: 2, pt: 1, pb: 0 }}>
         <Typography variant="h5">Delivery & Dispatch</Typography>
       </Grid>
-      
 
       {loading && (
         <Grid item xs={12}>
@@ -329,15 +404,17 @@ export default function DeliveryDispatch() {
         </Grid>
       )}
 
-      {!loading && !error && stages.map((s) => (
-        <Grid item xs={12} key={s.name} sx={{ px: 0 }}>
-          {String(s.name).toUpperCase() === 'ORDER-PENDING' ? (
-            <JobsStyleCard title={s.name} rows={s.rows} />
-          ) : (
-            <StageCard title={s.name} rows={s.rows} />
-          )}
-        </Grid>
-      ))}
+      {!loading &&
+        !error &&
+        stages.map((s) => (
+          <Grid item xs={12} key={s.name} sx={{ px: 0 }}>
+            {String(s.name).toUpperCase() === 'ORDER-PENDING' ? (
+              <JobsStyleCard title={s.name} rows={s.rows} />
+            ) : (
+              <StageCard title={s.name} rows={s.rows} />
+            )}
+          </Grid>
+        ))}
     </Grid>
   );
 }

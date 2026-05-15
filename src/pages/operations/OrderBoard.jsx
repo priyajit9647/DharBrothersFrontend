@@ -12,6 +12,12 @@ import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 
 import MainCard from 'components/MainCard';
 // Dot component removed (unused)
@@ -21,6 +27,7 @@ import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 
 import { getProcessStages } from 'api/processStage';
 import { getOrdersByStatus } from 'api/orders';
+import ShippingQrModal from 'components/ShippingQrModal';
 
 // ==============================|| ORDER BOARD (TABLE VIEW) ||============================== //
 
@@ -63,6 +70,7 @@ export default function OrderBoard() {
   const [error, setError] = useState('');
 
   const [anchorEl, setAnchorEl] = useState(null);
+  const [qrOrder, setQrOrder] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -128,6 +136,19 @@ export default function OrderBoard() {
     setAnchorEl(null);
   };
 
+  const handleShowQr = async (order) => {
+    // open modal and let it fetch the base64 via shared service
+    console.log('[OrderBoard.handleShowQr] QR button clicked, order:', order);
+    const id = order?.orderId ?? order?.id ?? order?.orderNo ?? order?.code;
+    console.log('[OrderBoard.handleShowQr] Order id:', id);
+    setQrOrder(order);
+  };
+
+  const handleCloseQr = () => {
+    console.log('[OrderBoard.handleCloseQr] Closing QR modal');
+    setQrOrder(null);
+  };
+
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       <Grid item xs={12}>
@@ -176,51 +197,79 @@ export default function OrderBoard() {
                     <OrdersTableHead />
                     <TableBody>
                       {pendingOrders && pendingOrders.length > 0 ? (
-                        pendingOrders.slice(0, 12).map((order) => (
-                          <TableRow
-                            hover
-                            tabIndex={-1}
-                            key={renderOrderId(order)}
-                            sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                          >
-                            <TableCell>
-                              <IconButton size="small" onClick={(e) => handleActionClick(e, order)}>
-                                <EllipsisOutlined style={{ fontSize: '1rem' }} />
-                              </IconButton>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="subtitle2">
-                                {order.firstName || order.lastName
-                                  ? `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim()
-                                  : (order.customer?.name ?? order.customerName ?? '—')}
-                              </Typography>
-                              {(order.customerPhone || order.customerEmail) && (
-                                <Typography variant="caption" color="text.secondary">
-                                  {[order.customerPhone, order.customerEmail].filter(Boolean).join(' • ')}
+                        pendingOrders.slice(0, 12).map((order) => {
+                          // Debug logs and safe stage extraction
+                          // eslint-disable-next-line no-console
+                          console.log('Order:', order);
+                          // eslint-disable-next-line no-console
+                          console.log('Stage:', order?.stage);
+                          // eslint-disable-next-line no-console
+                          console.log('Status:', order?.status);
+                          const rowStage = order?.stage || order?.status || order?.orderStageName || order?.stageName || '';
+                          const readyVariants = ['READY_TO_DISPATCH', 'READY-TO-DISPATCH', 'READY_FOR_DISPATCH'];
+                          const isReady = readyVariants.includes(String(rowStage).toUpperCase());
+                          console.log(
+                            '[OrderBoard.PendingOrders] Order:',
+                            renderOrderId(order),
+                            'rowStage:',
+                            rowStage,
+                            'isReady:',
+                            isReady
+                          );
+
+                          return (
+                            <TableRow
+                              hover
+                              tabIndex={-1}
+                              key={renderOrderId(order)}
+                              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                            >
+                              <TableCell>
+                                <IconButton size="small" onClick={(e) => handleActionClick(e, order)}>
+                                  <EllipsisOutlined style={{ fontSize: '1rem' }} />
+                                </IconButton>
+                                {isReady && (
+                                  <IconButton size="small" onClick={() => handleShowQr(order)} title="Show QR" sx={{ ml: 0.5 }}>
+                                    <Typography variant="caption">QR</Typography>
+                                  </IconButton>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="subtitle2">
+                                  {order?.firstName || order?.lastName
+                                    ? `${order?.firstName ?? ''} ${order?.lastName ?? ''}`.trim()
+                                    : (order?.customer?.name ?? order?.customerName ?? '—')}
                                 </Typography>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{order.orderStageName ?? order.stageName ?? order.stage ?? 'Pending'}</Typography>
-                            </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2">
-                                {order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}
-                              </Typography>
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
-                                label={order.paymentStatus ?? '—'}
-                                color={paymentStatusColor(order.paymentStatus)}
-                                size="small"
-                                variant={paymentStatusColor(order.paymentStatus) === 'default' ? 'outlined' : 'filled'}
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))
+                                {(order?.customerPhone || order?.customerEmail) && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    {[order?.customerPhone, order?.customerEmail].filter(Boolean).join(' • ')}
+                                  </Typography>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2">
+                                  {order?.orderStageName ?? order?.stageName ?? order?.stage ?? order?.status ?? 'N/A'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Typography variant="body2">
+                                  {order?.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}
+                                </Typography>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Chip
+                                  label={order?.paymentStatus ?? '—'}
+                                  color={paymentStatusColor(order?.paymentStatus)}
+                                  size="small"
+                                  variant={paymentStatusColor(order?.paymentStatus) === 'default' ? 'outlined' : 'filled'}
+                                />
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       ) : (
                         <TableRow>
                           <TableCell colSpan={6}>
@@ -313,6 +362,8 @@ export default function OrderBoard() {
                     <MenuItem onClick={handleMenuClose}>Assign</MenuItem>
                     <MenuItem onClick={handleMenuClose}>Edit</MenuItem>
                   </Menu>
+
+                  {qrOrder && <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} />}
                 </MainCard>
               </Grid>
             );
