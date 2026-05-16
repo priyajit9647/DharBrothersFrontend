@@ -20,9 +20,34 @@ const support = {
     {
       id: 'reports',
       title: 'Reports & Insights',
-      type: 'item',
-      url: '/reports',
-      icon: icons.BarChartOutlined
+      type: 'collapse',
+      icon: icons.BarChartOutlined,
+      children: [
+        {
+          id: 'delay-reports',
+          title: 'Delay Reports',
+          type: 'item',
+          url: '/reports/delay-reports'
+        },
+        {
+          id: 'open-jobs-report',
+          title: 'Open Jobs Report',
+          type: 'item',
+          url: '/reports/open-jobs'
+        },
+        {
+          id: 'ready-to-dispatch',
+          title: 'Ready To Dispatch',
+          type: 'item',
+          url: '/reports/ready-to-dispatch'
+        },
+        {
+          id: 'complete-jobs-report',
+          title: 'Complete Jobs Report',
+          type: 'item',
+          url: '/reports/complete-jobs'
+        }
+      ]
     },
     {
       id: 'branches-teams',

@@ -22,7 +22,7 @@ import ReportAreaChart from 'sections/dashboard/default/ReportAreaChart';
 import UniqueVisitorCard from 'sections/dashboard/default/UniqueVisitorCard';
 import OrdersTable from 'sections/dashboard/default/OrdersTable';
 import { getDashboardKpis } from 'api/dashboard';
-import PlacementAnalyticsCard, { defaultData as placementDefault } from 'components/analytics/PlacementAnalyticsCard';
+import PlacementTypeAnalytics from 'components/cards/PlacementTypeAnalytics';
 import JobInHandCard from 'components/cards/JobInHandCard';
 import { useAuth } from 'hooks/useAuth';
 import { formatLabel } from 'utils/formatLabel';
@@ -222,7 +222,9 @@ export default function DashboardDefault() {
         <MainCard sx={{ mt: 2 }} content={false}>
           <MonthlyBarChart />
         </MainCard>
-        <PlacementAnalyticsCard sx={{ mt: 2 }} loading={kpiLoading} {...placementDefault} />
+        <div style={{ marginTop: 16 }}>
+          <PlacementTypeAnalytics />
+        </div>
       </Grid>
       {/* row 3 */}
       <Grid size={{ xs: 12, md: 7, lg: 8 }}>
@@ -299,36 +301,7 @@ export default function DashboardDefault() {
       <Grid size={{ xs: 12 }}>
         <JobInHandCard />
       </Grid>
-      {/* row 4 */}
-      <Grid size={{ xs: 12, md: 5, lg: 4 }}>
-        <MainCard sx={{ mt: 2 }}>
-          <Stack sx={{ gap: 3 }}>
-            <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <Grid>
-                <Stack>
-                  <Typography variant="h5" noWrap>
-                    Help & Support Chat
-                  </Typography>
-                  <Typography variant="caption" color="secondary" noWrap>
-                    Typical replay within 5 min
-                  </Typography>
-                </Stack>
-              </Grid>
-              <Grid>
-                <AvatarGroup sx={{ '& .MuiAvatar-root': { width: 32, height: 32 } }}>
-                  <Avatar alt="Remy Sharp" src={avatar1} />
-                  <Avatar alt="Travis Howard" src={avatar2} />
-                  <Avatar alt="Cindy Baker" src={avatar3} />
-                  <Avatar alt="Agnes Walker" src={avatar4} />
-                </AvatarGroup>
-              </Grid>
-            </Grid>
-            <Button size="small" variant="contained" sx={{ textTransform: 'capitalize' }}>
-              Need Help?
-            </Button>
-          </Stack>
-        </MainCard>
-      </Grid>
+      {/* row 4 (Help & Support Chat removed) */}
     </Grid>
   );
 }

@@ -18,8 +18,11 @@ const Email = Loadable(lazy(() => import('pages/operations/Email')));
 
 
 // render - BMS Admin & Insights
-const ReportsOverview = Loadable(lazy(() => import('pages/reports/Overview')));
 const NotificationReports = Loadable(lazy(() => import('pages/reports/NotificationReports')));
+const DelayReports = Loadable(lazy(() => import('pages/reports/DelayReports')));
+const OpenJobsReport = Loadable(lazy(() => import('pages/reports/OpenJobsReport')));
+const ReadyToDispatch = Loadable(lazy(() => import('pages/reports/ReadyToDispatch')));
+const CompleteJobsReport = Loadable(lazy(() => import('pages/reports/CompleteJobsReport')));
 const Branches = Loadable(lazy(() => import('pages/admin/Branches')));
 const Teams = Loadable(lazy(() => import('pages/admin/Teams')));
 const DocumentVersionController = Loadable(lazy(() => import('pages/admin/DocumentVersionController')));
@@ -101,9 +104,22 @@ const MainRoutes = {
     {
       path: 'reports',
       children: [
+        
         {
-          path: '',
-          element: <ReportsOverview />
+          path: 'delay-reports',
+          element: <DelayReports />
+        },
+        {
+          path: 'open-jobs',
+          element: <OpenJobsReport />
+        },
+        {
+          path: 'ready-to-dispatch',
+          element: <ReadyToDispatch />
+        },
+        {
+          path: 'complete-jobs',
+          element: <CompleteJobsReport />
         },
         {
           path: 'notifications',
