@@ -21,8 +21,6 @@ import { publicFetch } from 'api/auth';
 import { attachOrder, getOrderEstimation, getOrderPageDetails, uploadTempOrderFiles } from 'api/order';
 import Logo from 'components/logo';
 
-import banner2 from 'assets/banner/banner2.jpg';
-
 const navItems = [
   { label: 'Home', to: '/order' },
   { label: 'About Us' },
@@ -302,7 +300,7 @@ function normalizePageDetails(pageDetails, pageTypes) {
   );
 }
 
-export default function PlaceOrder() {
+export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHeader = false, hideOrderButton = false, hideHero = false, hideFooter = false }) {
   const theme = useTheme();
   const [activeStep, setActiveStep] = useState(0);
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
@@ -868,9 +866,8 @@ export default function PlaceOrder() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f8f7f2' }}>
-      <TopInfoBar />
-      <HeaderNav />
-      <HeroBanner />
+      {!hideHeader && <TopInfoBar />}
+      {!hideHeader && <HeaderNav pageTitle={pageTitle} hideOrderButton={hideOrderButton} />}
 
       <Box sx={{ py: { xs: 6, md: 8 } }}>
         <Container maxWidth="lg">
@@ -1019,7 +1016,7 @@ export default function PlaceOrder() {
         onPageTypeChange={handlePageTypeChange}
       />
 
-      <FooterSection />
+      {!hideFooter && <FooterSection />}
     </Box>
   );
 }
@@ -1479,7 +1476,7 @@ function HeaderInfo({ icon: Icon, text }) {
   );
 }
 
-export function HeaderNav() {
+export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton = false }) {
   const theme = useTheme();
 
   return (
@@ -1528,52 +1525,31 @@ export function HeaderNav() {
               </Typography>
             ))}
 
-            <Button
-              variant="contained"
-              component={RouterLink}
-              to="/order"
-              sx={{
-                ml: { md: 1 },
-                px: 3,
-                py: 1.4,
-                borderRadius: 0,
-                bgcolor: theme.palette.warning.lighter,
-                color: theme.palette.text.primary,
-                boxShadow: 'none',
-                '&:hover': {
-                  bgcolor: theme.palette.warning.light,
-                  boxShadow: 'none'
-                }
-              }}
-            >
-              Order Thesis Online
-            </Button>
+            {!hideOrderButton && (
+              <Button
+                variant="contained"
+                component={RouterLink}
+                to="/order"
+                sx={{
+                  ml: { md: 1 },
+                  px: 3,
+                  py: 1.4,
+                  borderRadius: 0,
+                  bgcolor: theme.palette.warning.lighter,
+                  color: theme.palette.text.primary,
+                  boxShadow: 'none',
+                  '&:hover': {
+                    bgcolor: theme.palette.warning.light,
+                    boxShadow: 'none'
+                  }
+                }}
+              >
+                {pageTitle}
+              </Button>
+            )}
           </Stack>
         </Stack>
       </Container>
-    </Box>
-  );
-}
-
-function HeroBanner() {
-  return (
-    <Box
-      sx={{
-        position: 'relative',
-        minHeight: { xs: 220, md: 280 },
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        textAlign: 'center',
-        color: 'common.white',
-        backgroundImage: `linear-gradient(0deg, rgba(27, 24, 20, 0.38), rgba(27, 24, 20, 0.38)), url(${banner2})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }}
-    >
-      <Typography variant="h1" sx={{ fontSize: { xs: '2rem', md: '3rem' }, fontWeight: 400, letterSpacing: 0.4 }}>
-        Order Thesis Online
-      </Typography>
     </Box>
   );
 }
