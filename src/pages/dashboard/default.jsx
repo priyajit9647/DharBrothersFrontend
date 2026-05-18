@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { Link, useNavigate } from 'react-router-dom';
+
 // material-ui
 import Avatar from '@mui/material/Avatar';
 import AvatarGroup from '@mui/material/AvatarGroup';
@@ -48,6 +50,7 @@ export default function DashboardDefault() {
   const [kpiLoading, setKpiLoading] = useState(true);
   const [kpiError, setKpiError] = useState('');
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const branchId = useMemo(() => user?.branchId ?? user?.branch?.id ?? user?.branch?.branchId ?? user?.profile?.branchId ?? null, [user]);
 
@@ -62,7 +65,8 @@ export default function DashboardDefault() {
         color: 'primary',
         accent: 'primary',
         icon: CarryOutOutlined,
-        isLoss: false
+        isLoss: false,
+        link: '/reports/open-jobs'
       },
       {
         key: 'delayedJobs',
@@ -73,7 +77,8 @@ export default function DashboardDefault() {
         color: 'warning',
         accent: 'warning',
         icon: ExclamationCircleOutlined,
-        isLoss: true
+        isLoss: true,
+        link: '/reports/delay-reports'
       },
       {
         key: 'completedJobs',
@@ -84,7 +89,8 @@ export default function DashboardDefault() {
         color: 'success',
         accent: 'success',
         icon: CheckCircleOutlined,
-        isLoss: false
+        isLoss: false,
+        link: '/reports/complete-jobs'
       },
       {
         key: 'readyForDispatch',
@@ -95,7 +101,8 @@ export default function DashboardDefault() {
         color: 'secondary',
         accent: 'secondary',
         icon: TruckOutlined,
-        isLoss: false
+        isLoss: false,
+        link: '/reports/ready-to-dispatch'
       }
     ],
     []
@@ -190,10 +197,10 @@ export default function DashboardDefault() {
           </Typography>
         )}
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+      <Grid size={{ xs: 12, sm: 6, lg: 3 }} onClick={() => navigate(cardConfig[0].link)} style={{ cursor: 'pointer' }}>
         <AnalyticEcommerce {...cardConfig[0]} count={kpiLoading ? '—' : String(cardConfig[0]?.count ?? '—')} />
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+      <Grid size={{ xs: 12, sm: 6, lg: 3 }} onClick={() => navigate(cardConfig[1].link)} style={{ cursor: 'pointer' }}>
         <AnalyticEcommerce
           {...cardConfig[1]}
           count={kpiLoading ? '—' : String(cardConfig[1]?.count ?? '—')}
@@ -201,10 +208,10 @@ export default function DashboardDefault() {
           color={cardConfig[1]?.color}
         />
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+      <Grid size={{ xs: 12, sm: 6, lg: 3 }} onClick={() => navigate(cardConfig[2].link)} style={{ cursor: 'pointer' }}>
         <AnalyticEcommerce {...cardConfig[2]} count={kpiLoading ? '—' : String(cardConfig[2]?.count ?? '—')} />
       </Grid>
-      <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+      <Grid size={{ xs: 12, sm: 6, lg: 3 }} onClick={() => navigate(cardConfig[3].link)} style={{ cursor: 'pointer' }}>
         <AnalyticEcommerce {...cardConfig[3]} count={kpiLoading ? '—' : String(cardConfig[3]?.count ?? '—')} />
       </Grid>
       <Grid sx={{ display: { sm: 'none', md: 'block', lg: 'none' } }} size={{ md: 8 }} />
