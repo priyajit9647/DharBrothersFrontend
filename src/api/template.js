@@ -23,6 +23,8 @@ export async function getEmailTemplates() {
     isActive: item.isActive ?? item.active ?? false,
     branchId: item.branchId ?? null,
     processStageId: item.processStageId ?? null,
+    roleName: item.roleName ?? item.role?.name ?? null,
+    roleId: item.roleId ?? item.role?.id ?? null,
     default: item.default ?? false,
     // keep original payload for advanced usages
     _raw: item
@@ -34,15 +36,21 @@ export async function createEmailTemplate({
   templateCode,
   subject,
   body,
-  isActive
+  emailBody,
+  recipients,
+  isActive,
+  roleId
 }) {
+  const finalBody = body ?? emailBody ?? '';
   // eslint-disable-next-line no-console
   console.log('Calling POST /api/v1/template/notification/create', {
     templateName,
     templateCode,
     subject,
-    body,
-    isActive
+    body: finalBody,
+    recipients,
+    isActive,
+    roleId
   });
   return authorizedFetch('/api/v1/template/notification/create', {
     method: 'POST',
@@ -50,8 +58,11 @@ export async function createEmailTemplate({
       templateName,
       templateCode,
       subject,
-      body,
-      isActive
+      body: finalBody,
+      emailBody: finalBody,
+      recipients,
+      isActive,
+      roleId
     })
   });
 }
@@ -61,15 +72,21 @@ export async function editEmailTemplate(id, {
   templateCode,
   subject,
   body,
-  isActive
+  emailBody,
+  recipients,
+  isActive,
+  roleId
 }) {
+  const finalBody = body ?? emailBody ?? '';
   // eslint-disable-next-line no-console
   console.log(`Calling PUT /api/v1/template/notification/edit/${id}`, {
     templateName,
     templateCode,
     subject,
-    body,
-    isActive
+    body: finalBody,
+    recipients,
+    isActive,
+    roleId
   });
   return authorizedFetch(`/api/v1/template/notification/edit/${id}`, {
     method: 'PUT',
@@ -77,8 +94,11 @@ export async function editEmailTemplate(id, {
       templateName,
       templateCode,
       subject,
-      body,
-      isActive
+      body: finalBody,
+      emailBody: finalBody,
+      recipients,
+      isActive,
+      roleId
     })
   });
 }
@@ -113,46 +133,65 @@ export async function createWhatsappTemplate({
   templateName,
   templateCode,
   body,
-  isActive
+  templateContent,
+  variables,
+  isActive,
+  roleId
 }) {
+  const finalBody = body ?? templateContent ?? '';
   // eslint-disable-next-line no-console
   console.log('Calling POST /api/v1/template/whatsapp/create', {
     templateName,
     templateCode,
-    body,
-    isActive
+    body: finalBody,
+    variables,
+    isActive,
+    roleId
   });
   return authorizedFetch('/api/v1/template/whatsapp/create', {
     method: 'POST',
     body: JSON.stringify({
       templateName,
       templateCode,
-      body,
-      isActive
+      body: finalBody,
+      templateContent: finalBody,
+      variables,
+      isActive,
+      roleId
     })
   });
 }
+
 
 export async function editWhatsappTemplate(id, {
   templateName,
   templateCode,
   body,
-  isActive
+  templateContent,
+  variables,
+  isActive,
+  roleId
 }) {
+  const finalBody = body ?? templateContent ?? '';
   // eslint-disable-next-line no-console
   console.log(`Calling PUT /api/v1/template/whatsapp/edit/${id}`, {
     templateName,
     templateCode,
-    body,
-    isActive
+    body: finalBody,
+    variables,
+    isActive,
+    roleId
   });
   return authorizedFetch(`/api/v1/template/whatsapp/edit/${id}`, {
     method: 'PUT',
     body: JSON.stringify({
       templateName,
       templateCode,
-      body,
-      isActive
+      body: finalBody,
+      templateContent: finalBody,
+      variables,
+      isActive,
+      roleId
     })
   });
 }
@@ -187,46 +226,65 @@ export async function createInAppTemplate({
   templateName,
   templateCode,
   body,
-  isActive
+  content,
+  actionUrl,
+  isActive,
+  roleId
 }) {
+  const finalBody = body ?? content ?? '';
   // eslint-disable-next-line no-console
   console.log('Calling POST /api/v1/template/inapp/create', {
     templateName,
     templateCode,
-    body,
-    isActive
+    body: finalBody,
+    actionUrl,
+    isActive,
+    roleId
   });
   return authorizedFetch('/api/v1/template/inapp/create', {
     method: 'POST',
     body: JSON.stringify({
       templateName,
       templateCode,
-      body,
-      isActive
+      body: finalBody,
+      content: finalBody,
+      actionUrl,
+      isActive,
+      roleId
     })
   });
 }
+
 
 export async function editInAppTemplate(id, {
   templateName,
   templateCode,
   body,
-  isActive
+  content,
+  actionUrl,
+  isActive,
+  roleId
 }) {
+  const finalBody = body ?? content ?? '';
   // eslint-disable-next-line no-console
   console.log(`Calling PUT /api/v1/template/inapp/edit/${id}`, {
     templateName,
     templateCode,
-    body,
-    isActive
+    body: finalBody,
+    actionUrl,
+    isActive,
+    roleId
   });
   return authorizedFetch(`/api/v1/template/inapp/edit/${id}`, {
     method: 'PUT',
     body: JSON.stringify({
       templateName,
       templateCode,
-      body,
-      isActive
+      body: finalBody,
+      content: finalBody,
+      actionUrl,
+      isActive,
+      roleId
     })
   });
 }

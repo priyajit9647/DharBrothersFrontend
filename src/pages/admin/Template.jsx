@@ -18,6 +18,7 @@ import MainCard from 'components/MainCard';
 import MasterList from 'sections/admin/masters/MasterList';
 import { createTemplateNotification, getTemplateNotificationList, getTemplateNotificationById, editTemplateNotification } from 'api/admin/template/notification';
 import { getProcessStages } from 'api/processStage';
+import { getRoles } from 'api/role';
 
 // ==============================|| ADMIN - TEMPLATE PAGE ||============================== //
 
@@ -27,7 +28,9 @@ export default function Template() {
   const [rows, setRows] = useState([]);
   const [branches, setBranches] = useState([]);
   const [processStages, setProcessStages] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [loadingRoles, setLoadingRoles] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -72,6 +75,8 @@ export default function Template() {
           whatsappBody: item.whatsappBody,
           inAppBody: item.inAppBody,
           isActive: item.isActive,
+          roleName: item.roleName ?? item.role?.name ?? '',
+          roleId: item.roleId ?? item.role?.id ?? null,
           default: item.default
         }));
         setRows(normalized);
@@ -116,7 +121,8 @@ export default function Template() {
         whatsappBody: full.whatsappBody ?? '',
         inAppBody: full.inAppBody ?? '',
         isActive: typeof full.isActive === 'boolean' ? full.isActive : true,
-        dynamicData: full.dynamicData ?? ''
+        dynamicData: full.dynamicData ?? '',
+        roleId: full.roleId ?? full.role?.id ?? full.roleId ?? ''
       };
       setFormValues(fv);
       setEditingId(row.id);
@@ -141,6 +147,20 @@ export default function Template() {
       }
     };
     load();
+    // load roles
+    const loadRoles = async () => {
+      try {
+        setLoadingRoles(true);
+        const data = await getRoles();
+        const list = Array.isArray(data) ? data : data?.items || data?.data || [];
+        setRoles(list);
+      } catch (e) {
+        // ignore
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+    loadRoles();
     return () => { mounted = false; };
   }, []);
 
@@ -164,7 +184,8 @@ export default function Template() {
       whatsappBody: formValues.whatsappBody.trim(),
       inAppBody: formValues.inAppBody.trim(),
       isActive: Boolean(formValues.isActive),
-      dynamicData: formValues.dynamicData ? String(formValues.dynamicData) : ''
+      dynamicData: formValues.dynamicData ? String(formValues.dynamicData) : '',
+      roleId: formValues.roleId ? Number(formValues.roleId) : undefined
     };
 
     if (!payload.processStageId || !payload.emailSubject || !payload.emailBody) {
@@ -197,6 +218,8 @@ export default function Template() {
         whatsappBody: item.whatsappBody,
         inAppBody: item.inAppBody,
         isActive: item.isActive,
+        roleName: item.roleName ?? item.role?.name ?? '',
+        roleId: item.roleId ?? item.role?.id ?? null,
         default: item.default
       }));
       setRows(normalized);
@@ -224,6 +247,7 @@ export default function Template() {
             columns={[
               { id: 'branchName', label: 'Branch' },
               { id: 'processStageName', label: 'Process Stage' },
+              { id: 'roleName', label: 'Role' },
               {
                 id: 'email',
                 label: 'Email (Subject + Body)',
@@ -285,6 +309,18 @@ export default function Template() {
               <MenuItem value="">Select Process Stage</MenuItem>
               {processStages.map((ps) => (
                 <MenuItem key={ps.id} value={ps.id}>{ps.stageName || ps.code || ps.id}</MenuItem>
+              ))}
+            </Select>
+
+            <Select
+              value={formValues.roleId ?? ''}
+              onChange={handleFormChange('roleId')}
+              displayEmpty
+              fullWidth
+            >
+              <MenuItem value="">Select Role</MenuItem>
+              {roles.map((r) => (
+                <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
               ))}
             </Select>
 

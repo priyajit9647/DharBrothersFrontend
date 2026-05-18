@@ -6,6 +6,8 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -20,6 +22,7 @@ import {
   deleteWhatsappTemplate,
   toggleWhatsappTemplateActive
 } from 'api/template';
+import { getRoles } from 'api/role';
 
 // ==============================|| WHATSAPP TEMPLATE ||============================== //
 
@@ -39,6 +42,8 @@ export default function WhatsappTemplate() {
     variables: '',
     isActive: true
   });
+  const [roles, setRoles] = useState([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -52,6 +57,8 @@ export default function WhatsappTemplate() {
             templateCode: item.templateCode,
             templateContent: item.templateContent,
             variables: item.variables,
+            roleName: item.roleName ?? item.role?.name ?? '',
+            roleId: item.roleId ?? item.role?.id ?? null,
             active: item.isActive || item.active
           }))
         : [];
@@ -67,6 +74,25 @@ export default function WhatsappTemplate() {
     loadTemplates();
   }, [loadTemplates]);
 
+  useEffect(() => {
+    let mounted = true;
+    const loadRoles = async () => {
+      try {
+        setLoadingRoles(true);
+        const data = await getRoles();
+        if (!mounted) return;
+        const list = Array.isArray(data) ? data : data?.items || data?.data || [];
+        setRoles(list);
+      } catch (e) {
+        // ignore
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+    loadRoles();
+    return () => { mounted = false; };
+  }, []);
+
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
     const end = start + rowsPerPage;
@@ -80,7 +106,8 @@ export default function WhatsappTemplate() {
       templateCode: '',
       templateContent: '',
       variables: '',
-      isActive: true
+      isActive: true,
+      roleId: ''
     });
     setError('');
     setDialogOpen(true);
@@ -93,7 +120,8 @@ export default function WhatsappTemplate() {
       templateCode: row.templateCode || '',
       templateContent: row.templateContent || '',
       variables: row.variables || '',
-      isActive: row.active ?? true
+      isActive: row.active ?? true,
+      roleId: row.roleId ?? ''
     });
     setError('');
     setDialogOpen(true);
@@ -127,7 +155,8 @@ export default function WhatsappTemplate() {
           templateCode: templateCode.trim(),
           templateContent: templateContent.trim(),
           variables: variables.trim(),
-          isActive
+          isActive,
+          roleId: formValues.roleId ? Number(formValues.roleId) : undefined
         });
       } else {
         await createWhatsappTemplate({
@@ -135,7 +164,8 @@ export default function WhatsappTemplate() {
           templateCode: templateCode.trim(),
           templateContent: templateContent.trim(),
           variables: variables.trim(),
-          isActive
+          isActive,
+          roleId: formValues.roleId ? Number(formValues.roleId) : undefined
         });
       }
 
@@ -185,7 +215,8 @@ export default function WhatsappTemplate() {
             columns={[
               { id: 'templateName', label: 'Template Name' },
               { id: 'templateCode', label: 'Template Code' },
-              { id: 'templateContent', label: 'Content' }
+              { id: 'templateContent', label: 'Content' },
+                { id: 'roleName', label: 'Role' }
             ]}
             rows={pagedRows}
             page={page}
@@ -236,6 +267,17 @@ export default function WhatsappTemplate() {
               fullWidth
               placeholder="comma-separated variables"
             />
+            <Select
+              value={formValues.roleId ?? ''}
+              onChange={handleFormChange('roleId')}
+              displayEmpty
+              fullWidth
+            >
+              <MenuItem value="">Select Role</MenuItem>
+              {roles.map((r) => (
+                <MenuItem key={r.id} value={r.id}>{r.name}</MenuItem>
+              ))}
+            </Select>
             <FormControlLabel
               control={
                 <Switch
