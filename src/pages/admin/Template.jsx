@@ -245,7 +245,6 @@ export default function Template() {
             title="Notification Templates"
             description="Create and manage notification templates for branches and process stages."
             columns={[
-              { id: 'branchName', label: 'Branch' },
               { id: 'processStageName', label: 'Process Stage' },
               { id: 'roleName', label: 'Role' },
               {
