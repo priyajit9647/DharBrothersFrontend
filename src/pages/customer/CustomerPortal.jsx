@@ -381,197 +381,487 @@ export default function CustomerPortal() {
   };
 
   return (
-    <Box sx={{ backgroundColor: 'grey.100', minHeight: '100vh', px: { xs: 2, sm: 4 }, py: 6 }}>
-      <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}>
-        <Grid container rowSpacing={3} columnSpacing={2.75} sx={{ py: 0 }}>
-          <Grid item xs={12}>
-            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 800 }}>Customer Order Portal</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  One-time view for your Dhar Brothers orders. Review past orders, track current status, manage payments and delivery address, and send feedback.
-                </Typography>
-              </Box>
-              <Stack spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'flex-end' } }}>
-                <Typography variant="subtitle2" color="text.secondary">Order Reference</Typography>
+    <Box sx={{ backgroundColor: '#f5f6f7', minHeight: '100vh', py: { xs: 3, md: 4 } }}>
+      {/* ===================== HEADER SECTION (Full Width) ===================== */}
+      <Box
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          py: { xs: 3, md: 5 },
+          px: { xs: 2, md: 4 },
+          borderRadius: { xs: 0, md: 2 },
+          mb: { xs: 3, md: 4 },
+          boxShadow: '0 10px 40px rgba(0,0,0,0.1)'
+        }}
+      >
+        <Box sx={{ width: '100%', mx: 'auto' }}>
+          <Grid container spacing={2} alignItems="flex-start">
+            <Grid item xs={12} md={8}>
+              <Typography variant="h4" sx={{ fontWeight: 800, mb: 0.5 }}>
+                Customer Order Portal
+              </Typography>
+              <Typography variant="body1" sx={{ opacity: 0.95, maxWidth: 600 }}>
+                One-time view for your Dhar Brothers orders. Review past orders, track current status, manage payments and delivery address, and send feedback.
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={4} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, alignItems: 'flex-start' }}>
+              <Stack spacing={1} sx={{ alignItems: { xs: 'flex-start', md: 'flex-end' } }}>
+                <Typography variant="subtitle2" sx={{ opacity: 0.8 }}>Order Reference</Typography>
                 <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                  <Chip label={portalData.orderReference || portalSession.orderReference || mockPortalData.orderReference} color="warning" size="small" sx={{ fontWeight: 800, borderRadius: '999px' }} />
-                  <Chip label={portalData.status || mockPortalData.status} color="warning" size="small" sx={{ fontWeight: 700 }} />
+                  <Chip
+                    label={portalData.orderReference || portalSession.orderReference || mockPortalData.orderReference}
+                    sx={{
+                      backgroundColor: 'rgba(255,255,255,0.25)',
+                      color: 'white',
+                      fontWeight: 700,
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)'
+                    }}
+                    size="small"
+                  />
+                  <Chip
+                    label={portalData.status || mockPortalData.status}
+                    sx={{
+                      backgroundColor: 'rgba(255,255,255,0.2)',
+                      color: 'white',
+                      fontWeight: 600,
+                      borderRadius: '12px',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255,255,255,0.3)'
+                    }}
+                    size="small"
+                  />
                 </Stack>
               </Stack>
+            </Grid>
+          </Grid>
+        </Box>
+      </Box>
+
+      {/* ===================== MAIN CONTENT AREA ===================== */}
+      <Box sx={{ width: '100%', mx: 'auto', px: { xs: 2, md: 4 } }}>
+        <Grid container spacing={{ xs: 2, md: 3 }}>
+          {/* LEFT SECTION: Your Orders + Order Overview */}
+          <Grid item xs={12} lg={7}>
+            <Stack spacing={{ xs: 2, md: 3 }}>
+              {/* ============ YOUR ORDERS ============ */}
+              <Box
+                sx={{
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  p: { xs: 2, md: 3 },
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                  }
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1a1a1a' }}>
+                  Your Orders
+                </Typography>
+                <List disablePadding sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+                  {(orders.length ? orders : [{ orderReference: portalData.orderReference, status: portalData.status }]).map((o, idx) => {
+                    const id = o.orderId || o.orderReference || o.ref;
+                    const isSelected = selectedOrder && (selectedOrder.orderId === id || selectedOrder.orderReference === id);
+                    return (
+                      <ListItem key={id || idx} disablePadding>
+                        <ListItemButton
+                          sx={{
+                            borderRadius: 1.5,
+                            backgroundColor: isSelected ? 'rgba(102, 126, 234, 0.08)' : 'rgba(0,0,0,0.02)',
+                            border: isSelected ? '1.5px solid #667eea' : '1px solid rgba(0,0,0,0.06)',
+                            p: 1.5,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              backgroundColor: isSelected ? 'rgba(102, 126, 234, 0.12)' : 'rgba(0,0,0,0.04)',
+                              borderColor: '#667eea'
+                            }
+                          }}
+                          selected={isSelected}
+                          onClick={() => handleSelectOrder(o)}
+                        >
+                          <ListItemText
+                            primary={
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a1a1a' }}>
+                                {id}
+                              </Typography>
+                            }
+                            secondary={
+                              <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
+                                {o.currentStage || o.status || '—'}
+                              </Typography>
+                            }
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </Box>
+
+              {/* ============ ORDER OVERVIEW ============ */}
+              <Box
+                sx={{
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  p: { xs: 2, md: 3 },
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                  }
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, color: '#1a1a1a' }}>
+                  {selectedOrder ? 'Order Details' : 'Order Overview'}
+                </Typography>
+
+                {orderLoading ? (
+                  <Box sx={{ py: 4, textAlign: 'center' }}>
+                    <Typography color="text.secondary">Loading order...</Typography>
+                  </Box>
+                ) : selectedOrder ? (
+                  <Stack spacing={2.5}>
+                    {/* Order Header */}
+                    <Box sx={{ pb: 2, borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#667eea', textTransform: 'uppercase', fontSize: '0.75rem', mb: 0.5 }}>
+                        Order ID
+                      </Typography>
+                      <Typography variant="h6" sx={{ fontWeight: 700, color: '#1a1a1a' }}>
+                        {selectedOrder.orderId}
+                      </Typography>
+                    </Box>
+
+                    {/* Stage & Delivery Date */}
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Box>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>
+                            Current Stage
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5, color: '#1a1a1a' }}>
+                            {selectedOrder.currentStage || '—'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Box>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase' }}>
+                            Expected Delivery
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.5, color: '#1a1a1a' }}>
+                            {selectedOrder.expectedDeliveryDate || '—'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+
+                    {/* Shipping Address */}
+                    <Box sx={{ p: 1.5, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: 1.5, border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, color: '#1a1a1a' }}>
+                        Shipping Address
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
+                        {selectedOrder.shippingAddress || '—'}
+                      </Typography>
+                    </Box>
+
+                    {/* Pickup Branch */}
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75, color: '#1a1a1a' }}>
+                        Pickup Branch
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {selectedOrder.branchName || selectedOrder.pickupBranchName || '—'}
+                      </Typography>
+                    </Box>
+
+                    {/* Action Buttons */}
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ pt: 1 }}>
+                      <Button
+                        variant="contained"
+                        sx={{
+                          borderRadius: '999px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          py: 1
+                        }}
+                        onClick={() => {
+                          setAddressDraft(selectedOrder.shippingAddress || '');
+                        }}
+                      >
+                        Edit Shipping Address
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        sx={{
+                          borderRadius: '999px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          py: 1,
+                          borderColor: '#667eea',
+                          color: '#667eea',
+                          '&:hover': {
+                            backgroundColor: 'rgba(102, 126, 234, 0.08)'
+                          }
+                        }}
+                        onClick={openBranchDialog}
+                      >
+                        Pick up from branch
+                      </Button>
+                    </Stack>
+                  </Stack>
+                ) : (
+                  <Box sx={{ py: 4, textAlign: 'center' }}>
+                    <Typography color="text.secondary">Select an order to view details</Typography>
+                  </Box>
+                )}
+              </Box>
             </Stack>
           </Grid>
 
-      {/* Left: Past Orders */}
-      <Grid item xs={12} md={3}>
-        <MainCard title="Your Orders">
-          <List disablePadding>
-            {(orders.length ? orders : [{ orderReference: portalData.orderReference, status: portalData.status }]).map((o, idx) => {
-              const id = o.orderId || o.orderReference || o.ref;
-              const isSelected = selectedOrder && (selectedOrder.orderId === id || selectedOrder.orderReference === id);
-              return (
-                <ListItem key={id || idx} disablePadding>
-                  <ListItemButton sx={{ borderRadius: 1.5 }} selected={isSelected} onClick={() => handleSelectOrder(o)}>
-                    <ListItemText
-                      primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Typography variant="subtitle2">{id}</Typography></Stack>}
-                      secondary={<Typography variant="caption" color="text.secondary">{o.currentStage || o.status || '—'}</Typography>}
-                    />
-                  </ListItemButton>
-                </ListItem>
-              );
-            })}
-          </List>
-        </MainCard>
-      </Grid>
-
-      {/* Center: Order details, documents, status & feedback */}
-      <Grid item xs={12} md={6}>
-        <MainCard title={selectedOrder ? 'Order Details' : 'Order Overview'} contentSX={{ p: 2.5 }}>
-          <Stack spacing={2.5}>
-            {orderLoading && <Box><Typography>Loading order...</Typography></Box>}
-            {selectedOrder && !orderLoading && (
-              <Box sx={{ p: 1, bgcolor: 'grey.0', borderRadius: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 800, mb: 0.5 }}>{selectedOrder.orderId}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Stage: {selectedOrder.currentStage || '—'}</Typography>
-                <Typography variant="body2" color="text.secondary">Expected delivery: {selectedOrder.expectedDeliveryDate || '—'}</Typography>
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="subtitle2">Shipping Address</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>{selectedOrder.shippingAddress || '—'}</Typography>
-                </Box>
-                <Box sx={{ mt: 1 }}>
-                  <Typography variant="subtitle2">Pickup Branch</Typography>
-                  <Typography variant="body2" color="text.secondary">{selectedOrder.branchName || selectedOrder.pickupBranchName || '—'}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                  <Button variant="contained" size="small" sx={{ borderRadius: '999px', textTransform: 'none' }} onClick={() => { setAddressDraft(selectedOrder.shippingAddress || ''); }}>Edit Shipping Address</Button>
-                  <Button variant="outlined" size="small" sx={{ borderRadius: '999px', textTransform: 'none' }} onClick={openBranchDialog}>Pick up from branch</Button>
-                </Box>
+          {/* RIGHT SECTION: Delivery Address + Notifications */}
+          <Grid item xs={12} lg={5}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2, alignItems: 'stretch' }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  p: { xs: 2, md: 2.5 },
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                  },
+                  minHeight: { md: '100%' }
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: '#1a1a1a' }}>
+                  Delivery Address
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 1 }}>
+                  Confirm your delivery address for this order. Address changes are accepted for pending orders only.
+                </Typography>
+                {portalData.deliveryAddress ? (
+                  <Box sx={{ p: 1.5, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: 1, mb: 1.5, border: '1px solid rgba(0,0,0,0.06)', flexGrow: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#1a1a1a' }}>
+                      {portalData.deliveryAddress.name}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', whiteSpace: 'pre-line', mt: 0.5, lineHeight: 1.5 }}>
+                      {[portalData.deliveryAddress.line1, portalData.deliveryAddress.line2, portalData.deliveryAddress.city, portalData.deliveryAddress.state, portalData.deliveryAddress.pincode]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box sx={{ p: 1.5, backgroundColor: 'rgba(0,0,0,0.02)', borderRadius: 1, mb: 1.5, flexGrow: 1 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      No address on file
+                    </Typography>
+                  </Box>
+                )}
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    borderColor: '#667eea',
+                    color: '#667eea',
+                    '&:hover': {
+                      backgroundColor: 'rgba(102, 126, 234, 0.08)'
+                    }
+                  }}
+                  onClick={() => setAddressDraft(portalData.deliveryAddress ? JSON.stringify(portalData.deliveryAddress) : '')}
+                >
+                  Update Address
+                </Button>
               </Box>
-            )}
 
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>Order Details</Typography>
-              <Typography variant="body2" color="text.secondary">{portalData.notes || 'Order summary and specifications will appear here.'}</Typography>
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Order Current Status</Typography>
-              <List disablePadding>
-                {(portalData.statusHistory || [{ when: '', status: portalData.status }]).map((s, i) => (
-                  <ListItem key={i} sx={{ px: 0 }}>
-                    <ListItemText primary={<Typography variant="body2">{s.status}</Typography>} secondary={<Typography variant="caption" color="text.secondary">{s.when}</Typography>} />
-                  </ListItem>
-                ))}
-              </List>
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Document Versions</Typography>
-              <List disablePadding>
-                {(portalData.documents || []).map((doc) => (
-                  <ListItem key={doc.version} disablePadding>
-                    <ListItemButton sx={{ borderRadius: 1.5 }}>
-                      <ListItemText
-                        primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><Typography variant="subtitle2">v{doc.version}</Typography><Typography variant="body2">{doc.label}</Typography></Stack>}
-                        secondary={<Typography variant="caption" color="text.secondary">Uploaded on {doc.uploadedOn} • {doc.status}</Typography>}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
-              </List>
-
-              {latestDocument && (
-                <Box sx={{ mt: 2.5 }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Approve Latest Document</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Please review the latest version ({latestDocument.label}) and approve or request changes.</Typography>
-
-                  {approvalMessage && <Alert severity="success" sx={{ mb: 1.5 }}>{approvalMessage}</Alert>}
-
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}>
-                    <Button variant="contained" color="success" disabled={busy} onClick={() => handleApprove(true)} sx={{ borderRadius: '999px', textTransform: 'none', px: 2 }}>Approve Final Document</Button>
-                    <Button variant="outlined" color="error" disabled={busy} onClick={() => handleApprove(false)} sx={{ borderRadius: '999px', textTransform: 'none' }}>Disapprove / Changes Required</Button>
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  p: { xs: 2, md: 2.5 },
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  border: '2px solid rgba(102, 126, 234, 0.2)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                  },
+                  minHeight: { md: '100%' }
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: '#1a1a1a' }}>
+                  Notifications
+                </Typography>
+                {notifications && notifications.length > 0 ? (
+                  <Stack spacing={1} sx={{ flexGrow: 1 }}>
+                    {notifications.slice(0, 5).map((notif, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          p: 1,
+                          backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                          borderRadius: 1,
+                          borderLeft: '3px solid #667eea'
+                        }}
+                      >
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#667eea', display: 'block', mb: 0.25 }}>
+                          {notif.title || 'Update'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.4 }}>
+                          {notif.message || notif.body || 'New notification'}
+                        </Typography>
+                      </Box>
+                    ))}
                   </Stack>
-                </Box>
-              )}
-
-              <Divider sx={{ my: 2 }} />
-
-              <Box>
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>Feedback</Typography>
-                {approvalMessage && <Alert severity="info" sx={{ mb: 1 }}>{approvalMessage}</Alert>}
-                <TextField fullWidth multiline rows={4} placeholder="Tell us how we did or request changes..." value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} />
-                <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: 1 }}>
-                  <Button variant="contained" onClick={handleSubmitFeedback} disabled={busy || !feedbackText.trim()} sx={{ borderRadius: '999px', textTransform: 'none', px: 2 }}>Send Feedback</Button>
-                </Stack>
+                ) : (
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', py: 2, flexGrow: 1 }}>
+                    No notifications
+                  </Typography>
+                )}
               </Box>
             </Box>
-          </Stack>
-        </MainCard>
-      </Grid>
 
-      {/* Right: Delivery address, payments, notifications */}
-      <Grid item xs={12} md={3}>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <MainCard title="Delivery Address" contentSX={{ p: 2.5 }}>
-              <Stack spacing={1.5}>
-                <Typography variant="body2" color="text.secondary">Confirm your delivery address for this order. Address changes are accepted for pending orders only.</Typography>
+            <Stack spacing={2} sx={{ mt: 2 }}>
+              {/* ============ PAYMENT HISTORY ============ */}
+              <Box
+                sx={{
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  p: { xs: 2, md: 2.5 },
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                  }
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: '#1a1a1a' }}>
+                  Payment History
+                </Typography>
+                {portalData.payments && portalData.payments.length > 0 ? (
+                  <Stack spacing={1}>
+                    {portalData.payments.map((p, idx) => (
+                      <Box
+                        key={idx}
+                        sx={{
+                          p: 1,
+                          backgroundColor: 'rgba(0,0,0,0.02)',
+                          borderRadius: 1,
+                          border: '1px solid rgba(0,0,0,0.06)'
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: '#1a1a1a' }}>
+                            ₹ {p.amount}
+                          </Typography>
+                          <Chip
+                            label={p.status}
+                            size="small"
+                            color={p.status === 'Received' ? 'success' : 'warning'}
+                            variant="filled"
+                            sx={{ height: '18px', fontSize: '0.7rem' }}
+                          />
+                        </Box>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                          {p.date} • {p.mode}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', py: 2 }}>
+                    No payment records
+                  </Typography>
+                )}
+              </Box>
 
-                {addressMessage && <Alert severity="success">{addressMessage}</Alert>}
-
-                <TextField label="Delivery Address" multiline minRows={4} value={addressDraft} onChange={(event) => setAddressDraft(event.target.value)} fullWidth />
-
-                <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-                  <Button variant="contained" color="primary" onClick={handleAddressSubmit} disabled={busy || (!(selectedOrder) && !(portalData.status || '').toLowerCase().includes('pending'))} sx={{ borderRadius: '999px', textTransform: 'none' }}>Submit Address Change</Button>
-                </Stack>
-              </Stack>
-            </MainCard>
-          </Grid>
-
-          <Grid item xs={12}>
-            <MainCard title="Payment History & Pending Dues" contentSX={{ p: 2.5 }}>
-              <Stack spacing={1.5}>
-                <List disablePadding>
-                  {(portalData.payments || []).map((payment) => (
-                    <ListItem key={payment.id} sx={{ px: 0 }}>
-                      <ListItemText
-                        primary={<Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}><Typography variant="body2">{payment.date}</Typography><Typography variant="subtitle2">₹ {payment.amount}</Typography></Stack>}
-                        secondary={<Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between', mt: 0.25 }}><Typography variant="caption" color="text.secondary">{payment.mode}</Typography><Typography variant="caption" color={payment.status === 'Received' ? 'success.main' : 'warning.main'}>{payment.status}</Typography></Stack>}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-
-                {paymentMessage && <Alert severity="info">{paymentMessage}</Alert>}
-
-                <Divider sx={{ my: 0.5 }} />
-
-                <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
-                  <Button variant="contained" color="warning" onClick={handleMakePayment} disabled={busy} sx={{ borderRadius: '999px', textTransform: 'none' }}>Make a Payment</Button>
-                </Stack>
-              </Stack>
-            </MainCard>
-          </Grid>
-
-          <Grid item xs={12}>
-            <MainCard title="Notifications" contentSX={{ p: 2.5 }}>
-              <List disablePadding>
-                {(notifications || []).slice(0, 6).map((n, i) => (
-                  <ListItem key={n.id || i} sx={{ px: 0 }}>
-                    <ListItemText primary={<Typography variant="body2">{n.title || n.message}</Typography>} secondary={<Typography variant="caption" color="text.secondary">{n.when || n.date}</Typography>} />
-                  </ListItem>
-                ))}
-                {(!notifications || notifications.length === 0) && <Typography variant="caption" color="text.secondary">No notifications</Typography>}
-              </List>
-            </MainCard>
+              {/* ============ PENDING DUES ============ */}
+              <Box
+                sx={{
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  p: { xs: 2, md: 2.5 },
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.05) 100%)',
+                  border: '1px solid rgba(255, 152, 0, 0.1)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    boxShadow: '0 8px 24px rgba(255, 152, 0, 0.1)'
+                  }
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: '#1a1a1a' }}>
+                  Pending Dues
+                </Typography>
+                {portalData.payments && portalData.payments.some((p) => p.status === 'Pending') ? (
+                  <Stack spacing={1}>
+                    {portalData.payments
+                      .filter((p) => p.status === 'Pending')
+                      .map((p, idx) => (
+                        <Box
+                          key={idx}
+                          sx={{
+                            p: 1.5,
+                            backgroundColor: 'rgba(255, 152, 0, 0.08)',
+                            borderRadius: 1,
+                            borderLeft: '3px solid #ff9800'
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: '#1a1a1a' }}>
+                                ₹ {p.amount}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                Due: {p.date}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </Box>
+                      ))}
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        backgroundColor: '#ff9800',
+                        mt: 1,
+                        '&:hover': {
+                          backgroundColor: '#fb8c00'
+                        }
+                      }}
+                      onClick={() => initiateCustomerPayment && initiateCustomerPayment()}
+                    >
+                      Make a Payment
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', py: 2 }}>
+                    No pending dues
+                  </Typography>
+                )}
+              </Box>
+            </Stack>
           </Grid>
         </Grid>
-      </Grid>
-    </Grid>
+      </Box>
+
+      {/* ===================== DIALOGS & SNACKBARS ===================== */}
       <Dialog open={branchDialogOpen} onClose={() => setBranchDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Select Pickup Branch</DialogTitle>
         <DialogContent>
@@ -603,7 +893,6 @@ export default function CustomerPortal() {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-      </Box>
     </Box>
   );
 }

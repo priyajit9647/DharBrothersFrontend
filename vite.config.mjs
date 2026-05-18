@@ -28,7 +28,81 @@ export default defineConfig(({ mode }) => {
         // Add more aliases as needed
       }
     },
-    plugins: [react(), jsconfigPaths()],
+    plugins: [
+      react(),
+      jsconfigPaths(),
+      // Dev-only mock API for POST /api/customer/feedback/create/order/{orderId}
+      {
+        name: 'dev-api-mock',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            try {
+              // Dev GET: /api/customer/feedback/{customerId}
+              if (
+                req.method === 'GET' &&
+                req.url &&
+                req.url.startsWith('/api/customer/feedback/')
+              ) {
+                // ignore create endpoints (e.g. /api/customer/feedback/create)
+                if (req.url.startsWith('/api/customer/feedback/create')) {
+                  // let other handlers process
+                } else {
+                  const parts = req.url.split('/');
+                  const rawId = parts[parts.length - 1].split('?')[0];
+                  const customerId = decodeURIComponent(rawId || '');
+                  const sample = {
+                    customerId: Number(customerId) || 9007199254740991,
+                    customerName: 'string',
+                    feedbacks: [
+                      {
+                        questionNo: 1073741824,
+                        question: 'string',
+                        rating: 1073741824
+                      }
+                    ]
+                  };
+                  res.setHeader('Content-Type', 'application/json');
+                  res.statusCode = 200;
+                  res.end(JSON.stringify(sample));
+                  return;
+                }
+              }
+              if (
+                req.method === 'POST' &&
+                req.url &&
+                req.url.startsWith('/api/customer/feedback/create/order/')
+              ) {
+                const parts = req.url.split('/');
+                const rawId = parts[parts.length - 1].split('?')[0];
+                const orderId = decodeURIComponent(rawId || '');
+                let body = '';
+                req.on('data', (chunk) => {
+                  body += chunk;
+                });
+                req.on('end', () => {
+                  try {
+                    const data = body ? JSON.parse(body) : {};
+                    res.setHeader('Content-Type', 'application/json');
+                    res.statusCode = 200;
+                    res.end(
+                      JSON.stringify({ success: true, message: 'Mock feedback received', orderId, data })
+                    );
+                  } catch (err) {
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ success: false, message: 'Invalid JSON' }));
+                  }
+                });
+                return;
+              }
+            } catch (e) {
+              // fallthrough to next middleware on error
+            }
+            next();
+          });
+        }
+      }
+    ],
     build: {
       chunkSizeWarningLimit: 1000,
       sourcemap: true,

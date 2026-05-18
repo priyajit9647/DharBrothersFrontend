@@ -77,6 +77,46 @@ export async function submitCustomerFeedback({ portalToken, feedback }) {
   });
 }
 
+// Create customer feedback
+// Endpoint: POST /api/customer/feedback/create
+// Body: { customerId: number, feedbacks: [{ questionNo: number, rating: number }] }
+export async function createCustomerFeedback({ customerId, feedbacks }) {
+  return authorizedFetch('/api/customer/feedback/create', {
+    method: 'POST',
+    body: JSON.stringify({ customerId, feedbacks })
+  });
+}
+
+/**
+ * Get customer feedback by customerId
+ * Endpoint: GET /api/customer/feedback/{customerId}
+ * Response example:
+ * {
+ *   "customerId": 9007199254740991,
+ *   "customerName": "string",
+ *   "feedbacks": [{ "questionNo": 1073741824, "question": "string", "rating": 1073741824 }]
+ * }
+ */
+export async function getCustomerFeedback(customerId) {
+  if (!customerId) throw new Error('customerId is required');
+  return authorizedFetch(`/api/customer/feedback/${encodeURIComponent(String(customerId))}`, {
+    method: 'GET'
+  });
+}
+
+/**
+ * Create customer feedback for an order
+ * Endpoint: POST /api/customer/feedback/create/order/{orderId}
+ * Body: { customerId: number, feedbacks: [{ questionNo: number, rating: number }] }
+ */
+export async function createCustomerFeedbackForOrder(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedFetch(`/api/customer/feedback/create/order/${encodeURIComponent(String(orderId))}`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
 // ==============================|| CUSTOMER ORDERS (PUBLIC/CLIENT) ||============================== //
 
 /**
