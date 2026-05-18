@@ -23,7 +23,7 @@ export default function PaperSizeMaster() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
-  const [formValues, setFormValues] = useState({ code: '', displayName: '' });
+  const [formValues, setFormValues] = useState({ code: '', name: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,14 +52,14 @@ export default function PaperSizeMaster() {
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ code: '', displayName: '' });
+    setFormValues({ code: '', name: '' });
     setError('');
     setDialogOpen(true);
   };
 
   const openEditDialog = (row) => {
     setEditingRow(row);
-    setFormValues({ code: row.code || '', displayName: row.displayName || '' });
+    setFormValues({ code: row.code || '', name: row.name || '' });
     setError('');
     setDialogOpen(true);
   };
@@ -79,10 +79,10 @@ export default function PaperSizeMaster() {
 
   const handleSave = async () => {
     const code = formValues.code.trim();
-    const displayName = formValues.displayName.trim();
+    const name = formValues.name.trim();
 
-    if (!code || !displayName) {
-      setError('Code and Display Name are required');
+    if (!code || !name) {
+      setError('Code and Name are required');
       return;
     }
 
@@ -91,9 +91,9 @@ export default function PaperSizeMaster() {
 
     try {
       if (editingRow && editingRow.id) {
-        await editPaperSize(editingRow.id, { code, displayName });
+        await editPaperSize(editingRow.id, { code, name });
       } else {
-        await createPaperSize({ code, displayName });
+        await createPaperSize({ code, name });
       }
 
       await loadPaperSizes();
@@ -130,7 +130,7 @@ export default function PaperSizeMaster() {
           <MasterList
             title="Paper Sizes"
             columns={[
-              { id: 'displayName', label: 'Display Name' },
+              { id: 'name', label: 'Name' },
               { id: 'code', label: 'Code' }
             ]}
             rows={pagedRows}
@@ -162,9 +162,9 @@ export default function PaperSizeMaster() {
               inputProps={{ style: { textTransform: 'uppercase' } }}
             />
             <TextField
-              label="Display Name"
-              value={formValues.displayName}
-              onChange={handleFormChange('displayName')}
+              label="Name"
+              value={formValues.name}
+              onChange={handleFormChange('name')}
               fullWidth
             />
             {error && (

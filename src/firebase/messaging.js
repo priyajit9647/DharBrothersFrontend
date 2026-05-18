@@ -20,10 +20,26 @@ async function initFirebase() {
   }
 
   // Dynamically import firebase modules so the app doesn't break if env isn't set
-  const { initializeApp } = await import('firebase/app');
+  const { initializeApp, getApps } = await import('firebase/app');
   const { getMessaging } = await import('firebase/messaging');
 
-  const app = initializeApp(firebaseConfig);
+  // Avoid initializing the app multiple times during hot reloads or repeated calls
+  let app;
+  try {
+    if (!getApps || getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+  } catch (e) {
+    // Fallback: try to initialize, if it errors assume app already exists
+    try {
+      app = initializeApp(firebaseConfig);
+    } catch {
+      // ignore — getMessaging will accept an existing app
+    }
+  }
+
   const messaging = getMessaging(app);
   return messaging;
 }
@@ -84,6 +100,49 @@ export async function requestPermissionAndRegister() {
     // swallow errors — registration is best-effort
     // eslint-disable-next-line no-console
     console.error('Push registration failed', e);
+    return null;
+  }
+}
+
+// Listen for foreground messages and notify in-app / via Notification API.
+export async function listenForMessages() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const messaging = await initFirebase();
+    const { onMessage } = await import('firebase/messaging');
+    onMessage(messaging, (payload) => {
+      // payload may contain `notification` (standard) or `data` fields depending on server
+      // Show a native notification if permission is granted
+      try {
+        // Prefer the notification payload then fall back to data.
+        const title = payload?.notification?.title || payload?.data?.title || 'Notification';
+        const body = payload?.notification?.body || payload?.data?.body || '';
+        const icon = payload?.notification?.icon || payload?.data?.icon;
+        const url = payload?.data?.url;
+
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          try {
+            // show system notification for foreground messages
+            new Notification(title, { body, icon, data: { url } });
+          } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to display Notification', e);
+          }
+        }
+
+        // Dispatch a DOM event so in-app components can react (e.g., show a snackbar)
+        try {
+          window.dispatchEvent(new CustomEvent('fcmMessage', { detail: payload }));
+        } catch (e) {
+          // ignore
+        }
+      } catch (e) {
+        // swallow
+      }
+    });
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('listenForMessages failed', e);
     return null;
   }
 }

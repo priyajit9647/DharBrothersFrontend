@@ -19,7 +19,7 @@ import { createBindingRate, editBindingRate, getBindingRates, toggleBindingRateA
 const BINDING_TYPE_OPTIONS = [
   { value: 'HARD', label: 'Hard Binding' },
   { value: 'SOFT', label: 'Soft Binding' },
-  { value: 'SYN', label: 'Synopsis' }
+  { value: 'SYNOPSIS', label: 'Synopsis' }
 ];
 
 export default function BindingRateMaster() {

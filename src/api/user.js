@@ -53,6 +53,34 @@ export function createAdminUser({
   });
 }
 
+// Create user by submitting a roleId instead of roleName
+export function createUserWithRoleId(payload) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Valid user payload is required');
+  }
+
+  return authorizedFetch('/api/v1/user/create', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+// Edit an existing user. Submits same body shape as create, but uses PUT.
+export function editUser(id, payload) {
+  if (!id) {
+    throw new Error('id is required to edit user');
+  }
+
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Valid user payload is required');
+  }
+
+  return authorizedFetch(`/api/v1/user/edit/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
 // Get a single user by id
 export function getUserById(id) {
   if (!id) {

@@ -13,10 +13,16 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Avatar from '@mui/material/Avatar';
+import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
+import Box from '@mui/material/Box';
 
 import MasterList from 'sections/admin/masters/MasterList';
 import { getBranches } from 'api/branch';
-import { createAdminUser, getUsersByBranch, toggleUserActive } from 'api/user';
+import { createUserWithRoleId, getUsersByBranch, toggleUserActive, editUser } from 'api/user';
+import { getRoles } from 'api/role';
 
 // ==============================|| BMS - TEAMS (ADMIN) ||============================== //
 
@@ -33,6 +39,8 @@ export default function Teams() {
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [loadingBranches, setLoadingBranches] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [roles, setRoles] = useState([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRow, setEditingRow] = useState(null);
@@ -42,12 +50,22 @@ export default function Teams() {
     lastName: '',
     mobile: '',
     email: '',
-    password: ''
+    password: '',
+    branchId: '',
+    roleId: ''
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
   const loading = loadingBranches || loadingUsers;
+
+  const getInitials = (firstName, lastName, userName) => {
+    const f = (firstName || '').trim();
+    const l = (lastName || '').trim();
+    if (f || l) return `${(f[0] || '').toUpperCase()}${(l[0] || '').toUpperCase()}`;
+    if (userName) return userName.slice(0, 2).toUpperCase();
+    return 'U';
+  };
 
   // Load branches once and set default branch
   useEffect(() => {
@@ -71,42 +89,78 @@ export default function Teams() {
     };
 
     loadBranches();
+
+    // Load roles as well
+    const loadRoles = async () => {
+      try {
+        setLoadingRoles(true);
+        const data = await getRoles();
+        const items = Array.isArray(data) ? data : data?.items || data?.data || [];
+        setRoles(items);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load roles', err);
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    loadRoles();
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load users whenever selected branch changes
-  useEffect(() => {
-    const loadUsers = async () => {
-      if (!selectedBranchId) return;
-      try {
-        setLoadingUsers(true);
-        setError('');
-        const data = await getUsersByBranch(selectedBranchId);
-        const items = Array.isArray(data) ? data : data?.items || data?.data || [];
-        const normalized = items.map((item, index) => {
+  // Load users for all branches once branches are available
+  const loadAllUsers = async () => {
+    if (!branches || branches.length === 0) return;
+    try {
+      setLoadingUsers(true);
+      setError('');
+      const promises = branches.map(async (b) => {
+        try {
+          const data = await getUsersByBranch(String(b.id));
+          const items = Array.isArray(data) ? data : data?.items || data?.data || [];
+          return { branch: b, items };
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`Failed to load users for branch ${b.id}`, err);
+          return { branch: b, items: [] };
+        }
+      });
+
+      const results = await Promise.all(promises);
+      const normalized = [];
+      results.forEach(({ branch, items }) => {
+        items.forEach((item, index) => {
           const fullName = `${item.firstName || ''} ${item.lastName || ''}`.trim();
-          return {
-            id: item.id ?? index + 1,
+          normalized.push({
+            id: item.id ?? `${branch.id}-${index}`,
             name: item.userName || fullName || 'User',
             fullName: fullName || '-',
             mobile: item.mobile || '',
             email: item.email || '',
             roleName: item.roleName || 'ADMIN',
-            active: item.active
-          };
+            roleId: item.roleId ?? item.role?.id ?? null,
+            active: item.active,
+            branchId: branch.id,
+            branchName: branch.name
+          });
         });
-        setRows(normalized);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load users for branch', err);
-        setError(err?.message || 'Failed to load users for this branch');
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
+      });
+      setRows(normalized);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load users', err);
+      setError(err?.message || 'Failed to load users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
 
-    loadUsers();
-  }, [selectedBranchId]);
+  useEffect(() => {
+    loadAllUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branches]);
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -116,7 +170,16 @@ export default function Teams() {
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ name: '', firstName: '', lastName: '', mobile: '', email: '', password: '' });
+    setFormValues({
+      name: '',
+      firstName: '',
+      lastName: '',
+      mobile: '',
+      email: '',
+      password: '',
+      branchId: branches.length > 0 ? String(branches[0].id) : '',
+      roleId: roles.length > 0 ? String(roles[0].id) : ''
+    });
     setError('');
     setDialogOpen(true);
   };
@@ -129,7 +192,13 @@ export default function Teams() {
       lastName: row.fullName?.split(' ').slice(1).join(' ') || '',
       mobile: row.mobile || '',
       email: row.email || '',
-      password: ''
+      password: '',
+      branchId: row.branchId ? String(row.branchId) : '',
+      roleId: row.roleId
+        ? String(row.roleId)
+        : roles.find((r) => r.name === row.roleName)
+        ? String(roles.find((r) => r.name === row.roleName)?.id)
+        : ''
     });
     setError('');
     setDialogOpen(true);
@@ -156,8 +225,13 @@ export default function Teams() {
     const email = formValues.email.trim();
     const password = formValues.password.trim();
 
-    if (!selectedBranchId) {
+    if (!formValues.branchId) {
       setError('Please select a branch');
+      return;
+    }
+
+    if (!formValues.roleId) {
+      setError('Please select a role');
       return;
     }
 
@@ -170,25 +244,7 @@ export default function Teams() {
     setError('');
     try {
       if (editingRow && editingRow.id) {
-        // For now, edits are applied locally in the grid only.
-        const updatedFullName = `${firstName || ''} ${lastName || ''}`.trim();
-        setRows((prev) =>
-          prev.map((item) =>
-            item.id === editingRow.id
-              ? {
-                  ...item,
-                  name,
-                  fullName: updatedFullName || item.fullName,
-                  mobile,
-                  email
-                }
-              : item
-          )
-        );
-        setDialogOpen(false);
-      } else {
-        // Create a new admin-type user for the selected branch via API.
-        await createAdminUser({
+        const payload = {
           userName: name,
           firstName: firstName || name,
           lastName,
@@ -196,26 +252,28 @@ export default function Teams() {
           mobile,
           whatsapp: mobile,
           password,
-          branchId: selectedBranchId
-        });
-
-        // Reload users from API to include the new user.
-        const data = await getUsersByBranch(selectedBranchId);
-        const items = Array.isArray(data) ? data : data?.items || data?.data || [];
-        const normalized = items.map((item, index) => {
-          const fullName = `${item.firstName || ''} ${item.lastName || ''}`.trim();
-          return {
-            id: item.id ?? index + 1,
-            name: item.userName || fullName || 'User',
-            fullName: fullName || '-',
-            mobile: item.mobile || '',
-            email: item.email || '',
-            roleName: item.roleName || 'ADMIN',
-            active: item.active
-          };
-        });
-        setRows(normalized);
-
+          branchId: formValues.branchId,
+          roleId: formValues.roleId
+        };
+        await editUser(editingRow.id, payload);
+        await loadAllUsers();
+        setDialogOpen(false);
+      } else {
+        // Create a new user for the selected branch via API (roleId required)
+        const payload = {
+          userName: name,
+          firstName: firstName || name,
+          lastName,
+          email,
+          mobile,
+          whatsapp: mobile,
+          password,
+          branchId: formValues.branchId,
+          roleId: formValues.roleId
+        };
+        await createUserWithRoleId(payload);
+        // Reload all users to include the new user.
+        await loadAllUsers();
         setDialogOpen(false);
       }
     } catch (err) {
@@ -242,27 +300,13 @@ export default function Teams() {
     }
   };
 
+  const selectedRole = roles.find((r) => String(r.id) === String(formValues.roleId));
+
   return (
     <>
       <Grid container sx={{ width: '100%', flexGrow: 1 }}>
         <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
             <Stack spacing={1} sx={{ mb: 1 }}>
-              <FormControl size="small" sx={{ minWidth: 220 }} disabled={loadingBranches}>
-                <InputLabel id="teams-branch-select-label">Branch</InputLabel>
-                <Select
-                  labelId="teams-branch-select-label"
-                  label="Branch"
-                  value={selectedBranchId}
-                  onChange={(e) => setSelectedBranchId(e.target.value)}
-                >
-                  {branches.map((branch) => (
-                    <MenuItem key={branch.id} value={String(branch.id)}>
-                      {branch.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
               {error && !dialogOpen && (
                 <Typography variant="body2" color="error">
                   {error}
@@ -277,7 +321,8 @@ export default function Teams() {
               { id: 'fullName', label: 'Full Name' },
               { id: 'mobile', label: 'Mobile No' },
               { id: 'email', label: 'Email ID' },
-              { id: 'roleName', label: 'Role' }
+              { id: 'roleName', label: 'Role' },
+              { id: 'branchName', label: 'Branch' }
             ]}
             rows={pagedRows}
             page={page}
@@ -296,53 +341,148 @@ export default function Teams() {
         </Grid>
       </Grid>
 
-      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog} maxWidth="md" fullWidth>
         <DialogTitle>{editingRow ? 'Edit Team Member' : 'Create Team Member'}</DialogTitle>
         <DialogContent dividers>
-          <Stack spacing={2} mt={0.5}>
-            <TextField
-              label="User Name"
-              value={formValues.name}
-              onChange={handleFormChange('name')}
-              fullWidth
-            />
-            <TextField
-              label="First Name"
-              value={formValues.firstName}
-              onChange={handleFormChange('firstName')}
-              fullWidth
-            />
-            <TextField
-              label="Last Name"
-              value={formValues.lastName}
-              onChange={handleFormChange('lastName')}
-              fullWidth
-            />
-            <TextField
-              label="Mobile No"
-              value={formValues.mobile}
-              onChange={handleFormChange('mobile')}
-              fullWidth
-            />
-            <TextField
-              label="Email ID"
-              value={formValues.email}
-              onChange={handleFormChange('email')}
-              fullWidth
-            />
-            <TextField
-              label="Password"
-              type="password"
-              value={formValues.password}
-              onChange={handleFormChange('password')}
-              fullWidth
-            />
-            {error && (
-              <Typography variant="body2" color="error">
-                {error}
-              </Typography>
-            )}
-          </Stack>
+          <Grid container spacing={2}>
+                <Grid item xs={12} sm={8}>
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
+                      <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
+                        {getInitials(formValues.firstName, formValues.lastName, formValues.name)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6">{editingRow ? 'Edit Team Member' : 'New Team Member'}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {formValues.email || 'Enter details to create a team member'}
+                        </Typography>
+                      </Box>
+                    </Stack>
+
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="User Name"
+                          value={formValues.name}
+                          onChange={handleFormChange('name')}
+                          fullWidth
+                          required
+                        />
+                      </Grid>
+                      <Grid item xs={6} md={3}>
+                        <TextField
+                          label="First Name"
+                          value={formValues.firstName}
+                          onChange={handleFormChange('firstName')}
+                          fullWidth
+                        />
+                      </Grid>
+                      <Grid item xs={6} md={3}>
+                        <TextField
+                          label="Last Name"
+                          value={formValues.lastName}
+                          onChange={handleFormChange('lastName')}
+                          fullWidth
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="Mobile No"
+                          value={formValues.mobile}
+                          onChange={handleFormChange('mobile')}
+                          fullWidth
+                          required
+                          type="tel"
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="Email ID"
+                          value={formValues.email}
+                          onChange={handleFormChange('email')}
+                          fullWidth
+                          required
+                          type="email"
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          label="Password"
+                          type="password"
+                          value={formValues.password}
+                          onChange={handleFormChange('password')}
+                          fullWidth
+                          helperText={editingRow ? 'Leave empty to keep existing password' : ''}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <FormControl size="small" fullWidth>
+                          <InputLabel id="team-branch-select-label">Branch</InputLabel>
+                          <Select
+                            labelId="team-branch-select-label"
+                            label="Branch"
+                            value={formValues.branchId}
+                            onChange={handleFormChange('branchId')}
+                          >
+                            {branches.map((branch) => (
+                              <MenuItem key={branch.id} value={String(branch.id)}>
+                                {branch.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12} md={6}>
+                        <FormControl size="small" fullWidth>
+                          <InputLabel id="team-role-select-label">Role</InputLabel>
+                          <Select
+                            labelId="team-role-select-label"
+                            label="Role"
+                            value={formValues.roleId}
+                            onChange={handleFormChange('roleId')}
+                            disabled={loadingRoles}
+                          >
+                            {roles.map((r) => (
+                              <MenuItem key={r.id} value={String(r.id)}>
+                                {r.name}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        {error && (
+                          <Typography variant="body2" color="error">
+                            {error}
+                          </Typography>
+                        )}
+                      </Grid>
+                    </Grid>
+                  </Paper>
+                </Grid>
+            <Grid item xs={12} sm={4}>
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                  <Typography variant="subtitle1">Access Rights</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {(selectedRole?.accessCodes || []).length} rights
+                  </Typography>
+                </Stack>
+                <Divider sx={{ mb: 1 }} />
+
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, maxHeight: 320, overflow: 'auto' }}>
+                  {(selectedRole?.accessCodes || []).map((code) => (
+                    <Chip key={code} label={code} size="small" variant="outlined" />
+                  ))}
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog} disabled={saving}>

@@ -16,6 +16,7 @@ import Logo from 'components/logo';
 import AuthFooter from 'components/cards/AuthFooter';
 import AuthBackground from 'sections/auth/AuthBackground';
 import { customerLogin } from 'api/customerPortal';
+import { requestPermissionAndRegister } from 'firebase/messaging';
 
 // ==============================|| CUSTOMER PORTAL - OTP ENTRY ||============================== //
 
@@ -46,6 +47,23 @@ export default function CustomerPortalEntry() {
       // If backend returned a portal/session/token, open portal immediately.
       if (resp && (resp.portalToken || resp.token || resp.accessToken || resp.portalSession)) {
         const portalSession = resp.portalSession || { portalToken: resp.portalToken || resp.token || resp.accessToken, orderReference: orderReference.trim(), contact: contact.trim() };
+        try {
+          if (!localStorage.getItem('pushPrompted')) {
+            const allow = window.confirm('Enable push notifications to receive order updates?');
+            localStorage.setItem('pushPrompted', '1');
+            if (allow) {
+              try {
+                await requestPermissionAndRegister();
+              } catch (e) {
+                // eslint-disable-next-line no-console
+                console.error('Push registration failed', e);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+
         navigate('/customer/portal', { state: { portalSession }, replace: true });
         return;
       }
@@ -75,6 +93,23 @@ export default function CustomerPortalEntry() {
       // If backend returns portal/session/token, navigate to portal
       if (resp && (resp.portalToken || resp.token || resp.accessToken || resp.portalSession)) {
         const portalSession = resp.portalSession || { portalToken: resp.portalToken || resp.token || resp.accessToken, orderReference: orderReference.trim(), contact: contact.trim() };
+        try {
+          if (!localStorage.getItem('pushPrompted')) {
+            const allow = window.confirm('Enable push notifications to receive order updates?');
+            localStorage.setItem('pushPrompted', '1');
+            if (allow) {
+              try {
+                await requestPermissionAndRegister();
+              } catch (e) {
+                // eslint-disable-next-line no-console
+                console.error('Push registration failed', e);
+              }
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+
         navigate('/customer/portal', { state: { portalSession }, replace: true });
         return;
       }

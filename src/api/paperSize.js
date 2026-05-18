@@ -11,21 +11,21 @@ export async function getPaperSizes() {
   });
 }
 
-export async function createPaperSize({ code, displayName }) {
+export async function createPaperSize({ code, name }) {
   // eslint-disable-next-line no-console
-  console.log('Calling POST /api/v1/master/paper-size/create', { code, displayName });
+  console.log('Calling POST /api/v1/master/paper-size/create', { code, name });
   return authorizedFetch('/api/v1/master/paper-size/create', {
     method: 'POST',
-    body: JSON.stringify({ code, displayName })
+    body: JSON.stringify({ code, name })
   });
 }
 
-export async function editPaperSize(id, { code, displayName }) {
+export async function editPaperSize(id, { code, name }) {
   // eslint-disable-next-line no-console
-  console.log(`Calling PUT /api/v1/master/paper-size/edit/${id}`, { code, displayName });
+  console.log(`Calling PUT /api/v1/master/paper-size/edit/${id}`, { code, name });
   return authorizedFetch(`/api/v1/master/paper-size/edit/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({ code, displayName })
+    body: JSON.stringify({ code, name })
   });
 }
 

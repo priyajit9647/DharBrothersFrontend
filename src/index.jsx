@@ -20,6 +20,7 @@ import '@fontsource/public-sans/700.css';
 import App from './App';
 import { ConfigProvider } from 'contexts/ConfigContext';
 import reportWebVitals from './reportWebVitals';
+import { listenForMessages } from 'firebase/messaging';
 
 const container = document.getElementById('root');
 const root = createRoot(container);
@@ -36,3 +37,11 @@ root.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
+
+// Initialize foreground FCM message listener (best-effort)
+if (typeof window !== 'undefined') {
+  listenForMessages().catch((e) => {
+    // eslint-disable-next-line no-console
+    console.error('FCM listener init failed', e);
+  });
+}
