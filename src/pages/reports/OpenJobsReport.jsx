@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
 import { Search, Download, FileSpreadsheet, BriefcaseBusiness, Clock3 } from 'lucide-react';
-import { getOpenJobsReport } from 'api/Reports&insights';
+import { getOpenJobsReport } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
   { jobId: 'JOB-2101', client: 'Tata Steel', branch: 'Kolkata', department: 'Printing', assignedTo: 'Rahul Sharma', stage: 'Production', sla: '12 hrs', priority: 'High', status: 'Open' },

@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
 import { Download, FileSpreadsheet, Search } from 'lucide-react';
-import { getDelayedJobs } from 'api/Reports&insights';
+import { getDelayedJobs } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
   { jobId: 'JOB-1001', client: 'Tata Steel', branch: 'Kolkata', department: 'Printing', stage: 'Production', expectedDate: '2026-05-10', delayedDays: 5, priority: 'High', status: 'Delayed' },

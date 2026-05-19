@@ -122,3 +122,41 @@ export function getAccessTokenFromCookies() {
 export function getRefreshTokenFromCookies() {
   return getCookie(REFRESH_TOKEN_COOKIE);
 }
+
+// Customer portal session helpers (used by customer portal entry)
+const CUSTOMER_PORTAL_SESSION_KEY = 'dharbrothers-customer-portal-session';
+
+export function setCustomerPortalSession(session) {
+  if (typeof window === 'undefined') return;
+  if (!session || typeof session !== 'object') {
+    window.localStorage.removeItem(CUSTOMER_PORTAL_SESSION_KEY);
+    return;
+  }
+  try {
+    window.localStorage.setItem(CUSTOMER_PORTAL_SESSION_KEY, JSON.stringify(session));
+  } catch (e) {
+    // ignore localStorage errors
+  }
+}
+
+export function getCustomerPortalSession() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(CUSTOMER_PORTAL_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCustomerPortalSession() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(CUSTOMER_PORTAL_SESSION_KEY);
+  } catch {
+    // ignore
+  }
+}

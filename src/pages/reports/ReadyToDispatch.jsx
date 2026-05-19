@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
 import { Search, Download, FileSpreadsheet, Truck, PackageCheck } from 'lucide-react';
-import { getReadyToDispatchReport } from 'api/Reports&insights';
+import { getReadyToDispatchReport } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
   { jobId: 'JOB-3101', client: 'Tata Steel', branch: 'Kolkata', department: 'Packaging', dispatchType: 'Courier', assignedDispatcher: 'Rahul Das', readyDate: '2026-05-15', priority: 'High', status: 'Ready' },

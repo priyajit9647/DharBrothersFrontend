@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
 import { Search, Download, FileSpreadsheet, CheckCircle2, CircleDollarSign } from 'lucide-react';
-import { getCompleteJobsReport } from 'api/Reports&insights';
+import { getCompleteJobsReport } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
   { jobId: 'JOB-4101', client: 'Tata Steel', branch: 'Kolkata', department: 'Printing', completedBy: 'Rahul Sharma', completedDate: '2026-05-14', turnaroundTime: '12 hrs', totalAmount: 12500, priority: 'High', status: 'Completed' },
