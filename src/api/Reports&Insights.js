@@ -69,11 +69,47 @@ export async function getOpenJobsReport(params = {}) {
 }
 
 export async function getReadyToDispatchReport(params = {}) {
-  // Endpoint: /api/v1/admin/reports/ready-to-dispatch (TBD)
-  return { items: [], total: 0, page: 0, size: 0, raw: null };
+  // Endpoint: GET /api/v1/admin/reports/ready-for-dispatch
+  const { branchId, page = 0, size = 10, sort } = params;
+
+  const qs = buildQueryString({ branchId, page, size, sort });
+  const url = `/api/v1/admin/reports/ready-for-dispatch${qs}`;
+
+  const response = await authorizedFetch(url, { method: 'GET' });
+
+  const items = Array.isArray(response)
+    ? response
+    : response?.items ?? response?.data ?? response?.content ?? response?.list ?? [];
+
+  const total = Number(
+    response?.totalElements ?? response?.total ?? response?.totalItems ?? response?.totalCount ?? items.length
+  );
+
+  const currentPage = Number(response?.page ?? response?.pageNumber ?? page ?? 0);
+  const pageSize = Number(response?.size ?? size);
+
+  return { items, total, page: currentPage, size: pageSize, raw: response };
 }
 
 export async function getCompleteJobsReport(params = {}) {
-  // Endpoint: /api/v1/admin/reports/completed-jobs (TBD)
-  return { items: [], total: 0, page: 0, size: 0, raw: null };
+  // Endpoint: GET /api/v1/admin/reports/completed-jobs
+  const { branchId, page = 0, size = 10, sort } = params;
+
+  const qs = buildQueryString({ branchId, page, size, sort });
+  const url = `/api/v1/admin/reports/completed-jobs${qs}`;
+
+  const response = await authorizedFetch(url, { method: 'GET' });
+
+  const items = Array.isArray(response)
+    ? response
+    : response?.items ?? response?.data ?? response?.content ?? response?.list ?? [];
+
+  const total = Number(
+    response?.totalElements ?? response?.total ?? response?.totalItems ?? response?.totalCount ?? items.length
+  );
+
+  const currentPage = Number(response?.page ?? response?.pageNumber ?? page ?? 0);
+  const pageSize = Number(response?.size ?? size);
+
+  return { items, total, page: currentPage, size: pageSize, raw: response };
 }
