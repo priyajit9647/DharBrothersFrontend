@@ -1,4 +1,4 @@
-import { authorizedFetch, publicFetch } from 'api/auth';
+import { authorizedCustomerFetch, publicFetch, setCustomerAuthState } from 'api/auth';
 
 // ==============================|| CUSTOMER PORTAL API CLIENT (PLACEHOLDER) ||============================== //
 // These helpers describe the intended backend contract for the one-time customer portal.
@@ -6,7 +6,7 @@ import { authorizedFetch, publicFetch } from 'api/auth';
 
 export async function requestCustomerOtp({ orderReference, contact }) {
   // Example POST body; adjust field names and path to match backend.
-  return authorizedFetch('/api/v1/customer-portal/request-otp', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/request-otp', {
     method: 'POST',
     body: JSON.stringify({ orderReference, contact })
   });
@@ -14,64 +14,72 @@ export async function requestCustomerOtp({ orderReference, contact }) {
 
 // Customer login for the storefront/portal using orderId, mobileNumber and otp
 export async function customerLogin({ orderId, mobileNumber, otp }) {
-  return publicFetch('/api/v1/auth/customer/login', {
+  const response = await publicFetch('/api/v1/auth/customer/login', {
     method: 'POST',
     body: JSON.stringify({ orderId, mobileNumber, otp })
   });
+
+  const token = response?.accessToken || response?.token || response?.portalToken || response?.portalSession?.portalToken;
+  const refreshToken = response?.refreshToken || response?.portalSession?.refreshToken || null;
+  if (token) {
+    setCustomerAuthState({ accessToken: token, refreshToken });
+  }
+
+  return response;
 }
 
 export async function verifyCustomerOtp({ orderReference, contact, otp }) {
   // Backend should verify OTP and return a short-lived portal token / session id.
-  return authorizedFetch('/api/v1/customer-portal/verify-otp', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/verify-otp', {
     method: 'POST',
     body: JSON.stringify({ orderReference, contact, otp })
   });
 }
 
 export async function fetchCustomerPortalData({ portalToken }) {
-  return authorizedFetch('/api/v1/customer-portal/details', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/details', {
     method: 'POST',
     body: JSON.stringify({ portalToken })
   });
 }
 
 export async function updateCustomerDeliveryAddress({ portalToken, address }) {
-  return authorizedFetch('/api/v1/customer-portal/update-address', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/update-address', {
     method: 'POST',
     body: JSON.stringify({ portalToken, address })
   });
 }
 
 export async function initiateCustomerPayment({ portalToken }) {
-  return authorizedFetch('/api/v1/customer-portal/initiate-payment', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/initiate-payment', {
     method: 'POST',
     body: JSON.stringify({ portalToken })
   });
 }
 
 export async function submitDocumentApproval({ portalToken, version, approved }) {
-  return authorizedFetch('/api/v1/customer-portal/approve-document', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/approve-document', {
     method: 'POST',
     body: JSON.stringify({ portalToken, version, approved })
   });
 }
 
 export async function fetchCustomerOrders({ portalToken }) {
-  return authorizedFetch('/api/v1/customer-portal/orders', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/orders', {
     method: 'POST',
     body: JSON.stringify({ portalToken })
   });
 }
 
 export async function fetchCustomerNotifications({ portalToken }) {
-  return authorizedFetch('/api/v1/customer-portal/notifications', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/notifications', {
     method: 'POST',
     body: JSON.stringify({ portalToken })
   });
 }
 
 export async function submitCustomerFeedback({ portalToken, feedback }) {
-  return authorizedFetch('/api/v1/customer-portal/feedback', {
+  return authorizedCustomerFetch('/api/v1/customer-portal/feedback', {
     method: 'POST',
     body: JSON.stringify({ portalToken, feedback })
   });
@@ -81,7 +89,7 @@ export async function submitCustomerFeedback({ portalToken, feedback }) {
 // Endpoint: POST /api/customer/feedback/create
 // Body: { customerId: number, feedbacks: [{ questionNo: number, rating: number }] }
 export async function createCustomerFeedback({ customerId, feedbacks }) {
-  return authorizedFetch('/api/customer/feedback/create', {
+  return authorizedCustomerFetch('/api/customer/feedback/create', {
     method: 'POST',
     body: JSON.stringify({ customerId, feedbacks })
   });
@@ -99,7 +107,7 @@ export async function createCustomerFeedback({ customerId, feedbacks }) {
  */
 export async function getCustomerFeedback(customerId) {
   if (!customerId) throw new Error('customerId is required');
-  return authorizedFetch(`/api/customer/feedback/${encodeURIComponent(String(customerId))}`, {
+  return authorizedCustomerFetch(`/api/customer/feedback/${encodeURIComponent(String(customerId))}`, {
     method: 'GET'
   });
 }
@@ -111,7 +119,7 @@ export async function getCustomerFeedback(customerId) {
  */
 export async function createCustomerFeedbackForOrder(orderId, payload) {
   if (!orderId) throw new Error('orderId is required');
-  return authorizedFetch(`/api/customer/feedback/create/order/${encodeURIComponent(String(orderId))}`, {
+  return authorizedCustomerFetch(`/api/customer/feedback/create/order/${encodeURIComponent(String(orderId))}`, {
     method: 'POST',
     body: JSON.stringify(payload)
   });
@@ -124,7 +132,7 @@ export async function createCustomerFeedbackForOrder(orderId, payload) {
  * Endpoint: GET /api/v1/customer/orders/list
  */
 export async function listCustomerOrders() {
-  return authorizedFetch('/api/v1/customer/orders/list', {
+  return authorizedCustomerFetch('/api/v1/customer/orders/list', {
     method: 'GET'
   });
 }
@@ -135,7 +143,7 @@ export async function listCustomerOrders() {
  */
 export async function getCustomerOrder(orderId) {
   if (!orderId) throw new Error('orderId is required');
-  return authorizedFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}`, {
+  return authorizedCustomerFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}`, {
     method: 'GET'
   });
 }
@@ -147,7 +155,7 @@ export async function getCustomerOrder(orderId) {
  */
 export async function changeOrderDeliveryAddress(orderId, payload) {
   if (!orderId) throw new Error('orderId is required');
-  return authorizedFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}/change-delivery-address`, {
+  return authorizedCustomerFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}/change-delivery-address`, {
     method: 'POST',
     body: JSON.stringify(payload)
   });
@@ -160,7 +168,7 @@ export async function changeOrderDeliveryAddress(orderId, payload) {
  */
 export async function changeOrderPickupBranch(orderId, payload) {
   if (!orderId) throw new Error('orderId is required');
-  return authorizedFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}/change-pickup-branch-location`, {
+  return authorizedCustomerFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}/change-pickup-branch-location`, {
     method: 'POST',
     body: JSON.stringify(payload)
   });
@@ -171,7 +179,7 @@ export async function changeOrderPickupBranch(orderId, payload) {
  * Endpoint: GET /api/v1/web/master/branches
  */
 export async function listWebBranches() {
-  return authorizedFetch('/api/v1/web/master/branches', {
+  return authorizedCustomerFetch('/api/v1/web/master/branches', {
     method: 'GET'
   });
 }

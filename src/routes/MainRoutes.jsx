@@ -13,6 +13,7 @@ const OrderBoard = Loadable(lazy(() => import('pages/operations/OrderBoard')));
 const MyJobs = Loadable(lazy(() => import('pages/operations/MyJobs')));
 const OrdersIntake = Loadable(lazy(() => import('pages/operations/Orders')));
 const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')));
+const OrderDetails = Loadable(lazy(() => import('pages/operations/OrderDetails')));
 const Whatsapp = Loadable(lazy(() => import('pages/operations/Whatsapp')));
 const Email = Loadable(lazy(() => import('pages/operations/Email')));
 
@@ -82,6 +83,10 @@ const MainRoutes = {
     {
       path: 'my-jobs',
       element: <MyJobs />
+    },
+    {
+      path: 'orders/view/:orderId',
+      element: <OrderDetails />
     },
     {
       path: 'whatsapp',

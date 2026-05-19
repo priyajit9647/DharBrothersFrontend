@@ -35,7 +35,7 @@ export default function ProcessStageMaster() {
       const normalized = Array.isArray(data)
         ? data.map((item, index) => {
             const code = item.code || '';
-            const protectedCodes = ['ORDER-PENDING', 'DOCUMENT-MODIFI'];
+            const protectedCodes = [];
             const isProtected = protectedCodes.includes(code);
             return {
               id: item.id ?? index + 1,

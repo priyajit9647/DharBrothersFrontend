@@ -93,23 +93,11 @@ export default function AuthLogin({ isDemo = false }) {
               // Continue with login even if profile fetch fails
             }
 
-            // Ask for push notifications permission on first login
+            // Ask for push notifications permission on first login — use native browser prompt
             try {
-              if (!localStorage.getItem('pushPrompted')) {
-                const allow = window.confirm('Enable push notifications to receive order updates?');
-                localStorage.setItem('pushPrompted', '1');
-                if (allow) {
-                  try {
-                    await requestPermissionAndRegister();
-                  } catch (e) {
-                    // non-fatal
-                    // eslint-disable-next-line no-console
-                    console.error('Push registration failed', e);
-                  }
-                }
-              }
+              await requestPermissionAndRegister();
             } catch (e) {
-              // ignore
+              // ignore non-fatal failures
             }
 
             setStatus({ success: true, error: null });

@@ -84,6 +84,22 @@ export async function getRecentOrders(params = {}) {
 export const getOrdersByStage = getOrdersByStatus;
 
 /**
+ * Fetch order details from admin endpoint by order ID
+ * Endpoint: /api/v1/orders/admin/{orderId}
+ * @param {string} orderId
+ * @returns {Promise<object>} Order details
+ */
+export async function getOrderById(orderId) {
+  if (!orderId) {
+    throw new Error('orderId is required');
+  }
+
+  return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET'
+  });
+}
+
+/**
  * Fetch shipping address QR as base64 string for a given orderId
  * Endpoint: /api/v1/orders/{orderId}/shipping-address-qr/base64
  * Uses authorizedFetchRaw because the endpoint may return plain text or binary.

@@ -4,161 +4,199 @@ const PROMPTED_KEY = 'pushPrompted';
 const TOKEN_KEY = 'pushToken';
 
 async function initFirebase() {
-  if (typeof window === 'undefined') throw new Error('Not in a browser environment');
+  if (typeof window === 'undefined') {
+    throw new Error('Not in browser');
+  }
 
   const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyA995D50ZMwXV9TFEe-I7T0GtDRbLaUsTs',
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'pushnotification-9fa82.firebaseapp.com',
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'pushnotification-9fa82',
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'pushnotification-9fa82.firebasestorage.app',
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '313549477282',
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:313549477282:web:45f0a4d0413586cddc0efb',
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || 'G-8XETKYXL38'
   };
 
   if (!firebaseConfig.apiKey) {
-    throw new Error('Firebase config (VITE_FIREBASE_API_KEY etc.) is not set');
+    throw new Error('Firebase ENV variables missing');
   }
 
-  // Dynamically import firebase modules so the app doesn't break if env isn't set
-  const { initializeApp, getApps } = await import('firebase/app');
-  const { getMessaging } = await import('firebase/messaging');
+  // Resilient dynamic imports to support different bundlers/SDK shapes
+  const firebaseAppModule = await import('firebase/app');
+  const initializeApp = firebaseAppModule.initializeApp || firebaseAppModule.default?.initializeApp;
+  const getApps = firebaseAppModule.getApps || firebaseAppModule.default?.getApps;
+  const getApp = firebaseAppModule.getApp || firebaseAppModule.default?.getApp;
 
-  // Avoid initializing the app multiple times during hot reloads or repeated calls
+  const firebaseMessagingModule = await import('firebase/messaging');
+  const getMessaging = firebaseMessagingModule.getMessaging || firebaseMessagingModule.default?.getMessaging;
+  const isSupportedFn = firebaseMessagingModule.isSupported || firebaseMessagingModule.default?.isSupported;
+
+  // isSupported() may not be exported in some builds — fall back to basic feature detection
+  let supported = true;
+  if (typeof isSupportedFn === 'function') {
+    try {
+      supported = await isSupportedFn();
+    } catch (e) {
+      supported = Boolean('serviceWorker' in navigator && 'Notification' in window);
+    }
+  } else {
+    supported = Boolean('serviceWorker' in navigator && 'Notification' in window);
+  }
+
+  if (!supported) {
+    throw new Error('Firebase messaging not supported in this browser');
+  }
+
+  if (typeof initializeApp !== 'function' || typeof getMessaging !== 'function') {
+    throw new Error('Firebase SDK is not available or has unexpected exports');
+  }
+
+  // Prevent duplicate initialization — be tolerant if getApps/getApp are missing
   let app;
   try {
-    if (!getApps || getApps().length === 0) {
-      app = initializeApp(firebaseConfig);
+    if (typeof getApps === 'function' && typeof getApp === 'function') {
+      const apps = getApps();
+      app = apps && apps.length ? getApp() : initializeApp(firebaseConfig);
     } else {
-      app = getApps()[0];
+      // Older or differently bundled SDKs may not expose getApps/getApp — try initializeApp and fall back
+      try {
+        app = initializeApp(firebaseConfig);
+      } catch (e) {
+        app = (firebaseAppModule.getApp && firebaseAppModule.getApp()) || (firebaseAppModule.default && firebaseAppModule.default.getApp && firebaseAppModule.default.getApp());
+        if (!app) throw e;
+      }
     }
   } catch (e) {
-    // Fallback: try to initialize, if it errors assume app already exists
-    try {
-      app = initializeApp(firebaseConfig);
-    } catch {
-      // ignore — getMessaging will accept an existing app
-    }
+    throw new Error('Failed to initialize Firebase app: ' + (e?.message || String(e)));
   }
 
-  const messaging = getMessaging(app);
-  return messaging;
+  return getMessaging(app);
 }
 
 export async function registerForPush() {
-  if (typeof window === 'undefined') throw new Error('Not in a browser environment');
+  if (typeof window === 'undefined') return null;
 
   if (!('serviceWorker' in navigator)) {
-    throw new Error('Service workers are not supported in this browser');
+    throw new Error('Service Worker not supported');
   }
 
   const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+
   if (!vapidKey) {
-    throw new Error('VAPID key not configured (VITE_FIREBASE_VAPID_KEY)');
+    throw new Error('Missing VITE_FIREBASE_VAPID_KEY');
   }
 
   const messaging = await initFirebase();
 
-  // register service worker (must be available at root scope)
   const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
-  const { getToken } = await import('firebase/messaging');
+  const messagingModuleForToken = await import('firebase/messaging');
+  const getToken = messagingModuleForToken.getToken || messagingModuleForToken.default?.getToken;
+  if (typeof getToken !== 'function') throw new Error('Firebase getToken is not available');
 
-  const currentToken = await getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
-  if (!currentToken) {
-    throw new Error('Unable to obtain FCM token');
-  }
-
-  // submit device token to backend
-  await authorizedFetch('/api/users/device-token', {
-    method: 'POST',
-    body: JSON.stringify({ deviceToken: currentToken })
+  const token = await getToken(messaging, {
+    vapidKey,
+    serviceWorkerRegistration: registration
   });
 
-  try {
-    localStorage.setItem(TOKEN_KEY, currentToken);
-  } catch {}
+  if (!token) {
+    throw new Error('FCM token not generated');
+  }
 
-  return currentToken;
+  await authorizedFetch('/api/users/device-token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      deviceToken: token
+    })
+  });
+
+  localStorage.setItem(TOKEN_KEY, token);
+
+  return token;
 }
 
 export async function requestPermissionAndRegister() {
   if (typeof window === 'undefined') return null;
 
   try {
-    // mark that we've already asked the user once
-    if (localStorage.getItem(PROMPTED_KEY)) return null;
+    if (localStorage.getItem(PROMPTED_KEY)) {
+      return null;
+    }
+
     localStorage.setItem(PROMPTED_KEY, '1');
 
-    // request browser permission
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return null;
 
-    // register for push and send token to server
-    const token = await registerForPush();
-    return token;
-  } catch (e) {
-    // swallow errors — registration is best-effort
-    // eslint-disable-next-line no-console
-    console.error('Push registration failed', e);
+    if (permission !== 'granted') {
+      return null;
+    }
+
+    return await registerForPush();
+  } catch (err) {
+    console.error('Push registration failed:', err);
     return null;
   }
 }
 
-// Listen for foreground messages and notify in-app / via Notification API.
 export async function listenForMessages() {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') return;
+
   try {
     const messaging = await initFirebase();
-    const { onMessage } = await import('firebase/messaging');
+
+    const messagingModuleForListener = await import('firebase/messaging');
+    const onMessage = messagingModuleForListener.onMessage || messagingModuleForListener.default?.onMessage;
+    if (typeof onMessage !== 'function') return;
+
     onMessage(messaging, (payload) => {
-      // payload may contain `notification` (standard) or `data` fields depending on server
-      // Show a native notification if permission is granted
-      try {
-        // Prefer the notification payload then fall back to data.
-        const title = payload?.notification?.title || payload?.data?.title || 'Notification';
-        const body = payload?.notification?.body || payload?.data?.body || '';
-        const icon = payload?.notification?.icon || payload?.data?.icon;
-        const url = payload?.data?.url;
+      console.log('Foreground Message:', payload);
 
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          try {
-            // show system notification for foreground messages
-            new Notification(title, { body, icon, data: { url } });
-          } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error('Failed to display Notification', e);
-          }
-        }
+      const title =
+        payload?.notification?.title ||
+        payload?.data?.title ||
+        'Notification';
 
-        // Dispatch a DOM event so in-app components can react (e.g., show a snackbar)
-        try {
-          window.dispatchEvent(new CustomEvent('fcmMessage', { detail: payload }));
-        } catch (e) {
-          // ignore
-        }
-      } catch (e) {
-        // swallow
+      const body =
+        payload?.notification?.body ||
+        payload?.data?.body ||
+        '';
+
+      const icon =
+        payload?.notification?.icon ||
+        payload?.data?.icon;
+
+      const url = payload?.data?.url;
+
+      if (
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
+        new Notification(title, {
+          body,
+          icon,
+          data: { url }
+        });
       }
+
+      window.dispatchEvent(
+        new CustomEvent('fcmMessage', {
+          detail: payload
+        })
+      );
     });
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error('listenForMessages failed', e);
-    return null;
+  } catch (err) {
+    console.error('listenForMessages failed:', err);
   }
 }
 
 export function getStoredPushToken() {
-  try {
-    return localStorage.getItem(TOKEN_KEY);
-  } catch {
-    return null;
-  }
+  return localStorage.getItem(TOKEN_KEY);
 }
 
 export function hasPromptedForPush() {
-  try {
-    return Boolean(localStorage.getItem(PROMPTED_KEY));
-  } catch {
-    return false;
-  }
+  return Boolean(localStorage.getItem(PROMPTED_KEY));
 }

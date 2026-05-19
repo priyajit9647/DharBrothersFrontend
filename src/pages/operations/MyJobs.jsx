@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
@@ -7,11 +8,16 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import TextField from '@mui/material/TextField';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import IconButton from '@mui/material/IconButton';
+import Box from '@mui/material/Box';
 
 import MasterList from 'sections/admin/masters/MasterList';
 import Button from '@mui/material/Button';
 import { getJobList, completeMyJob } from 'api/myJobs';
 import { useAuth } from 'hooks/useAuth';
+import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 
 // ==============================|| MY JOBS ||============================== //
 
@@ -27,6 +33,8 @@ export default function MyJobs() {
   const [selectedCompleteId, setSelectedCompleteId] = useState(null);
   const [remark, setRemark] = useState('');
   const [remarkError, setRemarkError] = useState('');
+  const [actionAnchorEl, setActionAnchorEl] = useState(null);
+  const [activeJob, setActiveJob] = useState(null);
 
   const loadJobs = useCallback(async (uid) => {
     setLoading(true);
@@ -71,6 +79,39 @@ export default function MyJobs() {
     setRemark('');
     setRemarkError('');
     setCompleteDialogOpen(true);
+  };
+
+  const handleActionsOpen = (event, job) => {
+    setActionAnchorEl(event.currentTarget);
+    setActiveJob(job);
+  };
+
+  const navigate = useNavigate();
+
+  const handleActionsClose = () => {
+    setActionAnchorEl(null);
+    setActiveJob(null);
+  };
+
+  const handleViewOrder = () => {
+    if (!activeJob) return;
+    const id = activeJob.orderId || activeJob.id || activeJob.orderNo || activeJob.code;
+    if (id) {
+      navigate(`/orders/view/${encodeURIComponent(String(id))}`);
+    }
+    handleActionsClose();
+  };
+
+  const handleDocumentApproval = () => {
+    if (!activeJob) return;
+    window.alert(`Document version approval clicked for Order ID: ${activeJob.orderId || activeJob.id || 'unknown'}`);
+    handleActionsClose();
+  };
+
+  const handleReinitiatePayment = () => {
+    if (!activeJob) return;
+    window.alert(`Re-initiate payment clicked for Order ID: ${activeJob.orderId || activeJob.id || 'unknown'}`);
+    handleActionsClose();
   };
 
   const handleCloseCompleteDialog = () => {
@@ -146,6 +187,23 @@ export default function MyJobs() {
             title="My Jobs"
             description="View the list of jobs assigned to you."
             columns={[
+              {
+                id: 'rowActions',
+                label: '',
+                align: 'center',
+                sx: { width: '80px' },
+                render: (row) => (
+                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <IconButton
+                      size="small"
+                      onClick={(event) => handleActionsOpen(event, row)}
+                      aria-label="Job actions"
+                    >
+                      <EllipsisOutlined style={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Box>
+                )
+              },
               { id: 'orderId', label: 'Order ID' },
               { id: 'documentId', label: 'Document ID' },
               { id: 'stage', label: 'Stage' },
@@ -175,8 +233,7 @@ export default function MyJobs() {
                 id: 'delayedAt',
                 label: 'Delayed At',
                 format: (value) => formatDate(value)
-              }
-,
+              },
               {
                 id: 'actions',
                 label: 'Actions',
@@ -208,6 +265,17 @@ export default function MyJobs() {
             showActiveColumn={false}
             showActionsColumn={false}
           />
+          <Menu
+            anchorEl={actionAnchorEl}
+            open={Boolean(actionAnchorEl)}
+            onClose={handleActionsClose}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem onClick={handleViewOrder}>View Order</MenuItem>
+            <MenuItem onClick={handleDocumentApproval}>Document Version Approval</MenuItem>
+            <MenuItem onClick={handleReinitiatePayment}>Re-initiate Payment</MenuItem>
+          </Menu>
         </Grid>
       </Grid>
         <Dialog open={completeDialogOpen} onClose={handleCloseCompleteDialog} maxWidth="sm" fullWidth>

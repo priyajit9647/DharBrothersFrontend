@@ -302,3 +302,214 @@ export async function getUserProfile() {
   return authorizedFetch('/api/v1/user/me/profile');
 }
 
+const CUSTOMER_AUTH_KEY = 'dharbrothers-customer-auth';
+
+export function setCustomerAuthState({ accessToken, refreshToken }) {
+  if (typeof window === 'undefined') return;
+  const payload = {
+    accessToken: accessToken || null,
+    refreshToken: refreshToken || null
+  };
+  window.localStorage.setItem(CUSTOMER_AUTH_KEY, JSON.stringify(payload));
+}
+
+export function getCustomerAuthStateFromLocalStorage() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(CUSTOMER_AUTH_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCustomerAuthState() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(CUSTOMER_AUTH_KEY);
+}
+
+const CUSTOMER_PORTAL_SESSION_KEY = 'dharbrothers-customer-portal-session';
+
+export function setCustomerPortalSession(session) {
+  if (typeof window === 'undefined') return;
+  if (!session || typeof session !== 'object') {
+    window.localStorage.removeItem(CUSTOMER_PORTAL_SESSION_KEY);
+    return;
+  }
+  window.localStorage.setItem(CUSTOMER_PORTAL_SESSION_KEY, JSON.stringify(session));
+}
+
+export function getCustomerPortalSession() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(CUSTOMER_PORTAL_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function clearCustomerPortalSession() {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(CUSTOMER_PORTAL_SESSION_KEY);
+}
+
+export async function authorizedCustomerFetch(path, options = {}) {
+  if (!API_BASE_URL) {
+    throw new Error('API base URL is not configured');
+  }
+
+  const localAuth = getCustomerAuthStateFromLocalStorage();
+  let accessToken = localAuth?.accessToken || null;
+  const refreshToken = localAuth?.refreshToken || null;
+
+  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
+    try {
+      const refreshed = await refreshTokenApi(refreshToken);
+      accessToken = refreshed.accessToken;
+      setCustomerAuthState({ accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken ?? refreshToken });
+    } catch {
+      throw new Error('Customer session expired. Please login again.');
+    }
+  } else if (accessToken && isTokenExpired(accessToken)) {
+    throw new Error('Customer session expired. Please login again.');
+  }
+
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    ...(options.headers || {}),
+    ...(accessToken
+      ? {
+          Authorization: `Bearer ${accessToken}`
+        }
+      : {})
+  };
+
+  if (!isFormData) {
+    const hasContentTypeHeader = Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+    if (!hasContentTypeHeader) {
+      headers['Content-Type'] = 'application/json';
+    }
+  }
+
+  let response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers
+  });
+
+  if (response.status === 401 && refreshToken) {
+    try {
+      const refreshed = await refreshTokenApi(refreshToken);
+      const nextAccessToken = refreshed?.accessToken;
+      if (nextAccessToken) {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+          ...options,
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${nextAccessToken}`
+          }
+        });
+        setCustomerAuthState({ accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken ?? refreshToken });
+      }
+    } catch {
+      throw new Error('Customer session expired. Please login again.');
+    }
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || 'Request failed';
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+export async function authorizedCustomerFetchRaw(path, options = {}) {
+  if (!API_BASE_URL) {
+    throw new Error('API base URL is not configured');
+  }
+
+  const localAuth = getCustomerAuthStateFromLocalStorage();
+  let accessToken = localAuth?.accessToken || null;
+  const refreshToken = localAuth?.refreshToken || null;
+
+  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
+    try {
+      const refreshed = await refreshTokenApi(refreshToken);
+      accessToken = refreshed.accessToken;
+      setCustomerAuthState({ accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken ?? refreshToken });
+    } catch {
+      throw new Error('Customer session expired. Please login again.');
+    }
+  } else if (accessToken && isTokenExpired(accessToken)) {
+    throw new Error('Customer session expired. Please login again.');
+  }
+
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    ...(options.headers || {}),
+    ...(accessToken
+      ? {
+          Authorization: `Bearer ${accessToken}`
+        }
+      : {})
+  };
+
+  if (!isFormData) {
+    const hasContentTypeHeader = Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+    if (!hasContentTypeHeader) {
+      headers['Content-Type'] = 'application/json';
+    }
+  }
+
+  let response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers
+  });
+
+  if (response.status === 401 && refreshToken) {
+    try {
+      const refreshed = await refreshTokenApi(refreshToken);
+      const nextAccessToken = refreshed?.accessToken;
+      if (nextAccessToken) {
+        response = await fetch(`${API_BASE_URL}${path}`, {
+          ...options,
+          headers: {
+            ...headers,
+            Authorization: `Bearer ${nextAccessToken}`
+          }
+        });
+        setCustomerAuthState({ accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken ?? refreshToken });
+      }
+    } catch {
+      throw new Error('Customer session expired. Please login again.');
+    }
+  }
+
+  if (!response.ok) {
+    let message = 'Request failed';
+    try {
+      const data = await response.json();
+      message = data?.message || data?.error || message;
+    } catch {
+      // ignore JSON parse errors for non-JSON responses
+    }
+    throw new Error(message);
+  }
+
+  return response;
+}
+

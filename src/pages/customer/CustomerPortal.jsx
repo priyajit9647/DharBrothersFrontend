@@ -18,6 +18,7 @@ import Alert from '@mui/material/Alert';
 
 // project imports
 import MainCard from 'components/MainCard';
+import { getCustomerPortalSession } from 'utils/authTokens';
 import { fetchCustomerPortalData, updateCustomerDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders, listCustomerOrders, getCustomerOrder, changeOrderDeliveryAddress, changeOrderPickupBranch, listWebBranches } from 'api/customerPortal';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -56,7 +57,8 @@ export default function CustomerPortal() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const portalSession = location.state?.portalSession;
+  const initialPortalSession = location.state?.portalSession || getCustomerPortalSession();
+  const [portalSession, setPortalSession] = useState(initialPortalSession);
 
   const [portalData, setPortalData] = useState(mockPortalData);
   const [orders, setOrders] = useState([]);

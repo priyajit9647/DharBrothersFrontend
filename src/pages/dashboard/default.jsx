@@ -28,6 +28,7 @@ import PlacementTypeAnalytics from 'components/cards/PlacementTypeAnalytics';
 import JobInHandCard from 'components/cards/JobInHandCard';
 import { useAuth } from 'hooks/useAuth';
 import { formatLabel } from 'utils/formatLabel';
+import { requestPermissionAndRegister, listenForMessages } from 'firebase/messaging';
 
 // assets
 import CarryOutOutlined from '@ant-design/icons/CarryOutOutlined';
@@ -139,6 +140,34 @@ export default function DashboardDefault() {
     };
   }, [branchId]);
 
+  // Prompt for push notifications on dashboard load (admin users).
+  useEffect(() => {
+    let mounted = true;
+    const promptForPush = async () => {
+      try {
+        if (typeof window === 'undefined') return;
+        // Use native browser permission prompt; helper will avoid re-prompting
+        await requestPermissionAndRegister();
+      } catch (e) {
+        // ignore non-fatal errors
+      }
+    };
+
+    promptForPush();
+
+    // Start listening for foreground messages so the dashboard can react to them
+    try {
+      listenForMessages();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('listenForMessages error', e);
+    }
+
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
   const cardConfig = useMemo(() => {
     const cardByKey = new Map(kpiCards.map((card) => [String(card.key || card.title || '').toLowerCase(), card]));
 
@@ -150,13 +179,16 @@ export default function DashboardDefault() {
     };
 
     return fallbackCards.map((fallback) => {
+      const fallbackKey = fallback.key;
       const found =
-        cardByKey.get(fallback.key.toLowerCase()) || aliases[fallback.key].map((alias) => cardByKey.get(alias)).find(Boolean) || null;
+        cardByKey.get(String(fallbackKey).toLowerCase()) || (aliases[fallbackKey] || []).map((alias) => cardByKey.get(alias)).find(Boolean) || null;
 
-      const resolvedTitle = formatLabel(found?.title ?? found?.key ?? fallback.title ?? fallback.key);
+      const resolvedTitle = formatLabel(found?.title ?? found?.key ?? fallback.title ?? fallbackKey);
+
+      const { key: _omitKey, ...fallbackNoKey } = fallback;
 
       return {
-        ...fallback,
+        ...fallbackNoKey,
         title: resolvedTitle,
         count: found?.count ?? fallback.count,
         percentage: found?.percentage ?? fallback.percentage,
