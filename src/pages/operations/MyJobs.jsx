@@ -18,6 +18,7 @@ import Button from '@mui/material/Button';
 import { getJobList, completeMyJob } from 'api/myJobs';
 import { useAuth } from 'hooks/useAuth';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
+import DownloadDocumentButton from 'components/DownloadDocumentButton';
 
 // ==============================|| MY JOBS ||============================== //
 
@@ -234,7 +235,18 @@ export default function MyJobs() {
                 align: 'center',
                 render: (row) => formatDate(row.assignedDate)
               },
-              { id: 'documentVersion', label: 'Current Document' },
+              {
+                id: 'documentVersion',
+                label: 'Current Document',
+                render: (row) => (
+                  <DownloadDocumentButton
+                    documentVersion={row.documentVersion || row.version || ''}
+                    documentFilePath={row.documentFilePath || row.filePath || row.file_path || ''}
+                    documentFileName={row.documentFileName || row.fileName || row.filename || ''}
+                    accessToken={accessToken}
+                  />
+                )
+              },
               {
                 id: 'actions',
                 label: 'Actions',
@@ -275,7 +287,6 @@ export default function MyJobs() {
           >
             <MenuItem onClick={handleViewOrder}>View Order</MenuItem>
             <MenuItem onClick={handleDocumentApproval}>Document Version Approval</MenuItem>
-            <MenuItem onClick={handleReinitiatePayment}>Re-initiate Payment</MenuItem>
           </Menu>
         </Grid>
       </Grid>
