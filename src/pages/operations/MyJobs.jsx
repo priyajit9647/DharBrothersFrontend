@@ -166,7 +166,20 @@ export default function MyJobs() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleString();
+
+    const date = new Date(dateString);
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+
+    const time = date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).replace(' ', '');
+
+    return `${day}/${month}/${year} - ${time}`;
   };
 
   const getCustomerName = (customer) => {
@@ -205,35 +218,23 @@ export default function MyJobs() {
                 )
               },
               { id: 'orderId', label: 'Order ID' },
-              { id: 'documentId', label: 'Document ID' },
-              { id: 'stage', label: 'Stage' },
+              { id: 'processStageName', label: 'Stage' },
               {
-                id: 'customer',
+                id: 'customerFullName',
                 label: 'Customer',
-                render: (row) => getCustomerName(row.customer)
               },
               {
                 id: 'dueTime',
                 label: 'Due Time',
-                format: (value) => formatDate(value)
+                render: (row) => formatDate(row.dueTime)
               },
               {
-                id: 'completed',
-                label: 'Completed',
+                id: 'assignedDate',
+                label: 'Assigned at',
                 align: 'center',
-                format: (value) => (value ? 'Yes' : 'No')
+                render: (row) => formatDate(row.assignedDate)
               },
-              {
-                id: 'completedAt',
-                label: 'Completed At',
-                format: (value) => formatDate(value)
-              },
-              { id: 'delayNote', label: 'Delay Note' },
-              {
-                id: 'delayedAt',
-                label: 'Delayed At',
-                format: (value) => formatDate(value)
-              },
+              { id: 'documentVersion', label: 'Current Document' },
               {
                 id: 'actions',
                 label: 'Actions',
