@@ -175,6 +175,17 @@ export async function changeOrderPickupBranch(orderId, payload) {
 }
 
 /**
+ * Re-initiate payment for a customer order when payment status is INIT.
+ * Endpoint: GET /api/v1/customers/re-initiate-payment/{orderId}
+ */
+export async function reInitiateCustomerPayment(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedCustomerFetch(`/api/v1/customers/re-initiate-payment/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET'
+  });
+}
+
+/**
  * Fetch branches for pickup selection
  * Endpoint: GET /api/v1/web/master/branches
  */

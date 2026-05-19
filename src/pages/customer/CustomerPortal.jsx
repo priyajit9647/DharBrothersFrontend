@@ -19,7 +19,7 @@ import Alert from '@mui/material/Alert';
 // project imports
 import MainCard from 'components/MainCard';
 import { getCustomerPortalSession } from 'utils/authTokens';
-import { fetchCustomerPortalData, updateCustomerDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders, listCustomerOrders, getCustomerOrder, changeOrderDeliveryAddress, changeOrderPickupBranch, listWebBranches } from 'api/customerPortal';
+import { fetchCustomerPortalData, updateCustomerDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders, listCustomerOrders, getCustomerOrder, changeOrderDeliveryAddress, changeOrderPickupBranch, reInitiateCustomerPayment, listWebBranches } from 'api/customerPortal';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -94,11 +94,18 @@ export default function CustomerPortal() {
   const [paymentMessage, setPaymentMessage] = useState('');
   const [approvalMessage, setApprovalMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [paymentBusy, setPaymentBusy] = useState(false);
 
   const latestDocument = useMemo(() => {
     if (!portalData.documents?.length) return undefined;
     return portalData.documents[portalData.documents.length - 1];
   }, [portalData.documents]);
+
+  const isOrderPaymentInit = (order) => {
+    if (!order) return false;
+    const value = String(order.paymentStatus || order.paymentState || order.status || order.payment?.status || '').trim().toUpperCase();
+    return value === 'INIT';
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -323,7 +330,7 @@ export default function CustomerPortal() {
   };
 
   const handleMakePayment = async () => {
-    setBusy(true);
+    setPaymentBusy(true);
     setPaymentMessage('');
     const token = portalSession?.portalToken;
     try {
@@ -336,7 +343,39 @@ export default function CustomerPortal() {
     } catch (error) {
       setPaymentMessage(error?.message || 'Unable to start payment. Please try again.');
     } finally {
-      setBusy(false);
+      setPaymentBusy(false);
+    }
+  };
+
+  const handleReInitiatePayment = async () => {
+    if (!selectedOrder) {
+      setPaymentMessage('Please select an order before retrying payment.');
+      return;
+    }
+
+    const orderId = selectedOrder.orderId || selectedOrder.orderReference || selectedOrder.ref;
+    if (!orderId) {
+      setPaymentMessage('Unable to determine order ID for payment retry.');
+      return;
+    }
+
+    setPaymentBusy(true);
+    setPaymentMessage('');
+    try {
+      await reInitiateCustomerPayment(orderId);
+      setPaymentMessage('Payment re-initiation request has been sent successfully.');
+      const refreshed = await getCustomerOrder(orderId);
+      setSelectedOrder(refreshed);
+      try {
+        const list = await listCustomerOrders();
+        setOrders(Array.isArray(list) ? list : []);
+      } catch (listError) {
+        // ignore silently, keep current list
+      }
+    } catch (error) {
+      setPaymentMessage(error?.message || 'Unable to retry payment. Please try again.');
+    } finally {
+      setPaymentBusy(false);
     }
   };
 
@@ -614,6 +653,26 @@ export default function CustomerPortal() {
                       >
                         Pick up from branch
                       </Button>
+                      {isOrderPaymentInit(selectedOrder) && (
+                        <Button
+                          variant="outlined"
+                          sx={{
+                            borderRadius: '999px',
+                            textTransform: 'none',
+                            fontWeight: 600,
+                            py: 1,
+                            borderColor: '#ff9800',
+                            color: '#ff9800',
+                            '&:hover': {
+                              backgroundColor: 'rgba(255, 152, 0, 0.08)'
+                            }
+                          }}
+                          onClick={handleReInitiatePayment}
+                          disabled={paymentBusy}
+                        >
+                          {paymentBusy ? 'Retrying payment...' : 'Retry INIT payment'}
+                        </Button>
+                      )}
                     </Stack>
                   </Stack>
                 ) : (
@@ -847,10 +906,38 @@ export default function CustomerPortal() {
                           backgroundColor: '#fb8c00'
                         }
                       }}
-                      onClick={() => initiateCustomerPayment && initiateCustomerPayment()}
+                      onClick={handleMakePayment}
+                      disabled={paymentBusy}
                     >
-                      Make a Payment
+                      {paymentBusy ? 'Processing...' : 'Make a Payment'}
                     </Button>
+                    {isOrderPaymentInit(selectedOrder) && (
+                      <Button
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          borderRadius: '8px',
+                          textTransform: 'none',
+                          fontWeight: 600,
+                          borderColor: '#667eea',
+                          color: '#667eea',
+                          mt: 1,
+                          '&:hover': {
+                            backgroundColor: 'rgba(102, 126, 234, 0.08)'
+                          }
+                        }}
+                        onClick={handleReInitiatePayment}
+                        disabled={paymentBusy}
+                      >
+                        {paymentBusy ? 'Retrying payment...' : 'Retry INIT Payment'}
+                      </Button>
+                    )}
+                    {paymentMessage && (
+                      <Alert severity="info" sx={{ mt: 1, borderRadius: 1 }}>
+                        {paymentMessage}
+                      </Alert>
+                    )}
                   </Stack>
                 ) : (
                   <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', textAlign: 'center', py: 2 }}>

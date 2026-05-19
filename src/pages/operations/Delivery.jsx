@@ -39,15 +39,17 @@ function paymentStatusColor(status) {
   return 'default';
 }
 
+function isReadyToDispatchStage(stage) {
+  if (!stage) return false;
+  const normalized = String(stage).trim().replace(/[-_\s]+/g, ' ').toLowerCase();
+  return /(ready\s*(to|for)\s*dispatch)/.test(normalized);
+}
+
 function StageCard({ title, rows = [] }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeRow, setActiveRow] = useState(null);
-  const [qrOpen, setQrOpen] = useState(false);
-  const [qrLoading, setQrLoading] = useState(false);
-  const [qrData, setQrData] = useState(null);
-  const [qrError, setQrError] = useState('');
-  const [qrOrderId, setQrOrderId] = useState(null);
   const [qrOrder, setQrOrder] = useState(null);
+  const [qrType, setQrType] = useState('shipping');
 
   const handleMenuOpen = (event, row) => {
     setAnchorEl(event.currentTarget);
@@ -77,16 +79,18 @@ function StageCard({ title, rows = [] }) {
     handleMenuClose();
   };
 
-  const handleShowQr = async (order) => {
-    console.log('[Delivery.StageCard.handleShowQr] QR button clicked, order:', order);
+  const handleShowQr = async (order, type = 'shipping') => {
+    console.log('[Delivery.StageCard.handleShowQr] QR button clicked, order:', order, 'type:', type);
     const id = order?.orderId ?? order?.id ?? order?.orderNo ?? order?.code;
     console.log('[Delivery.StageCard.handleShowQr] Order id:', id);
+    setQrType(type === 'feedback' ? 'feedback' : 'shipping');
     setQrOrder(order);
   };
 
   const handleCloseQr = () => {
     console.log('[Delivery.StageCard.handleCloseQr] Closing QR modal');
     setQrOrder(null);
+    setQrType('shipping');
   };
 
   return (
@@ -147,14 +151,17 @@ function StageCard({ title, rows = [] }) {
                       >
                         <EllipsisOutlined style={{ fontSize: '0.9rem' }} />
                       </IconButton>
-                      {/* show QR button for ready-to-dispatch rows */}
-                      {['READY_TO_DISPATCH', 'READY-TO-DISPATCH', 'READY_FOR_DISPATCH'].includes(String(r.stage).toUpperCase()) && (
-                        <>
-                          {console.log('[Delivery.StageCard] QR button showing for order:', r.orderId, 'stage:', r.stage)}
-                          <IconButton size="small" onClick={() => handleShowQr(r)} title="Show QR" sx={{ ml: 0.5 }}>
-                            <Typography variant="caption">QR</Typography>
-                          </IconButton>
-                        </>
+                      {/* show QR buttons for ready-to-dispatch rows */}
+                      {isReadyToDispatchStage(r.stage) && (
+                        <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: 0.5, ml: 0.5 }}>
+                          {console.log('[Delivery.StageCard] QR buttons showing for order:', r.orderId, 'stage:', r.stage)}
+                          <Button type="button" size="small" variant="outlined" onClick={() => handleShowQr(r, 'shipping')}>
+                            Shipping QR
+                          </Button>
+                          <Button type="button" size="small" variant="outlined" onClick={() => handleShowQr(r, 'feedback')}>
+                            Feedback QR
+                          </Button>
+                        </Box>
                       )}
                     </TableCell>
                     <TableCell sx={{ maxWidth: 300, wordBreak: 'break-word' }}>
@@ -196,7 +203,9 @@ function StageCard({ title, rows = [] }) {
           <MenuItem onClick={handleAssign}>Assign</MenuItem>
           <MenuItem onClick={handleEdit}>Edit</MenuItem>
         </Menu>
-        {qrOrder && <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} />}
+        {qrOrder && (
+          <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} initialType={qrType} />
+        )}
       </MainCard>
     </Box>
   );

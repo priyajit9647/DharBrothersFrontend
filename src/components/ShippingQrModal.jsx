@@ -13,11 +13,19 @@ import DownloadOutlined from '@ant-design/icons/DownloadOutlined';
 
 import orderService from 'services/orderService';
 
-export default function ShippingQrModal({ open, onClose, order = {} }) {
+export default function ShippingQrModal({ open, onClose, order = {}, initialType = 'shipping' }) {
   const [loading, setLoading] = useState(false);
   const [base64, setBase64] = useState(null);
   const [error, setError] = useState('');
   const [snack, setSnack] = useState({ open: false, message: '' });
+  const [qrType, setQrType] = useState(String(initialType).toLowerCase() === 'feedback' ? 'feedback' : 'shipping');
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    setQrType(String(initialType).toLowerCase() === 'feedback' ? 'feedback' : 'shipping');
+  }, [open, initialType]);
 
   useEffect(() => {
     let mounted = true;
@@ -27,7 +35,7 @@ export default function ShippingQrModal({ open, onClose, order = {} }) {
         return;
       }
       const id = order?.orderId ?? order?.id ?? order?.orderNo ?? order?.code;
-      console.log('[ShippingQrModal] Modal opened, order:', order, 'id:', id);
+      console.log('[ShippingQrModal] Modal opened, order:', order, 'id:', id, 'type:', qrType);
       if (!id) {
         console.error('[ShippingQrModal] No order id found in:', order);
         setError('Order id not available');
@@ -37,11 +45,19 @@ export default function ShippingQrModal({ open, onClose, order = {} }) {
       setError('');
       setBase64(null);
       try {
-        console.log('[ShippingQrModal] Calling getShippingQrBase64 with id:', id);
-        const data = await orderService.getShippingQrBase64(id);
-        console.log('[ShippingQrModal] API response received, data length:', data?.length);
-        if (!mounted) return;
-        setBase64(data);
+        if (qrType === 'feedback') {
+          console.log('[ShippingQrModal] Calling getFeedbackQrBase64 with id:', id);
+          const data = await orderService.getQrBase64(id, 'feedback');
+          console.log('[ShippingQrModal] API response received, data length:', data?.length);
+          if (!mounted) return;
+          setBase64(data);
+        } else {
+          console.log('[ShippingQrModal] Calling getShippingQrBase64 with id:', id);
+          const data = await orderService.getQrBase64(id, 'shipping');
+          console.log('[ShippingQrModal] API response received, data length:', data?.length);
+          if (!mounted) return;
+          setBase64(data);
+        }
       } catch (e) {
         console.error('[ShippingQrModal] API Error:', e);
         if (!mounted) return;
@@ -55,14 +71,15 @@ export default function ShippingQrModal({ open, onClose, order = {} }) {
     return () => {
       mounted = false;
     };
-  }, [open, order]);
+  }, [open, order, qrType]);
 
   const handleDownload = () => {
     if (!base64) return setSnack({ open: true, message: 'No image to download' });
     const link = document.createElement('a');
     link.href = `data:image/png;base64,${base64}`;
     const id = order?.orderId ?? order?.id ?? order?.orderNo ?? order?.code ?? 'qr';
-    link.download = `shipping-qr-${id}.png`;
+    const filename = qrType === 'feedback' ? `feedback-qr-${id}.png` : `shipping-qr-${id}.png`;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -76,19 +93,36 @@ export default function ShippingQrModal({ open, onClose, order = {} }) {
   };
 
   const imageSrc = base64 ? `data:image/png;base64,${base64}` : null;
+  const qrLabel = qrType === 'feedback' ? 'Feedback QR' : 'Shipping Address QR';
 
   return (
     <>
       <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-        <DialogTitle>Shipping Address QR{order?.orderId ? ` — ${order.orderId}` : ''}</DialogTitle>
+        <DialogTitle>{qrLabel}{order?.orderId ? ` — ${order.orderId}` : ''}</DialogTitle>
         <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 180 }}>
+          <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Button
+              size="small"
+              variant={qrType === 'shipping' ? 'contained' : 'outlined'}
+              onClick={() => setQrType('shipping')}
+            >
+              Shipping QR
+            </Button>
+            <Button
+              size="small"
+              variant={qrType === 'feedback' ? 'contained' : 'outlined'}
+              onClick={() => setQrType('feedback')}
+            >
+              Feedback QR
+            </Button>
+          </Box>
           {loading ? (
             <CircularProgress />
           ) : error ? (
             <Typography color="error">{error}</Typography>
           ) : imageSrc ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-              <img src={imageSrc} alt="Shipping QR" style={{ maxWidth: '100%', height: 'auto' }} />
+              <img src={imageSrc} alt={qrLabel} style={{ maxWidth: '100%', height: 'auto' }} />
               <Typography variant="caption" color="text.secondary">
                 {order?.customerName || ''}
               </Typography>

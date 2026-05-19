@@ -37,6 +37,43 @@ function buildQueryString(params = {}) {
   return query ? `?${query}` : '';
 }
 
+async function blobToBase64(blob) {
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => {
+      reader.abort();
+      reject(new Error('Failed to read blob data'));
+    };
+    reader.onloadend = () => {
+      const dataUrl = reader.result;
+      if (typeof dataUrl !== 'string') {
+        reject(new Error('Unexpected blob data'));
+        return;
+      }
+      const idx = dataUrl.indexOf(',');
+      resolve(idx >= 0 ? dataUrl.substring(idx + 1) : dataUrl);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function parseQrBase64Response(response) {
+  const contentType = String(response.headers.get('Content-Type') || '').toLowerCase();
+
+  if (contentType.includes('application/json') || contentType.includes('text/')) {
+    const text = await response.text();
+    try {
+      const parsed = JSON.parse(text);
+      return parsed?.data || parsed?.base64 || parsed;
+    } catch {
+      return text;
+    }
+  }
+
+  const blob = await response.blob();
+  return blobToBase64(blob);
+}
+
 /**
  * Fetch orders for an admin by stage name
  * Endpoint: /api/v1/orders/admin/list/{stageName}
@@ -126,28 +163,33 @@ export async function getOrderShippingAddressQrBase64(orderId) {
   console.log('[API.getOrderShippingAddressQrBase64] Called with orderId:', orderId);
   if (!orderId) throw new Error('orderId is required');
 
-  try {
-    const res = await authorizedFetchRaw(`/api/v1/orders/${encodeURIComponent(String(orderId))}/shipping-address-qr/base64`, {
-      method: 'GET'
-    });
+  const res = await authorizedFetchRaw(`/api/v1/orders/${encodeURIComponent(String(orderId))}/shipping-address-qr/base64`, {
+    method: 'GET'
+  });
 
-    console.log('[API.getOrderShippingAddressQrBase64] Response received, status:', res.status);
-    // Try to parse as text first. The server may return plain base64 or a JSON wrapper.
-    const text = await res.text();
-    console.log('[API.getOrderShippingAddressQrBase64] Response text length:', text?.length);
-    try {
-      const parsed = JSON.parse(text);
-      console.log('[API.getOrderShippingAddressQrBase64] Parsed as JSON, keys:', Object.keys(parsed || {}));
-      // prefer common property names
-      return parsed?.data || parsed?.base64 || parsed?.content || parsed;
-    } catch (e) {
-      console.log('[API.getOrderShippingAddressQrBase64] Not JSON, returning raw text');
-      return text;
+  console.log('[API.getOrderShippingAddressQrBase64] Response received, status:', res.status);
+  return parseQrBase64Response(res);
+}
+
+/**
+ * Fetch feedback QR for a given order as base64 string.
+ * Endpoint: /api/customer/feedback/qr/{orderId}
+ * @param {string} orderId
+ * @returns {Promise<string>} base64-encoded QR content
+ */
+export async function getOrderFeedbackQrBase64(orderId) {
+  console.log('[API.getOrderFeedbackQrBase64] Called with orderId:', orderId);
+  if (!orderId) throw new Error('orderId is required');
+
+  const res = await authorizedFetchRaw(`/api/customer/feedback/qr/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'image/png'
     }
-  } catch (e) {
-    console.error('[API.getOrderShippingAddressQrBase64] Error:', e);
-    throw e;
-  }
+  });
+
+  console.log('[API.getOrderFeedbackQrBase64] Response received, status:', res.status);
+  return parseQrBase64Response(res);
 }
 
 /**
