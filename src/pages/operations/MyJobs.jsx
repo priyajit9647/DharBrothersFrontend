@@ -12,10 +12,19 @@ import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 
 import MasterList from 'sections/admin/masters/MasterList';
 import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import CircularProgress from '@mui/material/CircularProgress';
 import { getJobList, completeMyJob } from 'api/myJobs';
+import { getDocumentVersionList, uploadDocumentVersionFormData } from 'api/document';
+import { authorizedFetchRaw } from 'api/auth';
 import { useAuth } from 'hooks/useAuth';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 import DownloadDocumentButton from 'components/DownloadDocumentButton';
@@ -36,6 +45,16 @@ export default function MyJobs() {
   const [remarkError, setRemarkError] = useState('');
   const [actionAnchorEl, setActionAnchorEl] = useState(null);
   const [activeJob, setActiveJob] = useState(null);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [selectedApprovalJob, setSelectedApprovalJob] = useState(null);
+  const [versions, setVersions] = useState([]);
+  const [versionLoading, setVersionLoading] = useState(false);
+  const [approvalError, setApprovalError] = useState('');
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadRemarks, setUploadRemarks] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
 
   const loadJobs = useCallback(async (uid) => {
     setLoading(true);
@@ -103,10 +122,132 @@ export default function MyJobs() {
     handleActionsClose();
   };
 
-  const handleDocumentApproval = () => {
+  const getJobDocumentIdentifier = (job) => {
+    return job?.documentStageId ?? job?.documentId ?? job?.stageId ?? job?.processStageId;
+  };
+
+  const getJobDocumentName = (job) => {
+    return job?.documentFileName || job?.fileName || job?.filename || job?.currentDocumentName || job?.documentVersion || 'current-document';
+  };
+
+  const handleDocumentApproval = async () => {
     if (!activeJob) return;
-    window.alert(`Document version approval clicked for Order ID: ${activeJob.orderId || activeJob.id || 'unknown'}`);
+    setApprovalError('');
+    setVersions([]);
+    setUploadFile(null);
+    setUploadFileName('');
+    setUploadRemarks('');
+    setSelectedApprovalJob(activeJob);
+    setApprovalDialogOpen(true);
     handleActionsClose();
+    const identifier = getJobDocumentIdentifier(activeJob);
+    if (!identifier) {
+      setApprovalError('Document stage or document ID is not available for this job.');
+      return;
+    }
+    setVersionLoading(true);
+    try {
+      const versionList = await getDocumentVersionList(identifier);
+      if (Array.isArray(versionList)) {
+        setVersions(versionList);
+      } else if (versionList?.data && Array.isArray(versionList.data)) {
+        setVersions(versionList.data);
+      } else {
+        setVersions([]);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load document status', err);
+      setApprovalError(err?.message || 'Failed to load document version history');
+      setVersions([]);
+    } finally {
+      setVersionLoading(false);
+    }
+  };
+
+  const downloadCurrentDocument = async () => {
+    if (!selectedApprovalJob) return;
+    const documentName = getJobDocumentName(selectedApprovalJob);
+    const orderId = selectedApprovalJob.orderId || selectedApprovalJob.id || selectedApprovalJob.orderNo || selectedApprovalJob.code;
+    if (!orderId) {
+      setApprovalError('Unable to determine order ID for current document download.');
+      return;
+    }
+    setDownloadLoading(true);
+    try {
+      const path = `/api/v1/orders/admin/download/${encodeURIComponent(String(documentName))}/${encodeURIComponent(String(orderId))}`;
+      const res = await authorizedFetchRaw(path, { method: 'GET' });
+      const blob = await res.blob();
+      const cd = res.headers.get('Content-Disposition') || res.headers.get('content-disposition') || '';
+      let filename = documentName;
+      const m = /filename\*=UTF-8''([^;\n]+)/i.exec(cd) || /filename="?([^";\n]+)"?/i.exec(cd);
+      if (m && m[1]) {
+        try {
+          filename = decodeURIComponent(m[1]);
+        } catch (_e) {
+          filename = m[1];
+        }
+      }
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to download current document', err);
+      setApprovalError(err?.message || 'Failed to download current document');
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setUploadFile(file);
+    setUploadFileName(file?.name || '');
+  };
+
+  const handleUploadVersion = async () => {
+    const identifier = getJobDocumentIdentifier(selectedApprovalJob);
+    if (!identifier) {
+      setApprovalError('Document stage or document ID is not available for upload.');
+      return;
+    }
+    if (!uploadFile) {
+      setApprovalError('Please choose a file to upload.');
+      return;
+    }
+    setUploading(true);
+    setApprovalError('');
+    try {
+      await uploadDocumentVersionFormData({ documentStageId: identifier, file: uploadFile, remarks: uploadRemarks });
+      const versionList = await getDocumentVersionList(identifier);
+      setVersions(Array.isArray(versionList) ? versionList : Array.isArray(versionList?.data) ? versionList.data : []);
+      setUploadFile(null);
+      setUploadFileName('');
+      setUploadRemarks('');
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to upload document version', err);
+      setApprovalError(err?.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCloseApprovalDialog = () => {
+    if (uploading || downloadLoading) return;
+    setApprovalDialogOpen(false);
+    setSelectedApprovalJob(null);
+    setVersions([]);
+    setApprovalError('');
+    setUploadFile(null);
+    setUploadFileName('');
+    setUploadRemarks('');
   };
 
   const handleReinitiatePayment = () => {
@@ -290,6 +431,100 @@ export default function MyJobs() {
           </Menu>
         </Grid>
       </Grid>
+      <Dialog open={approvalDialogOpen} onClose={handleCloseApprovalDialog} fullWidth maxWidth="lg">
+        <DialogTitle>Document Version Approval</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={5}>
+              <Stack spacing={2} sx={{ py: 1 }}>
+                <Typography variant="subtitle1">Current Document</Typography>
+                <Button
+                  variant="outlined"
+                  onClick={downloadCurrentDocument}
+                  disabled={downloadLoading || !selectedApprovalJob}
+                >
+                  {downloadLoading ? 'Downloading...' : 'Download Current Document'}
+                </Button>
+                <Typography variant="subtitle1">Upload New Version</Typography>
+                <input type="file" accept="*/*" onChange={handleFileChange} />
+                {uploadFileName && (
+                  <Typography variant="body2">Selected file: {uploadFileName}</Typography>
+                )}
+                <TextField
+                  label="Remarks from customer"
+                  value={uploadRemarks}
+                  onChange={(e) => setUploadRemarks(e.target.value)}
+                  fullWidth
+                  multiline
+                  minRows={3}
+                />
+                {approvalError && (
+                  <Typography variant="body2" color="error">
+                    {approvalError}
+                  </Typography>
+                )}
+              </Stack>
+            </Grid>
+            <Grid item xs={12} md={7}>
+              <Typography variant="subtitle1">Previous Versions & Customer Remarks</Typography>
+              <Box sx={{ mt: 1, maxHeight: 460, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+                {versionLoading ? (
+                  <Box sx={{ py: 4, textAlign: 'center' }}>
+                    <CircularProgress />
+                  </Box>
+                ) : versions.length > 0 ? (
+                  <List dense>
+                    {versions.map((version) => {
+                      const versionNumber = version.versionNo ?? version.version ?? 'Unknown';
+                      const listKey = version.id ?? version.documentMasterId ?? versionNumber;
+                      return (
+                        <div key={listKey}>
+                          <ListItem alignItems="flex-start" sx={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 0.5 }}>
+                              <Box>
+                                <Typography variant="subtitle2">
+                                  {`Version ${versionNumber}`}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {version.fileName || version.documentMasterName || 'Unnamed file'}
+                                </Typography>
+                              </Box>
+                              <Chip label={version.approvalStatus || 'Unknown'} size="small" />
+                            </Box>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              {version.remarks || 'No remarks from customer.'}
+                            </Typography>
+                            {version.customerName || version.customerEmail || version.customerPhone ? (
+                              <Typography variant="caption" color="text.secondary">
+                                {version.customerName ? `Customer: ${version.customerName}` : ''}
+                                {version.customerEmail ? ` ${version.customerEmail}` : ''}
+                                {version.customerPhone ? ` ${version.customerPhone}` : ''}
+                              </Typography>
+                            ) : null}
+                          </ListItem>
+                          <Divider component="li" />
+                        </div>
+                      );
+                    })}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                    No previous versions available for this document.
+                  </Typography>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseApprovalDialog} disabled={uploading || downloadLoading}>
+            Close
+          </Button>
+          <Button variant="contained" onClick={handleUploadVersion} disabled={uploading || !uploadFile}>
+            {uploading ? 'Uploading...' : 'Upload Version'}
+          </Button>
+        </DialogActions>
+      </Dialog>
         <Dialog open={completeDialogOpen} onClose={handleCloseCompleteDialog} maxWidth="sm" fullWidth>
           <DialogTitle>Mark Job Complete</DialogTitle>
           <DialogContent>

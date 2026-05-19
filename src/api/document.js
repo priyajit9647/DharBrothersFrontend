@@ -26,6 +26,38 @@ export async function uploadDocumentVersion(payload) {
   });
 }
 
+export async function uploadDocumentVersionFormData(payload) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('Payload must be an object');
+  }
+
+  const { documentStageId, documentId, file, remarks } = payload;
+
+  if (file == null) {
+    throw new Error('file is required for multipart upload');
+  }
+
+  const formData = new FormData();
+  if (documentStageId != null) {
+    formData.append('documentStageId', String(documentStageId));
+  } else if (documentId != null) {
+    formData.append('documentId', String(documentId));
+  } else {
+    throw new Error('documentStageId or documentId is required');
+  }
+
+  if (remarks != null) {
+    formData.append('remarks', String(remarks));
+  }
+
+  formData.append('file', file);
+
+  return authorizedFetch('/api/v1/document/upload', {
+    method: 'POST',
+    body: formData
+  });
+}
+
 
 /**
  * Initialize a document version workflow
@@ -128,10 +160,22 @@ export async function getDocumentStatus(id) {
   });
 }
 
+export async function getDocumentVersionList(docStageId) {
+  if (docStageId == null || docStageId === '') {
+    throw new Error('docStageId is required');
+  }
+
+  return authorizedFetch(`/api/v1/document/vrson-list?docStageId=${encodeURIComponent(String(docStageId))}`, {
+    method: 'GET'
+  });
+}
+
 export default {
   uploadDocumentVersion,
+  uploadDocumentVersionFormData,
   initDocument,
   approveDocument,
-  getDocumentStatus
+  getDocumentStatus,
+  getDocumentVersionList
 };
 
