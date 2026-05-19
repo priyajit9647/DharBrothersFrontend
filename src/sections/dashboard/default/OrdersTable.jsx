@@ -13,10 +13,18 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 
-import { getRecentOrders } from 'api/orders';
+import { getRecentOrders, sendPaymentLink } from 'api/orders';
 
 const headCells = [
+  {
+    id: 'action',
+    align: 'center',
+    disablePadding: false,
+    label: 'Action'
+  },
   {
     id: 'order_no',
     align: 'left',
@@ -153,6 +161,7 @@ export default function OrderTable() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sending, setSending] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -208,7 +217,7 @@ export default function OrderTable() {
           <TableBody>
             {loading && (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <Stack alignItems="center" justifyContent="center" sx={{ py: 3 }}>
                     <CircularProgress size={24} />
                     <Typography color="text.secondary" sx={{ mt: 1 }}>
@@ -221,7 +230,7 @@ export default function OrderTable() {
 
             {!loading && error && (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <Typography color="error">{error}</Typography>
                 </TableCell>
               </TableRow>
@@ -229,7 +238,7 @@ export default function OrderTable() {
 
             {!loading && !error && orders.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <Typography color="text.secondary">No recent orders found.</Typography>
                 </TableCell>
               </TableRow>
@@ -240,6 +249,26 @@ export default function OrderTable() {
               orders.map((row, index) => {
                 const labelId = `recent-order-row-${index}`;
                 const statusMeta = getStatusMeta(getStatusLabel(row));
+                const orderId = getOrderId(row);
+                const isSending = Boolean(sending[orderId]);
+
+                const handleSendPaymentLink = async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setSending((s) => ({ ...s, [orderId]: true }));
+                  try {
+                    await sendPaymentLink(orderId);
+                    // Optional: show success toast/notification
+                    // eslint-disable-next-line no-console
+                    console.log(`Payment link sent for order ${orderId}`);
+                  } catch (err) {
+                    // Optional: show error toast/notification
+                    // eslint-disable-next-line no-console
+                    console.error(`Failed to send payment link for order ${orderId}:`, err);
+                  } finally {
+                    setSending((s) => ({ ...s, [orderId]: false }));
+                  }
+                };
 
                 return (
                   <TableRow
@@ -250,11 +279,23 @@ export default function OrderTable() {
                       '&:hover': { backgroundColor: 'action.hover' }
                     }}
                     tabIndex={-1}
-                    key={`${getOrderId(row)}-${index}`}
+                    key={`${orderId}-${index}`}
                   >
+                    <TableCell align="center">
+                      <Tooltip title="Send payment link to customer">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={handleSendPaymentLink}
+                          disabled={isSending}
+                        >
+                          {isSending ? <CircularProgress size={16} /> : 'Send Link'}
+                        </Button>
+                      </Tooltip>
+                    </TableCell>
                     <TableCell component="th" id={labelId} scope="row">
                       <Link color="secondary" underline="hover">
-                        {getOrderId(row)}
+                        {orderId}
                       </Link>
                     </TableCell>
                     <TableCell sx={{ maxWidth: 240, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

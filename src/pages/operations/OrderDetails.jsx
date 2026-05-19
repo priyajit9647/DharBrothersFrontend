@@ -6,12 +6,12 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
-import Link from '@mui/material/Link';
 import Chip from '@mui/material/Chip';
 import CircularProgress from '@mui/material/CircularProgress';
 import MainCard from 'components/MainCard';
 
 import { getOrderById } from 'api/orders';
+import { authorizedFetchRaw } from 'api/auth';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -34,31 +34,7 @@ function getDownloadHref(path) {
   return null;
 }
 
-function renderDocumentRow(label, name, path) {
-  if (!name && !path) return null;
-  const href = getDownloadHref(path);
-
-  return (
-    <Box key={label} sx={{ mb: 1 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-        {label}
-      </Typography>
-      {name ? (
-        href ? (
-          <Link href={href} target="_blank" rel="noreferrer" underline="hover">
-            {name}
-          </Link>
-        ) : (
-          <Typography variant="body2">{name}</Typography>
-        )
-      ) : (
-        <Typography variant="body2" color="text.secondary">
-          Not available
-        </Typography>
-      )}
-    </Box>
-  );
-}
+// renderDocumentRow removed — rendering is handled inside the component so it can call downloadDocument
 
 export default function OrderDetails() {
   const { orderId } = useParams();
@@ -66,6 +42,7 @@ export default function OrderDetails() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState({});
 
   useEffect(() => {
     let mounted = true;
@@ -96,6 +73,90 @@ export default function OrderDetails() {
   }, [orderId]);
 
   const documentData = order?.documents || {};
+
+  const downloadDocument = async (documentName, suggestedFileName, fallbackPath) => {
+    if (!order) return;
+    setDownloading((s) => ({ ...s, [documentName]: true }));
+    try {
+      const path = `/api/v1/orders/admin/download/${encodeURIComponent(String(documentName))}/${encodeURIComponent(String(orderId))}`;
+
+      const res = await authorizedFetchRaw(path, { method: 'GET' });
+
+      // prefer filename from Content-Disposition header
+      let filename = suggestedFileName || `${orderId}-${documentName}`;
+      const cd = res.headers.get('Content-Disposition') || res.headers.get('content-disposition');
+      if (cd) {
+        const m = /filename\*=?UTF-8''([^;\n\r]+)/i.exec(cd) || /filename="?([^";]+)"?/i.exec(cd);
+        if (m && m[1]) {
+          try {
+            filename = decodeURIComponent(m[1]);
+          } catch (e) {
+            filename = m[1];
+          }
+        }
+      }
+
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('[OrderDetails.downloadDocument] Error', e);
+      // Do not auto-open fallbackPath — prefer API download. Log fallback for debugging.
+      if (fallbackPath) {
+        // eslint-disable-next-line no-console
+        console.warn('[OrderDetails.downloadDocument] Fallback path available, not auto-opening:', fallbackPath);
+      }
+    } finally {
+      setDownloading((s) => ({ ...s, [documentName]: false }));
+    }
+  };
+
+  const renderDocRow = (label, name, path, docKey) => {
+    const isDownloading = Boolean(downloading[docKey]);
+    return (
+      <Box key={label} sx={{ mb: 1 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+          {label}
+        </Typography>
+        {name ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography
+              component="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                downloadDocument(docKey, name, path);
+              }}
+              variant="body2"
+              sx={{
+                p: 0,
+                m: 0,
+                bg: 'transparent',
+                border: 0,
+                color: 'primary.main',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              {name}
+            </Typography>
+            {isDownloading && <CircularProgress size={14} />}
+          </Box>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Not available
+          </Typography>
+        )}
+      </Box>
+    );
+  };
 
   return (
     <Box sx={{ py: 3, px: { xs: 2, md: 3 } }}>
@@ -232,10 +293,13 @@ export default function OrderDetails() {
             <Typography variant="h6" sx={{ mb: 2 }}>
               Documents
             </Typography>
-            {renderDocumentRow('Thesis Document', documentData.thesisDocumentName, documentData.thesisDocumentPath)}
-            {renderDocumentRow('Synopsis Document', documentData.synopsisDocumentName, documentData.synopsisDocumentPath)}
-            {renderDocumentRow('Hard Cover Design', documentData.hardCoverDesignName, documentData.hardCoverDesignPath)}
-            {renderDocumentRow('Soft Cover Design', documentData.softCoverDesignName, documentData.softCoverDesignPath)}
+
+            <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column', mb: 2 }}>
+              {renderDocRow('Thesis Document', documentData.thesisDocumentName, documentData.thesisDocumentPath, 'thesis')}
+              {renderDocRow('Synopsis Document', documentData.synopsisDocumentName, documentData.synopsisDocumentPath, 'synopsis')}
+              {renderDocRow('Hard Cover Design', documentData.hardCoverDesignName, documentData.hardCoverDesignPath, 'hardcoverdesign')}
+              {renderDocRow('Soft Cover Design', documentData.softCoverDesignName, documentData.softCoverDesignPath, 'softcoverdesign')}
+            </Box>
 
             <Divider sx={{ my: 3 }} />
 

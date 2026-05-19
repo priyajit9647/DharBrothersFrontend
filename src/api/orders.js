@@ -100,6 +100,22 @@ export async function getOrderById(orderId) {
 }
 
 /**
+ * Send payment link to customer for a given order
+ * Endpoint: /api/v1/dashboard/send-payment-link/{orderId}
+ * @param {string} orderId
+ * @returns {Promise<object>} Response from server
+ */
+export async function sendPaymentLink(orderId) {
+  if (!orderId) {
+    throw new Error('orderId is required');
+  }
+
+  return authorizedFetch(`/api/v1/dashboard/send-payment-link/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET'
+  });
+}
+
+/**
  * Fetch shipping address QR as base64 string for a given orderId
  * Endpoint: /api/v1/orders/{orderId}/shipping-address-qr/base64
  * Uses authorizedFetchRaw because the endpoint may return plain text or binary.
