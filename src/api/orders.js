@@ -1,4 +1,4 @@
-import { authorizedFetch } from './auth';
+import { authorizedFetch, authorizedFetchRaw } from './auth';
 
 // ==============================|| ORDERS API CLIENT ||============================== //
 
@@ -57,6 +57,17 @@ async function blobToBase64(blob) {
   });
 }
 
+function extractBase64String(value) {
+  if (value == null) return undefined;
+  const str = String(value).trim();
+  if (!str) return undefined;
+  const commaIndex = str.indexOf(',');
+  if (str.startsWith('data:') && commaIndex >= 0) {
+    return str.substring(commaIndex + 1);
+  }
+  return str;
+}
+
 async function parseQrBase64Response(response) {
   const contentType = String(response.headers.get('Content-Type') || '').toLowerCase();
 
@@ -64,9 +75,10 @@ async function parseQrBase64Response(response) {
     const text = await response.text();
     try {
       const parsed = JSON.parse(text);
-      return parsed?.data || parsed?.base64 || parsed;
+      const candidate = parsed?.qrCodeBase64 ?? parsed?.qrCode ?? parsed?.data ?? parsed?.base64 ?? parsed;
+      return extractBase64String(candidate);
     } catch {
-      return text;
+      return extractBase64String(text);
     }
   }
 
