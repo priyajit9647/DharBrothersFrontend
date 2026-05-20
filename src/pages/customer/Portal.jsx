@@ -1,24 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
-import Divider from '@mui/material/Divider';
-import TextField from '@mui/material/TextField';
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
 import TableBody from '@mui/material/TableBody';
 import TableRow from '@mui/material/TableRow';
 import TableCell from '@mui/material/TableCell';
-import Avatar from '@mui/material/Avatar';
 
 import MainCard from 'components/MainCard';
-
-import HistoryOutlined from '@ant-design/icons/HistoryOutlined';
-import EnvironmentOutlined from '@ant-design/icons/EnvironmentOutlined';
-import { alpha } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
+import CircularProgress from '@mui/material/CircularProgress';
+import { listCustomerOrders } from 'api/customerPortal';
 
 function StatusChip({ label }) {
   const key = String(label || '').toLowerCase();
@@ -40,41 +36,43 @@ function StatusChip({ label }) {
 }
 
 export default function CustomerPortal() {
-  // UI-only state for small interactions (do not change business logic)
-  const [remarks, setRemarks] = useState('');
-  const [remarksError, setRemarksError] = useState(false);
+  const theme = useTheme();
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState(null);
 
   const orderRef = 'ORD-2026-00123';
   const status = 'Ready for Approval';
 
-  const overview = { items: 3, pages: 24, size: 'A4', notes: 'Final document ready for review — duplex color printing.' };
+  useEffect(() => {
+    let mounted = true;
+    setOrdersLoading(true);
 
-  const versions = [
-    { version: 'v1', date: '2026-05-10', status: 'approved' },
-    { version: 'v2', date: '2026-05-12', status: 'pending' },
-    { version: 'v3', date: '2026-05-13', status: 'review' }
-  ];
+    (async () => {
+      try {
+        const resp = await listCustomerOrders();
+        const data = Array.isArray(resp) ? resp : resp?.data || resp?.orders || [];
 
-  const delivery = { name: 'John Doe', address: '123 Main St, Suite 4', city: 'Metropolis', pincode: '123456' };
+        // Move the first 'Order-Created' to the top
+        const idx = (data || []).findIndex((o) => o?.currentStage === 'Order-Created');
+        const ordered = Array.from(data || []);
+        if (idx > -1) {
+          const [item] = ordered.splice(idx, 1);
+          ordered.unshift(item);
+        }
 
-  const payments = [
-    { id: 'PAY-001', date: '2026-05-01', amount: 100.0, status: 'Paid' },
-    { id: 'PAY-002', date: '2026-05-12', amount: 50.0, status: 'Pending' }
-  ];
+        if (mounted) setOrders(ordered);
+      } catch (err) {
+        if (mounted) setOrdersError(err?.message || 'Unable to load orders');
+      } finally {
+        if (mounted) setOrdersLoading(false);
+      }
+    })();
 
-  const handleApprove = () => {
-    // UI-only: visual confirmation; business flows unchanged
-    console.log('Approve clicked');
-  };
-
-  const handleDisapprove = () => {
-    if (!remarks.trim()) {
-      setRemarksError(true);
-      return;
-    }
-    setRemarksError(false);
-    console.log('Disapprove clicked with remarks:', remarks);
-  };
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <Box sx={{ backgroundColor: 'grey.100', minHeight: '100vh', px: { xs: 2, sm: 4 }, py: 6 }}>
@@ -103,138 +101,75 @@ export default function CustomerPortal() {
           </MainCard>
         </Grid>
 
-        {/* Sequence: Order Overview (full width) */}
+        {/* Order List (full width) */}
         <Grid item xs={12}>
           <MainCard
-            title="Order Overview"
+            title="Order List"
             contentSX={{ p: 0 }}
-            sx={{
-              boxShadow: 2,
-              borderRadius: 3,
-              transition: 'all 180ms ease',
-              '&:hover': { boxShadow: 6, transform: 'translateY(-3px)' }
-            }}
+            sx={{ boxShadow: 2, borderRadius: 3, transition: 'all 120ms ease' }}
           >
-            <Grid container>
-              <Grid item xs={12} md={7}>
-                <Box sx={{ p: 2 }}>
-                  <Typography variant="body1" sx={{ fontWeight: 600, mb: 1 }}>{overview.notes}</Typography>
+            <Box sx={{ p: 2 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>Your Orders</Typography>
 
-                  <Grid container spacing={1}>
-                    <Grid item xs={4} sm={4}>
-                      <Box sx={{ bgcolor: 'grey.50', p: 1.25, borderRadius: 1 }}>
-                        <Typography variant="caption" color="text.secondary">Items</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>{overview.items}</Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={4} sm={4}>
-                      <Box sx={{ bgcolor: 'grey.50', p: 1.25, borderRadius: 1 }}>
-                        <Typography variant="caption" color="text.secondary">Pages</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>{overview.pages}</Typography>
-                      </Box>
-                    </Grid>
-                    <Grid item xs={4} sm={4}>
-                      <Box sx={{ bgcolor: 'grey.50', p: 1.25, borderRadius: 1 }}>
-                        <Typography variant="caption" color="text.secondary">Size</Typography>
-                        <Typography variant="h6" sx={{ fontWeight: 700 }}>{overview.size}</Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
+              {ordersLoading ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                  <CircularProgress />
                 </Box>
-              </Grid>
-
-              <Grid item xs={12} md={5}>
+              ) : ordersError ? (
                 <Box sx={{ p: 2 }}>
-                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>Document Version History</Typography>
-
-                  <Box sx={{ position: 'relative', pl: 3, mb: 2, '::before': { content: '""', position: 'absolute', left: 14, top: 12, bottom: 12, width: 4, bgcolor: (theme) => alpha(theme.palette.primary.main, 0.12) } }}>
-                    {versions.map((v, idx) => (
-                      <Box key={v.version} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', mb: 2 }}>
-                        <Avatar sx={{ width: 40, height: 40, bgcolor: idx === versions.length - 1 ? 'primary.main' : 'grey.300' }}>
-                          <HistoryOutlined style={{ color: idx === versions.length - 1 ? '#fff' : undefined }} />
-                        </Avatar>
-                        <Box>
-                          <Typography sx={{ fontWeight: 700 }}>{v.version} • {v.date}</Typography>
-                          <Box sx={{ mt: 0.5 }}><StatusChip label={v.status} /></Box>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-
-                  <Divider sx={{ my: 1 }} />
-
-                  <Typography variant="subtitle2" sx={{ mt: 1, mb: 1, fontWeight: 700 }}>Payment History & Pending Dues</Typography>
-                  <Table size="small">
-                    <TableHead>
+                  <Typography color="error">{ordersError}</Typography>
+                </Box>
+              ) : (
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Order ID</TableCell>
+                      <TableCell>Stage</TableCell>
+                      <TableCell>Expected Delivery</TableCell>
+                      <TableCell>Shipping Address</TableCell>
+                      <TableCell>Branch</TableCell>
+                      <TableCell align="right">Pages</TableCell>
+                      <TableCell align="center">Payment</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {orders.length === 0 ? (
                       <TableRow>
-                        <TableCell>Payment ID</TableCell>
-                        <TableCell>Date</TableCell>
-                        <TableCell align="right">Amount</TableCell>
-                        <TableCell align="center">Status</TableCell>
+                        <TableCell colSpan={7} align="center">No orders found</TableCell>
                       </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {payments.map((p) => (
-                        <TableRow key={p.id} sx={{ bgcolor: p.status === 'Pending' ? (theme) => alpha(theme.palette.warning.main, 0.12) : 'inherit' }}>
-                          <TableCell>{p.id}</TableCell>
-                          <TableCell>{p.date}</TableCell>
-                          <TableCell align="right">{p.amount.toFixed(2)}</TableCell>
-                          <TableCell align="center"><Chip label={p.status} color={p.status === 'Paid' ? 'success' : 'warning'} size="small" /></TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                    ) : (
+                      orders.map((o, idx) => {
+                        const stage = o.currentStage;
+                        const sx =
+                          stage === 'Order-Created'
+                            ? { bgcolor: (theme) => alpha(theme.palette.success.main, 0.12) }
+                            : stage === 'Order-Complete'
+                            ? { bgcolor: 'grey.100', color: 'text.secondary' }
+                            : stage === 'Ready-To-Dispatch'
+                            ? { bgcolor: (theme) => alpha(theme.palette.info.main, 0.12) }
+                            : {};
 
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                    <Button variant="contained" color="primary">Make a Payment</Button>
-                  </Box>
-                </Box>
-              </Grid>
-            </Grid>
-          </MainCard>
-        </Grid>
-
-        {/* Sequence: Approval Actions (full width) */}
-        <Grid item xs={12}>
-          <MainCard
-            title="Approval Actions"
-            contentSX={{ p: 2 }}
-            sx={{ boxShadow: 2, borderRadius: 3, transition: 'all 180ms ease', '&:hover': { boxShadow: 6, transform: 'translateY(-3px)' } }}
-          >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Review the final document and take action.</Typography>
-            <Box sx={{ display: 'flex', gap: 1, mb: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
-              <Button variant="contained" color="success" fullWidth sx={{ fontWeight: 700 }} onClick={handleApprove}>Approve Final Document</Button>
-              <Button variant="outlined" color="warning" fullWidth onClick={handleDisapprove}>Disapprove / Changes Required</Button>
-            </Box>
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              placeholder="Optional remarks or changes required..."
-              value={remarks}
-              onChange={(e) => { setRemarks(e.target.value); if (remarksError) setRemarksError(false); }}
-              error={remarksError}
-              helperText={remarksError ? 'Please provide remarks when disapproving' : ''}
-            />
-          </MainCard>
-        </Grid>
-
-        {/* Sequence: Delivery Address (full width) */}
-        <Grid item xs={12}>
-          <MainCard title="Delivery Address" contentSX={{ p: 2 }} sx={{ mt: 2, boxShadow: 2, borderRadius: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-              <EnvironmentOutlined style={{ fontSize: 28, color: '#1976d2' }} />
-              <Box>
-                <Typography sx={{ fontWeight: 700 }}>{delivery.name}</Typography>
-                <Typography variant="body2" color="text.secondary">{delivery.address}</Typography>
-                <Typography variant="body2" color="text.secondary">{delivery.city} • {delivery.pincode}</Typography>
-              </Box>
-            </Box>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-              <Button variant="contained">Submit Address Change</Button>
+                        return (
+                          <TableRow key={o.orderId || idx} sx={sx}>
+                            <TableCell>{o.orderId}</TableCell>
+                            <TableCell><StatusChip label={o.currentStage} /></TableCell>
+                            <TableCell>{o.expectedDeliveryDate}</TableCell>
+                            <TableCell>{o.shippingAddress}</TableCell>
+                            <TableCell>{o.branchName}</TableCell>
+                            <TableCell align="right">{o.totalPages ?? '-'}</TableCell>
+                            <TableCell align="center"><Chip label={o.paymentStatus || '-'} size="small" /></TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              )}
             </Box>
           </MainCard>
         </Grid>
+
+        {/* Removed additional sections; only Order List is shown per request */}
       </Grid>
       </Box>
     </Box>
