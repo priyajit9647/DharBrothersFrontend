@@ -15,10 +15,13 @@ import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 
 // project imports
 import MainCard from 'components/MainCard';
 import { getCustomerPortalSession } from 'utils/authTokens';
+import { getUserProfile } from 'api/auth';
 import { fetchCustomerPortalData, updateCustomerDeliveryAddress, updateCustomerPortalOrderDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders, listCustomerOrders, getCustomerOrder, changeOrderDeliveryAddress, changeOrderPickupBranch, reInitiateCustomerPayment, listWebBranches } from 'api/customerPortal';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -64,6 +67,9 @@ export default function CustomerPortal() {
   const [orders, setOrders] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [feedbackText, setFeedbackText] = useState('');
+  const [isCustomer, setIsCustomer] = useState(false);
+  const [activeTab, setActiveTab] = useState('order-status');
+  const [profileLoading, setProfileLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [orderListLoading, setOrderListLoading] = useState(false);
@@ -141,6 +147,30 @@ export default function CustomerPortal() {
       mounted = false;
     };
   }, [portalSession]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const profile = await getUserProfile();
+        if (!mounted) return;
+        if (profile && String(profile.roleName || profile.role || profile.roles || '').toUpperCase().includes('CUSTOMER')) {
+          setIsCustomer(true);
+        } else {
+          setIsCustomer(false);
+        }
+      } catch (e) {
+        // not logged-in as admin/customer; hide customer-only menu
+        if (mounted) setIsCustomer(false);
+      } finally {
+        if (mounted) setProfileLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Fetch simple list of orders (customer-facing) when portal session present
   useEffect(() => {
@@ -521,12 +551,34 @@ export default function CustomerPortal() {
 
       {/* ===================== MAIN CONTENT AREA ===================== */}
       <Box sx={{ width: '100%', mx: 'auto', px: { xs: 2, md: 4 } }}>
+        {isCustomer && !profileLoading && (
+          <Box sx={{ mb: 2, backgroundColor: 'white', borderRadius: 1, p: 1 }}>
+            <Tabs
+              value={activeTab}
+              onChange={(e, v) => {
+                setActiveTab(v);
+                setTimeout(() => {
+                  const el = document.getElementById(v);
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 120);
+              }}
+              aria-label="Customer portal menu"
+              variant="scrollable"
+              scrollButtons="auto"
+            >
+              <Tab label="Order Status" value="order-status" />
+              <Tab label="Order History" value="order-history" />
+              <Tab label="Payment History" value="payment-history" />
+              <Tab label="Feedback" value="feedback" />
+            </Tabs>
+          </Box>
+        )}
         <Grid container spacing={{ xs: 2, md: 3 }}>
           {/* LEFT SECTION: Your Orders + Order Overview */}
           <Grid item xs={12} lg={7}>
             <Stack spacing={{ xs: 2, md: 3 }}>
               {/* ============ YOUR ORDERS ============ */}
-              <Box
+              <Box id="order-status"
                 sx={{
                   backgroundColor: 'white',
                   borderRadius: 2,
@@ -582,7 +634,7 @@ export default function CustomerPortal() {
               </Box>
 
               {/* ============ ORDER OVERVIEW ============ */}
-              <Box
+              <Box id="order-history"
                 sx={{
                   backgroundColor: 'white',
                   borderRadius: 2,
@@ -911,7 +963,7 @@ export default function CustomerPortal() {
               </Box>
 
               {/* ============ PENDING DUES ============ */}
-              <Box
+              <Box id="payment-history"
                 sx={{
                   backgroundColor: 'white',
                   borderRadius: 2,
@@ -1006,6 +1058,25 @@ export default function CustomerPortal() {
                     No pending dues
                   </Typography>
                 )}
+              </Box>
+
+              {/* ============ FEEDBACK ============ */}
+              <Box id="feedback"
+                sx={{
+                  backgroundColor: 'white',
+                  borderRadius: 2,
+                  p: { xs: 2, md: 2.5 },
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                }}
+              >
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1.5, color: '#1a1a1a' }}>
+                  Feedback
+                </Typography>
+                <TextField fullWidth multiline minRows={3} placeholder="Write your feedback here" value={feedbackText} onChange={(e) => setFeedbackText(e.target.value)} />
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button variant="contained" onClick={handleSubmitFeedback} disabled={busy || !feedbackText.trim()}>Submit Feedback</Button>
+                  <Button variant="outlined" onClick={() => setFeedbackText('')}>Clear</Button>
+                </Stack>
               </Box>
             </Stack>
           </Grid>

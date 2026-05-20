@@ -182,7 +182,7 @@ export default function CustomerPortalEntry() {
                     <Grid item xs={12}>
                       <TextField
                         fullWidth
-                        label="Registered Email or Mobile"
+                        label="Registered Mobile"
                         helperText="We will send an OTP to this contact for verification."
                         value={contact}
                         onChange={(event) => setContact(event.target.value)}

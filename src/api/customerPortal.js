@@ -36,11 +36,23 @@ export async function verifyCustomerOtp({ orderReference, contact, otp }) {
   });
 }
 
-export async function fetchCustomerPortalData({ portalToken }) {
-  return authorizedCustomerFetch('/api/v1/customer-portal/details', {
-    method: 'POST',
-    body: JSON.stringify({ portalToken })
-  });
+export async function fetchCustomerPortalData({ portalToken } = {}) {
+  // Prefer the standard profile endpoint. If that fails and a portalToken is
+  // provided (one-time portal session), fall back to the legacy portal details
+  // endpoint so existing OTP-based flows continue to work.
+  try {
+    return await authorizedCustomerFetch('/api/v1/user/me/profile', {
+      method: 'GET'
+    });
+  } catch (err) {
+    if (portalToken) {
+      return authorizedCustomerFetch('/api/v1/customer-portal/details', {
+        method: 'POST',
+        body: JSON.stringify({ portalToken })
+      });
+    }
+    throw err;
+  }
 }
 
 export async function updateCustomerDeliveryAddress({ portalToken, address }) {

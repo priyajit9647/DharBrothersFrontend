@@ -82,8 +82,6 @@ setItemsData({
   items: normalized,
   totalOrders: Number(resp?.totalOrders || 0)
 });
-
-      setItemsData(withMeta);
     } catch (e) {
       setError(e?.message || String(e));
     } finally {

@@ -14,6 +14,7 @@ const SelectCoverPage = Loadable(lazy(() => import('pages/extra-pages/SelectCove
 // customer portal (public, OTP-based)
 const CustomerPortalEntryPage = Loadable(lazy(() => import('pages/customer/CustomerPortalEntry')));
 const CustomerPortalPage = Loadable(lazy(() => import('pages/customer/CustomerPortal')));
+const OrderDetails = Loadable(lazy(() => import('pages/operations/OrderDetails')));
 
 // ==============================|| AUTH ROUTING ||============================== //
 
@@ -51,6 +52,11 @@ const LoginRoutes = {
     {
       path: 'customer/portal',
       element: <CustomerPortalPage />
+    }
+    ,
+    {
+      path: 'customer/orders/view/:orderId',
+      element: <OrderDetails />
     }
   ]
 };

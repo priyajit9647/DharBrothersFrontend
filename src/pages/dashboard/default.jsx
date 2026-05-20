@@ -25,7 +25,6 @@ import UniqueVisitorCard from 'sections/dashboard/default/UniqueVisitorCard';
 import OrdersTable from 'sections/dashboard/default/OrdersTable';
 import { getDashboardKpis } from 'api/dashboard';
 import PlacementTypeAnalytics from 'components/cards/PlacementTypeAnalytics';
-import JobInHandCard from 'components/cards/JobInHandCard';
 import { useAuth } from 'hooks/useAuth';
 import { formatLabel } from 'utils/formatLabel';
 import { requestPermissionAndRegister, listenForMessages } from 'firebase/messaging';
@@ -46,7 +45,6 @@ import avatar4 from 'assets/images/users/avatar-4.png';
 
 export default function DashboardDefault() {
   const [orderMenuAnchor, setOrderMenuAnchor] = useState(null);
-  const [analyticsMenuAnchor, setAnalyticsMenuAnchor] = useState(null);
   const [kpiCards, setKpiCards] = useState([]);
   const [kpiLoading, setKpiLoading] = useState(true);
   const [kpiError, setKpiError] = useState('');
@@ -208,13 +206,6 @@ export default function DashboardDefault() {
     setOrderMenuAnchor(null);
   };
 
-  const handleAnalyticsMenuClick = (event) => {
-    setAnalyticsMenuAnchor(event.currentTarget);
-  };
-  const handleAnalyticsMenuClose = () => {
-    setAnalyticsMenuAnchor(null);
-  };
-
   return (
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
       {/* row 1 */}
@@ -266,7 +257,7 @@ export default function DashboardDefault() {
         </div>
       </Grid>
       {/* row 3 */}
-      <Grid size={{ xs: 12, md: 7, lg: 8 }}>
+      <Grid size={{ xs: 12, md: 12, lg: 12 }}>
         <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
           <Grid>
             <Typography variant="h5">Recent Orders</Typography>
@@ -294,52 +285,8 @@ export default function DashboardDefault() {
           <OrdersTable />
         </MainCard>
       </Grid>
-      <Grid size={{ xs: 12, md: 5, lg: 4 }}>
-        <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Grid>
-            <Typography variant="h5">Analytics Report</Typography>
-          </Grid>
-          <Grid>
-            <IconButton onClick={handleAnalyticsMenuClick}>
-              <EllipsisOutlined style={{ fontSize: '1.25rem' }} />
-            </IconButton>
-            <Menu
-              id="fade-menu"
-              slotProps={{ list: { 'aria-labelledby': 'fade-button' } }}
-              anchorEl={analyticsMenuAnchor}
-              open={Boolean(analyticsMenuAnchor)}
-              onClose={handleAnalyticsMenuClose}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-            >
-              <MenuItem onClick={handleAnalyticsMenuClose}>Weekly</MenuItem>
-              <MenuItem onClick={handleAnalyticsMenuClose}>Monthly</MenuItem>
-              <MenuItem onClick={handleAnalyticsMenuClose}>Yearly</MenuItem>
-            </Menu>
-          </Grid>
-        </Grid>
-        <MainCard sx={{ mt: 2 }} content={false}>
-          <List sx={{ p: 0, '& .MuiListItemButton-root': { py: 2 } }}>
-            <ListItemButton divider>
-              <ListItemText primary="Company Finance Growth" />
-              <Typography variant="h5">+45.14%</Typography>
-            </ListItemButton>
-            <ListItemButton divider>
-              <ListItemText primary="Company Expenses Ratio" />
-              <Typography variant="h5">0.58%</Typography>
-            </ListItemButton>
-            <ListItemButton>
-              <ListItemText primary="Business Risk Cases" />
-              <Typography variant="h5">Low</Typography>
-            </ListItemButton>
-          </List>
-          <ReportAreaChart />
-        </MainCard>
-      </Grid>
-      {/* Job in Hand analytics card */}
-      <Grid size={{ xs: 12 }}>
-        <JobInHandCard />
-      </Grid>
+      {/* Analytics Report removed */}
+      {/* Job in Hand analytics card removed */}
       {/* row 4 (Help & Support Chat removed) */}
     </Grid>
   );

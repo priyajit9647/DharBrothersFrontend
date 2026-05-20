@@ -72,8 +72,9 @@ export default function WhatsappNotifications() {
               setPage(0);
             }}
             loading={loading}
-            hideCreateButton
-            hideActions
+            showCreateButton={false}
+            showActiveColumn={false}
+            showActionsColumn={false}
           />
         </Grid>
       </Grid>

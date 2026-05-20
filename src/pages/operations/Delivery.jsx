@@ -24,7 +24,6 @@ import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 
 import MainCard from 'components/MainCard';
 
-import { getProcessStages } from 'api/processStage';
 import { getOrdersByStatus } from 'api/orders';
 import ShippingQrModal from 'components/ShippingQrModal';
 
@@ -324,47 +323,28 @@ export default function DeliveryDispatch() {
       setLoading(true);
       setError(null);
       try {
-        const ps = await getProcessStages();
-        const excluded = new Set(['document-modifi', 'rfrfrf']);
-        const stageNames = Array.isArray(ps)
-          ? ps
-              .map((s) => (typeof s === 'string' ? s : (s.stageName ?? s.name)))
-              .filter(Boolean)
-              .map((n) => String(n).trim())
-              .filter((n) => !excluded.has(n.toLowerCase()))
-          : [];
+        // Only load orders for the explicit Ready-To-Dispatch stage
+        const stageName = 'Ready-To-Dispatch';
+        try {
+          const data = await getOrdersByStatus(stageName);
+          const items = Array.isArray(data) ? data : (data?.items ?? data?.data ?? []);
+          const rows = items.map((o) => ({
+            orderId: o.orderId ?? o.orderNo ?? o.id ?? o.code ?? '',
+            customerName: o.customer?.name ?? (`${o.firstName ?? ''} ${o.lastName ?? ''}`.trim() || o.customerName || '—'),
+            customerContact: o.customerPhone ?? o.customer?.phone ?? o.customerContact ?? '',
+            customerEmail: o.customerEmail ?? o.customer?.email ?? o.email ?? '',
+            stage: o.orderStageName ?? o.stageName ?? o.stage ?? stageName,
+            amount: Number(o.totalAmount ?? o.amount ?? o.grandTotal ?? 0),
+            payment: o.paymentStatus ?? o.payment ?? '—'
+          }));
 
-        const results = await Promise.all(
-          stageNames.map(async (stageName) => {
-            try {
-              const data = await getOrdersByStatus(stageName);
-              const items = Array.isArray(data) ? data : (data?.items ?? data?.data ?? []);
-              console.log('[Delivery.load] Stage:', stageName, 'orders count:', items.length);
-              const rows = items.map((o) => ({
-                orderId: o.orderId ?? o.orderNo ?? o.id ?? o.code ?? '',
-                customerName: o.customer?.name ?? (`${o.firstName ?? ''} ${o.lastName ?? ''}`.trim() || o.customerName || '—'),
-                customerContact: o.customerPhone ?? o.customer?.phone ?? o.customerContact ?? '',
-                customerEmail: o.customerEmail ?? o.customer?.email ?? o.email ?? '',
-                stage: o.orderStageName ?? o.stageName ?? o.stage ?? stageName,
-                amount: Number(o.totalAmount ?? o.amount ?? o.grandTotal ?? 0),
-                payment: o.paymentStatus ?? o.payment ?? '—'
-              }));
-              console.log(
-                '[Delivery.load] Stage:',
-                stageName,
-                'mapped rows:',
-                rows.map((r) => ({ id: r.orderId, stage: r.stage }))
-              );
-              return { name: stageName, rows };
-            } catch (e) {
-              console.error('[Delivery.load] Error loading stage:', stageName, e);
-              return { name: stageName, rows: [] };
-            }
-          })
-        );
-
-        if (!mounted) return;
-        setStages(results);
+          if (!mounted) return;
+          setStages([{ name: stageName, rows }]);
+        } catch (e) {
+          console.error('[Delivery.load] Error loading Ready-To-Dispatch:', e);
+          if (!mounted) return;
+          setStages([]);
+        }
       } catch (e) {
         if (!mounted) return;
         setError(e.message || 'Failed to load orders');
