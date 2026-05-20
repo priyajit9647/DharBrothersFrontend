@@ -7,11 +7,13 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
 import Chip from '@mui/material/Chip';
+import Rating from '@mui/material/Rating';
 import CircularProgress from '@mui/material/CircularProgress';
 import MainCard from 'components/MainCard';
 
 import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
+import { getCustomerFeedbackByOrderId } from 'api/customerPortal';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -43,6 +45,9 @@ export default function OrderDetails() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState({});
+  const [feedback, setFeedback] = useState(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -67,12 +72,29 @@ export default function OrderDetails() {
 
     loadOrder();
 
+    const loadFeedback = async () => {
+      if (!orderId) return;
+      setFeedbackLoading(true);
+      setFeedbackError(null);
+      try {
+        const response = await getCustomerFeedbackByOrderId(orderId);
+        if (mounted) setFeedback(response?.feedbacks || null);
+      } catch (err) {
+        if (mounted) setFeedbackError(err?.message || 'Unable to load feedback.');
+      } finally {
+        if (mounted) setFeedbackLoading(false);
+      }
+    };
+
+    loadFeedback();
+
     return () => {
       mounted = false;
     };
   }, [orderId]);
 
   const documentData = order?.documents || {};
+  const isFeedbackSubmitted = feedback && feedback.length > 0;
 
   const downloadDocument = async (documentName, suggestedFileName, fallbackPath) => {
     if (!order) return;
@@ -167,6 +189,8 @@ export default function OrderDetails() {
             View admin order details for order ID {orderId}
           </Typography>
         </Box>
+        <Button variant="contained" color="success" onClick={() => console.log('Order Received clicked')}>Order Received</Button>
+        <Button variant="contained" color="primary" onClick={() => navigate(`/customer/orders/feedback/${orderId}`)} disabled={isFeedbackSubmitted}>Feedback</Button>
         <Button variant="contained" onClick={() => navigate(-1)}>
           Back
         </Button>
@@ -328,6 +352,32 @@ export default function OrderDetails() {
             </Grid>
 
             <Divider sx={{ my: 3 }} />
+
+            {feedbackLoading ? (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : feedbackError ? (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <Typography color="error">{feedbackError}</Typography>
+              </Box>
+            ) : isFeedbackSubmitted ? (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Customer Feedback
+                </Typography>
+                <Grid container spacing={2}>
+                  {feedback.map((f) => (
+                    <Grid item xs={12} key={f.questionNo}>
+                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                        {f.question}
+                      </Typography>
+                      <Rating name={`feedback-display-${f.questionNo}`} value={f.rating} readOnly precision={1} max={5} />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            ) : null}
 
             <Typography variant="h6" sx={{ mb: 2 }}>
               Bindings

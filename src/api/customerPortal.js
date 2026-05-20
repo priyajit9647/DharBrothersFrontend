@@ -125,6 +125,37 @@ export async function getCustomerFeedback(customerId) {
 }
 
 /**
+ * Get customer feedback by orderId
+ * Endpoint: GET /api/customer/feedback/order/{orderId}
+ * Response example:
+ * {
+ *   "orderId": "string",
+ *   "feedbacks": [{ "questionNo": 1073741824, "question": "string", "rating": 1073741824 }]
+ * }
+ */
+export async function getCustomerFeedbackByOrderId(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedCustomerFetch(`/api/customer/feedback/order/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET'
+  });
+}
+
+/**
+ * Get customer feedback questions
+ * Endpoint: GET /api/customer/feedback/questions
+ * Response example:
+ * {
+ *   "1": "How satisfied are you with the binding quality?",
+ *   "2": "How would you rate the cover finishing and print quality?"
+ * }
+ */
+export async function getCustomerFeedbackQuestions() {
+  return authorizedCustomerFetch('/api/customer/feedback/questions', {
+    method: 'GET'
+  });
+}
+
+/**
  * Create customer feedback for an order
  * Endpoint: POST /api/customer/feedback/create/order/{orderId}
  * Body: { customerId: number, feedbacks: [{ questionNo: number, rating: number }] }
