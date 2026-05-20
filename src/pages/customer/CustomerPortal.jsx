@@ -19,7 +19,7 @@ import Alert from '@mui/material/Alert';
 // project imports
 import MainCard from 'components/MainCard';
 import { getCustomerPortalSession } from 'utils/authTokens';
-import { fetchCustomerPortalData, updateCustomerDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders, listCustomerOrders, getCustomerOrder, changeOrderDeliveryAddress, changeOrderPickupBranch, reInitiateCustomerPayment, listWebBranches } from 'api/customerPortal';
+import { fetchCustomerPortalData, updateCustomerDeliveryAddress, updateCustomerPortalOrderDeliveryAddress, initiateCustomerPayment, submitDocumentApproval, submitCustomerFeedback, fetchCustomerNotifications, fetchCustomerOrders, listCustomerOrders, getCustomerOrder, changeOrderDeliveryAddress, changeOrderPickupBranch, reInitiateCustomerPayment, listWebBranches } from 'api/customerPortal';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -81,6 +81,8 @@ export default function CustomerPortal() {
   const [addressDraft, setAddressDraft] = useState(() => {
     const sa = mockPortalData.deliveryAddress || {};
     return {
+      shippingName: sa.name || '',
+      shippingPhone: sa.phone || '',
       shippingAddress1: sa.line1 || sa.address || '',
       shippingAddress2: sa.line2 || '',
       shippingCity: sa.city || '',
@@ -91,6 +93,7 @@ export default function CustomerPortal() {
   });
 
   const [addressMessage, setAddressMessage] = useState('');
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [approvalMessage, setApprovalMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -218,14 +221,44 @@ export default function CustomerPortal() {
     setAddressMessage('');
     const token = portalSession?.portalToken;
     try {
-      if (selectedOrder) {
-        const id = selectedOrder.orderId || selectedOrder.orderReference || selectedOrder.ref;
-        await changeOrderDeliveryAddress(id, { ...addressDraft });
+      // Determine order id if available
+      const potentialId = (selectedOrder && (selectedOrder.orderId || selectedOrder.orderReference || selectedOrder.ref)) || portalSession?.orderId || portalSession?.orderReference || portalData?.orderId || portalData?.orderReference;
+      const payloadForPut = {
+        fullName: addressDraft.shippingName || addressDraft.shippingFullName || addressDraft.name || '',
+        phone: addressDraft.shippingPhone || addressDraft.phone || '',
+        addressLine1: addressDraft.shippingAddress1,
+        addressLine2: addressDraft.shippingAddress2,
+        city: addressDraft.shippingCity,
+        state: addressDraft.shippingState,
+        pincode: addressDraft.shippingPincode
+      };
+
+      if (token && potentialId) {
+        // Use portal PUT endpoint
+        await updateCustomerPortalOrderDeliveryAddress(potentialId, payloadForPut);
+        // Refresh portal data and orders so UI shows updated address
+        try {
+          const refreshedPortal = await fetchCustomerPortalData({ portalToken: token });
+          setPortalData(refreshedPortal || {});
+          setOrders(refreshedPortal?.orders || refreshedPortal?.oldOrders || []);
+        } catch (e) {
+          // ignore
+        }
+        try {
+          const refreshedOrder = await getCustomerOrder(potentialId);
+          if (refreshedOrder) setSelectedOrder(refreshedOrder);
+        } catch (e) {
+          // ignore
+        }
         setAddressMessage('Your delivery address change request has been submitted for this order.');
         setSnackbarSeverity('success');
         setSnackbarMessage('Address change submitted');
         setSnackbarOpen(true);
-        // refresh selected order and orders list
+        setAddressDialogOpen(false);
+      } else if (selectedOrder) {
+        // Fallback: call existing change order endpoint
+        const id = selectedOrder.orderId || selectedOrder.orderReference || selectedOrder.ref;
+        await changeOrderDeliveryAddress(id, { ...addressDraft });
         const refreshed = await getCustomerOrder(id);
         setSelectedOrder(refreshed);
         try {
@@ -234,14 +267,20 @@ export default function CustomerPortal() {
         } catch (e) {
           // ignore
         }
+        setAddressMessage('Your delivery address change request has been submitted for this order.');
+        setSnackbarSeverity('success');
+        setSnackbarMessage('Address change submitted');
+        setSnackbarOpen(true);
+        setAddressDialogOpen(false);
       } else if (token) {
-        // fallback for portal-level address update (server expects a single string)
+        // legacy portal-level endpoint expects a single string
         const joined = [addressDraft.shippingAddress1, addressDraft.shippingAddress2, `${addressDraft.shippingCity} ${addressDraft.shippingState || ''} ${addressDraft.shippingPincode || ''}`].filter(Boolean).join('\n');
         await updateCustomerDeliveryAddress({ portalToken: token, address: joined });
         setAddressMessage('Your delivery address change request has been submitted for this order.');
         setSnackbarSeverity('success');
         setSnackbarMessage('Address change submitted');
         setSnackbarOpen(true);
+        setAddressDialogOpen(false);
       } else {
         setAddressMessage('Address change requested. Please contact support to complete this change.');
       }
@@ -631,7 +670,17 @@ export default function CustomerPortal() {
                           py: 1
                         }}
                         onClick={() => {
-                          setAddressDraft(selectedOrder.shippingAddress || '');
+                          setAddressDraft((prev) => ({
+                            shippingName: (selectedOrder && (selectedOrder.shippingName || selectedOrder.name)) || prev.shippingName || '',
+                            shippingPhone: (selectedOrder && (selectedOrder.shippingPhone || selectedOrder.phone)) || prev.shippingPhone || '',
+                            shippingAddress1: selectedOrder?.shippingAddress1 || selectedOrder?.shippingAddress || '',
+                            shippingAddress2: selectedOrder?.shippingAddress2 || '',
+                            shippingCity: selectedOrder?.shippingCity || '',
+                            shippingState: selectedOrder?.shippingState || '',
+                            shippingCountry: selectedOrder?.shippingCountry || '',
+                            shippingPincode: selectedOrder?.shippingPincode || selectedOrder?.pincode || ''
+                          }));
+                          setAddressDialogOpen(true);
                         }}
                       >
                         Edit Shipping Address
@@ -740,7 +789,20 @@ export default function CustomerPortal() {
                       backgroundColor: 'rgba(102, 126, 234, 0.08)'
                     }
                   }}
-                  onClick={() => setAddressDraft(portalData.deliveryAddress ? JSON.stringify(portalData.deliveryAddress) : '')}
+                  onClick={() => {
+                    const da = portalData.deliveryAddress || {};
+                    setAddressDraft({
+                      shippingName: da.name || '',
+                      shippingPhone: da.phone || '',
+                      shippingAddress1: da.line1 || da.address || '',
+                      shippingAddress2: da.line2 || '',
+                      shippingCity: da.city || '',
+                      shippingState: da.state || '',
+                      shippingCountry: da.country || '',
+                      shippingPincode: da.pincode || ''
+                    });
+                    setAddressDialogOpen(true);
+                  }}
                 >
                   Update Address
                 </Button>
@@ -951,6 +1013,27 @@ export default function CustomerPortal() {
       </Box>
 
       {/* ===================== DIALOGS & SNACKBARS ===================== */}
+      <Dialog open={addressDialogOpen} onClose={() => setAddressDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Delivery Address</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField label="Full name" fullWidth value={addressDraft.shippingName || ''} onChange={(e) => setAddressDraft((s) => ({ ...s, shippingName: e.target.value }))} />
+            <TextField label="Phone" fullWidth value={addressDraft.shippingPhone || ''} onChange={(e) => setAddressDraft((s) => ({ ...s, shippingPhone: e.target.value }))} />
+            <TextField label="Address line 1" fullWidth value={addressDraft.shippingAddress1 || ''} onChange={(e) => setAddressDraft((s) => ({ ...s, shippingAddress1: e.target.value }))} error={!!addressErrors.shippingAddress1} helperText={addressErrors.shippingAddress1} />
+            <TextField label="Address line 2" fullWidth value={addressDraft.shippingAddress2 || ''} onChange={(e) => setAddressDraft((s) => ({ ...s, shippingAddress2: e.target.value }))} />
+            <Stack direction="row" spacing={1}>
+              <TextField label="City" fullWidth value={addressDraft.shippingCity || ''} onChange={(e) => setAddressDraft((s) => ({ ...s, shippingCity: e.target.value }))} error={!!addressErrors.shippingCity} helperText={addressErrors.shippingCity} />
+              <TextField label="State" fullWidth value={addressDraft.shippingState || ''} onChange={(e) => setAddressDraft((s) => ({ ...s, shippingState: e.target.value }))} />
+              <TextField label="Pincode" sx={{ width: 140 }} value={addressDraft.shippingPincode || ''} onChange={(e) => setAddressDraft((s) => ({ ...s, shippingPincode: e.target.value }))} error={!!addressErrors.shippingPincode} helperText={addressErrors.shippingPincode} />
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddressDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" onClick={handleAddressSubmit} disabled={busy}>Submit</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={branchDialogOpen} onClose={() => setBranchDialogOpen(false)} fullWidth maxWidth="sm">
         <DialogTitle>Select Pickup Branch</DialogTitle>
         <DialogContent>

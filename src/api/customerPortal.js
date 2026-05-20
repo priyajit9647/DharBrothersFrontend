@@ -162,6 +162,20 @@ export async function changeOrderDeliveryAddress(orderId, payload) {
 }
 
 /**
+ * Update delivery address for a customer portal order
+ * Endpoint: PUT /api/customer-portal/orders/{orderId}/delivery-address
+ * Body example: { fullName, phone, addressLine1, addressLine2, city, state, pincode }
+ */
+export async function updateCustomerPortalOrderDeliveryAddress(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  if (!payload) throw new Error('payload is required');
+  return authorizedCustomerFetch(`/api/customer-portal/orders/${encodeURIComponent(String(orderId))}/delivery-address`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
  * Change pickup branch for an order
  * Endpoint: POST /api/v1/customer/orders/{orderId}/change-pickup-branch-location
  * Body: { pickupBranchId }
