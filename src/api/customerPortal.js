@@ -135,9 +135,17 @@ export async function getCustomerFeedback(customerId) {
  */
 export async function getCustomerFeedbackByOrderId(orderId) {
   if (!orderId) throw new Error('orderId is required');
-  return authorizedCustomerFetch(`/api/customer/feedback/order/${encodeURIComponent(String(orderId))}`, {
-    method: 'GET'
-  });
+  try {
+    return await authorizedCustomerFetch(`/api/customer/feedback/order/${encodeURIComponent(String(orderId))}`, {
+      method: 'GET'
+    });
+  } catch (err) {
+    // Check if the error is a 404 (Not Found)
+    if (err.status === 404 || err.response?.status === 404) {
+      return null; // Return null to indicate feedback not found, not an error
+    }
+    throw err; // Re-throw other errors
+  }
 }
 
 /**
