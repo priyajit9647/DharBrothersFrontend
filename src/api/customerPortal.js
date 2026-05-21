@@ -251,6 +251,29 @@ export async function reInitiateCustomerPayment(orderId) {
 }
 
 /**
+ * Re-initiate payment for a customer order via the customer portal endpoint
+ * Endpoint: POST /api/customer-portal/orders/{orderId}/payment-status
+ * Note: server may respond with payment link or updated status
+ */
+export async function reInitiateCustomerPortalPayment(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedCustomerFetch(`/api/customer-portal/orders/${encodeURIComponent(String(orderId))}/payment-status`, {
+    method: 'POST'
+  });
+}
+
+/**
+ * Get payment status for a customer portal order
+ * Endpoint: GET /api/customer-portal/orders/{orderId}/payment-status
+ */
+export async function getCustomerPortalOrderPaymentStatus(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedCustomerFetch(`/api/customer-portal/orders/${encodeURIComponent(String(orderId))}/payment-status`, {
+    method: 'GET'
+  });
+}
+
+/**
  * Fetch branches for pickup selection
  * Endpoint: GET /api/v1/web/master/branches
  */

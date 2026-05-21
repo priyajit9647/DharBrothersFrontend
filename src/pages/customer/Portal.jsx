@@ -15,7 +15,9 @@ import TableCell from '@mui/material/TableCell';
 import MainCard from 'components/MainCard';
 import { alpha, useTheme } from '@mui/material/styles';
 import CircularProgress from '@mui/material/CircularProgress';
-import { listCustomerOrders } from 'api/customerPortal';
+import Avatar from '@mui/material/Avatar';
+import Skeleton from '@mui/material/Skeleton';
+import { listCustomerOrders, getCustomerPortalOrderPaymentStatus, reInitiateCustomerPayment, fetchCustomerPortalData } from 'api/customerPortal';
 
 function StatusChip({ label }) {
   const key = String(label || '').toLowerCase();
@@ -42,6 +44,33 @@ export default function CustomerPortal() {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState(null);
+  const [reInitiatingOrderId, setReInitiatingOrderId] = useState(null);
+  const [checkingOrderId, setCheckingOrderId] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
+
+  // Derived profile fields for display
+  const profileName = profile?.fullName || profile?.name || profile?.displayName || profile?.email || null;
+  const mobileNumber = profile?.mobile || profile?.mobileNumber || profile?.phone || profile?.phoneNumber || profile?.contact || profile?.telephone || null;
+  const whatsappNumber = profile?.whatsapp || profile?.whatsappNumber || profile?.whatsappPhone || profile?.whatsApp || profile?.whats_app || null;
+  const address = (() => {
+    if (!profile) return null;
+    if (profile.address && typeof profile.address === 'string') return profile.address;
+    const parts = [];
+    if (profile.addressLine1) parts.push(profile.addressLine1);
+    if (profile.addressLine2) parts.push(profile.addressLine2);
+    if (profile.city) parts.push(profile.city);
+    if (profile.state) parts.push(profile.state);
+    if (profile.pincode || profile.zip) parts.push(profile.pincode || profile.zip);
+    if (parts.length) return parts.join(', ');
+    if (profile.shippingAddress) return profile.shippingAddress;
+    if (Array.isArray(profile.addresses) && profile.addresses.length > 0) {
+      const a = profile.addresses[0];
+      return [a.addressLine1, a.addressLine2, a.city, a.state, a.pincode].filter(Boolean).join(', ');
+    }
+    return null;
+  })();
 
   const orderRef = 'ORD-2026-00123';
   const status = 'Ready for Approval';
@@ -76,6 +105,26 @@ export default function CustomerPortal() {
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setProfileLoading(true);
+        const resp = await fetchCustomerPortalData();
+        const data = resp?.data || resp || resp?.profile || resp?.user || null;
+        if (mounted) setProfile(data);
+      } catch (err) {
+        if (mounted) setProfileError(err?.message || 'Unable to load profile');
+      } finally {
+        if (mounted) setProfileLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <Box sx={{ backgroundColor: 'grey.100', minHeight: '100vh', px: { xs: 2, sm: 4 }, py: 6 }}>
       <Box sx={{ width: '100%', maxWidth: 1200, mx: 'auto' }}>
@@ -87,7 +136,7 @@ export default function CustomerPortal() {
               sx={{ boxShadow: 2, borderRadius: 3, transition: 'all 120ms ease' }}
             >
               <Box sx={{ p: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>Your Orders</Typography>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>My Profile</Typography>
 
                 {ordersLoading ? (
                   <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -98,7 +147,44 @@ export default function CustomerPortal() {
                     <Typography color="error">{ordersError}</Typography>
                   </Box>
                 ) : (
-                  <Table size="small">
+                  <>
+                    {profileLoading ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Skeleton variant="circular" width={40} height={40} />
+                        <Box>
+                          <Skeleton variant="text" width={160} height={28} />
+                          <Skeleton variant="text" width={120} height={18} />
+                        </Box>
+                      </Box>
+                    ) : profile ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>{String((profileName || 'U')[0] || 'U')}</Avatar>
+                        <Box>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                            {profileName || 'Customer'}
+                          </Typography>
+                          {profile?.email && <Typography variant="caption" color="text.secondary">{profile.email}</Typography>}
+
+                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 90 }}>Mobile:</Typography>
+                            <Typography variant="body2">{mobileNumber || '-'}</Typography>
+                          </Box>
+
+                          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 0.5 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 90 }}>WhatsApp:</Typography>
+                            <Typography variant="body2">{whatsappNumber || '-'}</Typography>
+                          </Box>
+
+                          {address && (
+                            <Typography variant="body2" sx={{ mt: 0.5 }}>{address}</Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    ) : profileError ? (
+                      <Typography color="error" sx={{ mb: 2 }}>{profileError}</Typography>
+                    ) : null}
+
+                    <Table size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell>Order ID</TableCell>
@@ -139,13 +225,78 @@ export default function CustomerPortal() {
                               <TableCell>{o.shippingAddress}</TableCell>
                               <TableCell>{o.branchName}</TableCell>
                               <TableCell align="right">{o.totalPages ?? '-'}</TableCell>
-                              <TableCell align="center"><Chip label={o.paymentStatus || '-'} size="small" /></TableCell>
+                              <TableCell align="center">
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                                      <Chip label={o.paymentStatus || '-'} size="small" />
+                                      {o.paymentStatus === 'PENDING' && (
+                                        <Button
+                                          size="small"
+                                          variant="contained"
+                                          color="primary"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (!o.orderId) return;
+                                            try {
+                                              setCheckingOrderId(o.orderId);
+                                              const resp = await getCustomerPortalOrderPaymentStatus(o.orderId);
+                                              // refresh orders list after check
+                                              const listResp = await listCustomerOrders();
+                                              const data = Array.isArray(listResp) ? listResp : listResp?.data || listResp?.orders || [];
+                                              setOrders(data);
+                                              // simple feedback
+                                              // eslint-disable-next-line no-alert
+                                              alert('Payment status: ' + (resp?.paymentStatus || JSON.stringify(resp)));
+                                            } catch (err) {
+                                              // eslint-disable-next-line no-alert
+                                              alert(err?.message || 'Unable to check payment status');
+                                            } finally {
+                                              setCheckingOrderId(null);
+                                            }
+                                          }}
+                                          disabled={checkingOrderId === o.orderId}
+                                        >
+                                          {checkingOrderId === o.orderId ? <CircularProgress size={14} color="inherit" /> : 'Check Payment'}
+                                        </Button>
+                                      )}
+                                      {o.paymentStatus === 'FAILED' && (
+                                        <Button
+                                          size="small"
+                                          variant="contained"
+                                          color="primary"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            if (!o.orderId) return;
+                                            try {
+                                              setReInitiatingOrderId(o.orderId);
+                                              await reInitiateCustomerPayment(o.orderId);
+                                              // refresh orders list after re-initiation
+                                              const resp = await listCustomerOrders();
+                                              const data = Array.isArray(resp) ? resp : resp?.data || resp?.orders || [];
+                                              setOrders(data);
+                                              // simple feedback
+                                              // eslint-disable-next-line no-alert
+                                              alert('Re-payment initiated successfully.');
+                                            } catch (err) {
+                                              // eslint-disable-next-line no-alert
+                                              alert(err?.message || 'Unable to re-initiate payment');
+                                            } finally {
+                                              setReInitiatingOrderId(null);
+                                            }
+                                          }}
+                                          disabled={reInitiatingOrderId === o.orderId}
+                                        >
+                                          {reInitiatingOrderId === o.orderId ? <CircularProgress size={14} color="inherit" /> : 'Re-Payment'}
+                                        </Button>
+                                      )}
+                                    </Box>
+                              </TableCell>
                             </TableRow>
                           );
                         })
                       )}
                     </TableBody>
-                  </Table>
+                    </Table>
+                  </>
                 )}
               </Box>
             </MainCard>

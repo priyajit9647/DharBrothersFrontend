@@ -95,6 +95,104 @@ export default defineConfig(({ mode }) => {
                 });
                 return;
               }
+              // Dev POST: /api/customer-portal/orders/{orderId}/payment-status
+              if (
+                req.method === 'POST' &&
+                req.url &&
+                req.url.match(/^\/api\/customer-portal\/orders\/[^/]+\/payment-status/) 
+              ) {
+                const parts = req.url.split('/');
+                const rawId = parts[parts.length - 2];
+                const orderId = decodeURIComponent(rawId || '');
+                let body = '';
+                req.on('data', (chunk) => {
+                  body += chunk;
+                });
+                req.on('end', () => {
+                  try {
+                    const data = body ? JSON.parse(body) : {};
+                    const now = new Date().toISOString();
+                    const resp = {
+                      message: 'Payment re-initiation triggered',
+                      paymentStatus: 'INITIATED',
+                      paymentLink: `https://pay.example.com/pay/${orderId}`,
+                      updatedAt: now
+                    };
+                    res.setHeader('Content-Type', 'application/json');
+                    res.statusCode = 200;
+                    res.end(JSON.stringify(resp));
+                  } catch (err) {
+                    res.statusCode = 400;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ success: false, message: 'Invalid JSON' }));
+                  }
+                });
+                return;
+              }
+
+                // Dev GET: /api/customer-portal/orders/{orderId}/payment-status
+                if (
+                  req.method === 'GET' &&
+                  req.url &&
+                  req.url.match(/^\/api\/customer-portal\/orders\/[^/]+\/payment-status/)
+                ) {
+                  const parts = req.url.split('/');
+                  const rawId = parts[parts.length - 2];
+                  const orderId = decodeURIComponent(rawId || '');
+                  const resp = {
+                    orderId,
+                    paymentStatus: 'COMPLETED',
+                    message: 'Mock payment check: completed',
+                    paymentLink: null,
+                    checkedAt: new Date().toISOString()
+                  };
+                  res.setHeader('Content-Type', 'application/json');
+                  res.statusCode = 200;
+                  res.end(JSON.stringify(resp));
+                  return;
+                }
+
+                // Dev GET: /api/v1/user/me/profile
+                if (
+                  req.method === 'GET' &&
+                  req.url &&
+                  (req.url === '/api/v1/user/me/profile' || req.url.startsWith('/api/v1/user/me/profile'))
+                ) {
+                  const now = new Date().toISOString();
+                  const profile = {
+                    id: 12345,
+                    fullName: 'John Doe',
+                    email: 'john.doe@example.com',
+                    phone: '9876543210',
+                    customerId: 9001,
+                    joinedAt: now
+                  };
+                  res.setHeader('Content-Type', 'application/json');
+                  res.statusCode = 200;
+                  res.end(JSON.stringify(profile));
+                  return;
+                }
+
+                // Dev GET: /api/v1/customers/re-initiate-payment/{orderId}
+                if (
+                  req.method === 'GET' &&
+                  req.url &&
+                  req.url.match(/^\/api\/v1\/customers\/re-initiate-payment\/[^^/]+/)
+                ) {
+                  const parts = req.url.split('/');
+                  const rawId = parts[parts.length - 1].split('?')[0];
+                  const orderId = decodeURIComponent(rawId || '');
+                  const resp = {
+                    success: true,
+                    message: 'Mock re-initiation started',
+                    paymentLink: `https://pay.example.com/reinit/${orderId}`,
+                    updatedAt: new Date().toISOString()
+                  };
+                  res.setHeader('Content-Type', 'application/json');
+                  res.statusCode = 200;
+                  res.end(JSON.stringify(resp));
+                  return;
+                }
             } catch (e) {
               // fallthrough to next middleware on error
             }
