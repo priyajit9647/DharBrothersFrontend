@@ -274,6 +274,29 @@ export async function getCustomerPortalOrderPaymentStatus(orderId) {
 }
 
 /**
+ * Get single order timeline for customer portal
+ * Endpoint: GET /api/customer-portal/orders/{orderId}/timeline
+ * Example response shape (demo):
+ * {
+ *   "orderId": "string",
+ *   "orderNumber": "string",
+ *   "currentStage": "string",
+ *   "createdAt": "2026-05-21T12:12:04.669Z",
+ *   "totalAmount": 0.1,
+ *   "paidAmount": 0.1,
+ *   "dueAmount": 0.1,
+ *   "paymentStatus": "string",
+ *   "stages": [ { "stageHistoryId": 9007199254740991, "stageName": "string", "remarks": "string", "updatedAt": "2026-05-21T12:12:04.669Z", "updatedBy": "string", "isCompleted": true, "rating": 1073741824, "reviewComment": "string", "isRateable": true } ]
+ * }
+ */
+export async function getCustomerPortalOrderTimeline(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedCustomerFetch(`/api/customer-portal/orders/${encodeURIComponent(String(orderId))}/timeline`, {
+    method: 'GET'
+  });
+}
+
+/**
  * Fetch branches for pickup selection
  * Endpoint: GET /api/v1/web/master/branches
  */

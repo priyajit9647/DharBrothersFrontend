@@ -13,7 +13,15 @@ import MainCard from 'components/MainCard';
 
 import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
-import { getCustomerFeedbackByOrderId } from 'api/customerPortal';
+import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline } from 'api/customerPortal';
+import { getCustomerPortalSession } from 'utils/authTokens';
+import Timeline from '@mui/lab/Timeline';
+import TimelineItem from '@mui/lab/TimelineItem';
+import TimelineSeparator from '@mui/lab/TimelineSeparator';
+import TimelineConnector from '@mui/lab/TimelineConnector';
+import TimelineContent from '@mui/lab/TimelineContent';
+import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
+import TimelineDot from '@mui/lab/TimelineDot';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -48,6 +56,9 @@ export default function OrderDetails() {
   const [feedback, setFeedback] = useState(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState(null);
+  const [timeline, setTimeline] = useState(null);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineError, setTimelineError] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -86,7 +97,30 @@ export default function OrderDetails() {
       }
     };
 
+    const loadTimelineIfPortal = async () => {
+      if (!orderId) return;
+      // Only attempt portal timeline for customer portal sessions or when route indicates customer view
+      const session = getCustomerPortalSession();
+      const isCustomerPortal = Boolean(session);
+      if (!isCustomerPortal) return;
+
+      setTimelineLoading(true);
+      setTimelineError(null);
+      try {
+        const resp = await getCustomerPortalOrderTimeline(orderId);
+        if (!mounted) return;
+        setTimeline(resp || null);
+      } catch (err) {
+        if (!mounted) return;
+        setTimelineError(err?.message || 'Unable to load order timeline.');
+      } finally {
+        if (!mounted) return;
+        setTimelineLoading(false);
+      }
+    };
+
     loadFeedback();
+    loadTimelineIfPortal();
 
     return () => {
       mounted = false;
@@ -258,6 +292,51 @@ export default function OrderDetails() {
             </Grid>
 
             <Divider sx={{ my: 3 }} />
+
+            {timelineLoading ? (
+              <Box sx={{ py: 4, textAlign: 'center' }}>
+                <CircularProgress />
+              </Box>
+            ) : timelineError ? (
+              <Box sx={{ py: 2 }}>
+                <Typography color="error">{timelineError}</Typography>
+              </Box>
+            ) : timeline ? (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  Order Timeline
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  Current Stage: {timeline.currentStage || timeline.current_stage || '—'}
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Payment Status: {timeline.paymentStatus || timeline.payment_status || '—'}
+                </Typography>
+
+                {Array.isArray(timeline.stages) && timeline.stages.length > 0 ? (
+                  <Timeline sx={{ py: 0 }}>
+                    {timeline.stages.map((s, idx) => (
+                      <TimelineItem key={s.stageHistoryId || s.id || `${s.stageName}-${s.updatedAt}`}>
+                        <TimelineOppositeContent sx={{ m: 'auto 0' }} color="text.secondary">
+                          {s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}
+                        </TimelineOppositeContent>
+                        <TimelineSeparator>
+                          <TimelineDot sx={{ bgcolor: s.isCompleted ? 'primary.main' : 'grey.400' }} />
+                          {idx < timeline.stages.length - 1 && <TimelineConnector />}
+                        </TimelineSeparator>
+                        <TimelineContent sx={{ py: '12px' }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{s.stageName}</Typography>
+                          {s.remarks && <Typography variant="body2" color="text.secondary">{s.remarks}</Typography>}
+                          <Typography variant="caption" color="text.secondary">{s.isCompleted ? 'Completed' : 'Pending'}</Typography>
+                        </TimelineContent>
+                      </TimelineItem>
+                    ))}
+                  </Timeline>
+                ) : (
+                  <Typography variant="body2">No timeline stages available.</Typography>
+                )}
+              </Box>
+            ) : null}
 
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
