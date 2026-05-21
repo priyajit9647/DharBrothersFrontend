@@ -67,6 +67,22 @@ export default defineConfig(({ mode }) => {
                   return;
                 }
               }
+                // Dev GET: /api/customer/feedback/questions
+                if (
+                  req.method === 'GET' &&
+                  req.url &&
+                  (req.url === '/api/customer/feedback/questions' || req.url.startsWith('/api/customer/feedback/questions'))
+                ) {
+                  const sample = {
+                    additionalProp1: 'string',
+                    additionalProp2: 'string',
+                    additionalProp3: 'string'
+                  };
+                  res.setHeader('Content-Type', 'application/json');
+                  res.statusCode = 200;
+                  res.end(JSON.stringify(sample));
+                  return;
+                }
               if (
                 req.method === 'POST' &&
                 req.url &&
@@ -191,6 +207,70 @@ export default defineConfig(({ mode }) => {
                   res.setHeader('Content-Type', 'application/json');
                   res.statusCode = 200;
                   res.end(JSON.stringify(resp));
+                  return;
+                }
+                // Dev POST: /api/v1/customer/orders/{orderId}/confirm-received
+                if (
+                  req.method === 'POST' &&
+                  req.url &&
+                  req.url.match(/^\/api\/v1\/customer\/orders\/[^/]+\/confirm-received/)
+                ) {
+                  const parts = req.url.split('/');
+                  const rawId = parts[parts.length - 2] || parts[parts.length - 1];
+                  const orderId = decodeURIComponent((rawId || '').split('?')[0]);
+                  let body = '';
+                  req.on('data', (chunk) => { body += chunk; });
+                  req.on('end', () => {
+                    try {
+                      const payload = body ? JSON.parse(body) : {};
+                      const resp = {
+                        message: 'Order confirmed received (mock)',
+                        orderId,
+                        receivedByCustomer: payload?.receivedByCustomer ?? true,
+                        updatedAt: new Date().toISOString(),
+                        payload
+                      };
+                      res.setHeader('Content-Type', 'application/json');
+                      res.statusCode = 200;
+                      res.end(JSON.stringify(resp));
+                    } catch (err) {
+                      res.statusCode = 400;
+                      res.setHeader('Content-Type', 'application/json');
+                      res.end(JSON.stringify({ success: false, message: 'Invalid JSON' }));
+                    }
+                  });
+                  return;
+                }
+                // Dev POST: /api/v1/orders/admin/{orderId}/confirm-received (admin fallback)
+                if (
+                  req.method === 'POST' &&
+                  req.url &&
+                  req.url.match(/^\/api\/v1\/orders\/admin\/[^/]+\/confirm-received/)
+                ) {
+                  const parts = req.url.split('/');
+                  const rawId = parts[parts.length - 2] || parts[parts.length - 1];
+                  const orderId = decodeURIComponent((rawId || '').split('?')[0]);
+                  let body = '';
+                  req.on('data', (chunk) => { body += chunk; });
+                  req.on('end', () => {
+                    try {
+                      const payload = body ? JSON.parse(body) : {};
+                      const resp = {
+                        message: 'Order confirmed received via admin endpoint (mock)',
+                        orderId,
+                        receivedByCustomer: payload?.receivedByCustomer ?? true,
+                        updatedAt: new Date().toISOString(),
+                        payload
+                      };
+                      res.setHeader('Content-Type', 'application/json');
+                      res.statusCode = 200;
+                      res.end(JSON.stringify(resp));
+                    } catch (err) {
+                      res.statusCode = 400;
+                      res.setHeader('Content-Type', 'application/json');
+                      res.end(JSON.stringify({ success: false, message: 'Invalid JSON' }));
+                    }
+                  });
                   return;
                 }
             } catch (e) {
