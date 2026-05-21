@@ -1,4 +1,4 @@
-import { authorizedFetch, authorizedFetchRaw } from './auth';
+import { authorizedFetch, authorizedFetchRaw, authorizedCustomerFetch } from './auth';
 
 // ==============================|| ORDERS API CLIENT ||============================== //
 
@@ -145,6 +145,31 @@ export async function getOrderById(orderId) {
 
   return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
     method: 'GET'
+  });
+}
+
+/**
+ * Confirm order received by customer
+ * Endpoint: POST /api/v1/customer/orders/{orderId}/confirm-received
+ * Body: { receivedByCustomer: boolean, ...optional order summary }
+ */
+export async function confirmOrderReceived(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedCustomerFetch(`/api/v1/customer/orders/${encodeURIComponent(String(orderId))}/confirm-received`, {
+    method: 'POST',
+    body: JSON.stringify(payload || {})
+  });
+}
+
+/**
+ * Admin confirm order received - fallback for admin users
+ * Endpoint: POST /api/v1/orders/admin/{orderId}/confirm-received
+ */
+export async function adminConfirmOrderReceived(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}/confirm-received`, {
+    method: 'POST',
+    body: JSON.stringify(payload || {})
   });
 }
 

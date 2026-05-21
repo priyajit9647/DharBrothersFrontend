@@ -11,7 +11,7 @@ import Rating from '@mui/material/Rating';
 import CircularProgress from '@mui/material/CircularProgress';
 import MainCard from 'components/MainCard';
 
-import { getOrderById } from 'api/orders';
+import { getOrderById, confirmOrderReceived, adminConfirmOrderReceived } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
 import { getCustomerFeedbackByOrderId } from 'api/customerPortal';
 
@@ -26,6 +26,14 @@ function formatDateTime(value) {
     hour: '2-digit',
     minute: '2-digit'
   }).format(date);
+}
+
+function isOrderConfirmAllowed(order) {
+  if (!order) return false;
+  const candidates = [order.orderStatus, order.currentStage, order.orderStageName, order.stage, order.status];
+  const normalized = candidates.filter(Boolean).map((v) => String(v).toUpperCase()).join(' ');
+  if (!normalized) return false;
+  return normalized.includes('COMPLET') || normalized.includes('DELIVER');
 }
 
 function getDownloadHref(path) {
@@ -48,6 +56,7 @@ export default function OrderDetails() {
   const [feedback, setFeedback] = useState(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -189,7 +198,59 @@ export default function OrderDetails() {
             View admin order details for order ID {orderId}
           </Typography>
         </Box>
-        <Button variant="contained" color="success" onClick={() => console.log('Order Received clicked')}>Order Received</Button>
+        <Button
+          variant="contained"
+          color="success"
+          onClick={async (e) => {
+            e.stopPropagation();
+            if (!orderId) return;
+            const payload = {
+              orderId: order?.orderId || orderId,
+              currentStage: order?.currentStage || order?.orderStatus || '',
+              expectedDeliveryDate: order?.expectedDeliveryDate || null,
+              shippingAddress: order?.shippingAddress || '',
+              pickupBranchId: order?.pickupBranchId ?? order?.pickupBranch?.id ?? null,
+              branchName: order?.branchName || '',
+              totalPages: order?.totalPages ?? 0,
+              paymentStatus: order?.paymentStatus || '',
+              receivedByCustomer: true
+            };
+            try {
+              setConfirmLoading(true);
+
+              const isCustomerPath = typeof window !== 'undefined' && window.location && window.location.pathname && window.location.pathname.startsWith('/customer');
+
+              if (isCustomerPath) {
+                await confirmOrderReceived(orderId, payload);
+              } else {
+                await adminConfirmOrderReceived(orderId, payload);
+              }
+
+              // refresh order and feedback
+              const refreshed = await getOrderById(orderId);
+              setOrder(refreshed || null);
+              try {
+                const fb = await getCustomerFeedbackByOrderId(orderId);
+                setFeedback(fb?.feedbacks || null);
+              } catch (e) {
+                // ignore feedback refresh error
+              }
+
+              // simple feedback
+              // eslint-disable-next-line no-alert
+              alert(isCustomerPath ? 'Order confirmed as received.' : 'Order confirmed as received via admin endpoint.');
+            } catch (err) {
+              // generic error
+              // eslint-disable-next-line no-alert
+              alert(err?.message || 'Unable to confirm order received');
+            } finally {
+              setConfirmLoading(false);
+            }
+          }}
+          disabled={confirmLoading || order?.receivedByCustomer === true || !isOrderConfirmAllowed(order)}
+        >
+          {confirmLoading ? <CircularProgress size={18} color="inherit" /> : 'Order Received'}
+        </Button>
         <Button variant="contained" color="primary" onClick={() => navigate(`/customer/orders/feedback/${orderId}`)} disabled={isFeedbackSubmitted}>Feedback</Button>
         <Button variant="contained" onClick={() => navigate(-1)}>
           Back
