@@ -9,6 +9,9 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchOutlined from '@ant-design/icons/SearchOutlined';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Menu from '@mui/material/Menu';
@@ -25,6 +28,7 @@ import MainCard from 'components/MainCard';
 
 // icons
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
+import FileExcelOutlined from '@ant-design/icons/FileExcelOutlined';
 
 import { getProcessStages } from 'api/processStage';
 import { getOrdersByStatus } from 'api/orders';
@@ -39,15 +43,17 @@ function OrdersTableHead() {
   return (
     <TableHead>
       <TableRow>
-        <TableCell />
-        <TableCell>Order #</TableCell>
-        <TableCell>Customer</TableCell>
-        <TableCell>Stage</TableCell>
-        <TableCell>Assigned Staff</TableCell>
-        <TableCell>Date Assigned</TableCell>
-        <TableCell>Expected Done</TableCell>
-        <TableCell align="right">Amount</TableCell>
-        <TableCell align="center">Payment</TableCell>
+        <TableCell sx={{ width: 48 }} />
+         <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Order #</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Customer</TableCell>
+        <TableCell sx={{ minWidth: 180, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>University Name</TableCell>
+        <TableCell sx={{ minWidth: 160, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>University Department</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Stage</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Assigned Staff</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Date Assigned</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Expected Done</TableCell>
+        <TableCell align="right" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Amount</TableCell>
+        <TableCell align="center" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Payment</TableCell>
       </TableRow>
     </TableHead>
   );
@@ -55,6 +61,21 @@ function OrdersTableHead() {
 
 function renderOrderId(order) {
   return order.orderId ?? order.orderNo ?? order.id ?? order.code ?? '—';
+}
+
+function getUniversityName(order) {
+  return (
+    order.universityName ||
+    (order.university && (order.university.name || order.universityName)) ||
+    order.university?.name ||
+    null
+  );
+}
+
+function getUniversityDept(order) {
+  return (
+    order.universityDept || order.universityDepartment || order.department || order.university?.department || null
+  );
 }
 
 function paymentStatusColor(status) {
@@ -80,8 +101,19 @@ function formatDateTime(value) {
 }
 
 export default function OrderBoard() {
+  const BOARD_STAGES = [
+    'Order-Created',
+    'Order-Processing',
+    'Document-Edit-Stage',
+    'Printing-Done',
+    'Binding-Done',
+    'Order-Ready-Check',
+    'Ready-To-Dispatch',
+    'Order-Complete'
+  ];
   const [stages, setStages] = useState([]);
   const [ordersByStage, setOrdersByStage] = useState({});
+  const [searchByStage, setSearchByStage] = useState({});
   const [pendingOrders, setPendingOrders] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -101,8 +133,8 @@ export default function OrderBoard() {
       setLoading(true);
       setError('');
       try {
-        const ps = await getProcessStages();
-        const normalized = Array.isArray(ps) ? ps.map((s) => (typeof s === 'string' ? s : (s.stageName ?? s.name))).filter(Boolean) : [];
+        // Use fixed board stages (requested by UI) instead of dynamic process stages
+        const normalized = BOARD_STAGES.slice();
         if (!mounted) return;
         setStages(normalized);
 
@@ -279,6 +311,51 @@ export default function OrderBoard() {
     setQrOrder(null);
   };
 
+  const exportStageToCsv = (stageName) => {
+    const group = ordersByStage[stageName] || { items: [] };
+    const rows = group.items || [];
+    const query = String(searchByStage[stageName] || '').trim().toLowerCase();
+    const filteredRows = query
+      ? rows.filter((order) => {
+          const id = String(renderOrderId(order) || '').toLowerCase();
+          const name = String((order.firstName || '') + ' ' + (order.lastName || '') || (order.customer?.name || '') || '').toLowerCase();
+          const email = String(order.customerEmail || order.customer?.email || '').toLowerCase();
+          const phone = String(order.customerPhone || order.customer?.phone || '').toLowerCase();
+          return id.includes(query) || name.includes(query) || email.includes(query) || phone.includes(query);
+        })
+      : rows;
+
+    const headers = ['Order ID', 'Customer', 'University', 'Department', 'Stage', 'Assigned Staff', 'Date Assigned', 'Expected Done', 'Amount', 'Payment'];
+    const csvRows = [headers.join(',')];
+
+    for (const o of filteredRows) {
+      const cols = [
+        `"${(renderOrderId(o) ?? '').toString().replace(/"/g, '""')}"`,
+        `"${((o.firstName || '') + ' ' + (o.lastName || '')).trim() || (o.customer?.name || '')}".replace(/"/g, '""')`,
+        `"${(getUniversityName(o) || '').toString().replace(/"/g, '""')}"`,
+        `"${(getUniversityDept(o) || '').toString().replace(/"/g, '""')}"`,
+        `"${(o.orderStageName || o.stageName || o.stage || '').toString().replace(/"/g, '""')}"`,
+        `"${(o.assignedStaffName || '').toString().replace(/"/g, '""')}"`,
+        `"${(formatDateTime(o.assignedDate) || '').toString().replace(/"/g, '""')}"`,
+        `"${(formatDateTime(o.expectedDoneDate) || '').toString().replace(/"/g, '""')}"`,
+        `"${o.totalAmount != null ? Number(o.totalAmount).toFixed(2) : ''}"`,
+        `"${(o.paymentStatus || '').toString().replace(/"/g, '""')}"`
+      ];
+      csvRows.push(cols.join(','));
+    }
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${stageName.replace(/\s+/g, '_')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  };
+
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       <Grid item xs={12}>
@@ -313,21 +390,119 @@ export default function OrderBoard() {
           {stages.map((stageName) => {
             const group = ordersByStage[stageName] || { items: [], error: null };
             const rows = group.items || [];
+            const query = String(searchByStage[stageName] || '').trim().toLowerCase();
+            const filteredRows = query
+              ? rows.filter((order) => {
+                  const id = String(renderOrderId(order) || '').toLowerCase();
+                  const name = String((order.firstName || '') + ' ' + (order.lastName || '') || (order.customer?.name || '') || '').toLowerCase();
+                  const email = String(order.customerEmail || order.customer?.email || '').toLowerCase();
+                  const phone = String(order.customerPhone || order.customer?.phone || '').toLowerCase();
+                  return id.includes(query) || name.includes(query) || email.includes(query) || phone.includes(query);
+                })
+              : rows;
             return (
               <Grid item xs={12} md={6} lg={4} key={stageName}>
                 <MainCard content={false} sx={{ minHeight: 200 }}>
                   <Box sx={{ p: 2 }}>
-                    <Typography variant="h6">{stageName}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {rows.length} orders
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                      <Box sx={{ flex: '1 1 auto' }}>
+                        <Typography variant="h6">{stageName}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {rows.length} orders
+                        </Typography>
+                      </Box>
+                      <Box sx={{ flex: '0 0 320px' }}>
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Search orders..."
+                            variant="outlined"
+                            value={searchByStage[stageName] || ''}
+                            onChange={(e) => setSearchByStage((s) => ({ ...s, [stageName]: e.target.value }))}
+                            InputProps={{
+                              startAdornment: (
+                                <InputAdornment position="start">
+                                  <SearchOutlined style={{ fontSize: 18, color: 'inherit' }} />
+                                </InputAdornment>
+                              ),
+                              'aria-label': 'search-orders'
+                            }}
+                            sx={(theme) => ({
+                              '& .MuiOutlinedInput-root': {
+                                borderRadius: 1.5,
+                                backgroundColor: theme.palette.mode === 'light' ? '#fff' : theme.palette.background.paper,
+                                '& fieldset': {
+                                  borderColor: theme.palette.mode === 'light' ? theme.palette.grey[300] : theme.palette.grey[700],
+                                  borderWidth: 1.6
+                                },
+                                '&:hover fieldset': { borderColor: theme.palette.primary.main },
+                                '&.Mui-focused fieldset': {
+                                  borderColor: theme.palette.primary.dark,
+                                  boxShadow: `0 0 0 8px ${theme.palette.primary.main}33`
+                                }
+                              },
+                              '& .MuiInputAdornment-root svg': {
+                                color: theme.palette.primary.main
+                              }
+                            })}
+                          />
+
+                          <Button
+                          variant="contained"
+                          startIcon={<span>📊</span>}
+                          sx={{
+                              minWidth: '145px',
+                              height: '42px',
+
+                          background:
+                              'linear-gradient(135deg,#16a34a,#22c55e)',
+
+                               color: '#fff',
+
+                               fontWeight: 700,
+
+                              fontSize: '13px',
+
+                              textTransform: 'none',
+
+                              borderRadius: '12px',
+
+                              px: 1.8,
+
+                              boxShadow:
+                                '0 5px 14px rgba(34,197,94,0.24)',
+
+                              transition: 'all .25s ease',
+
+                                '&:hover': {
+                              background:
+                                'linear-gradient(135deg,#15803d,#16a34a)',
+
+                              transform: 'translateY(-2px)',
+
+                              boxShadow:
+                                '0 8px 18px rgba(34,197,94,0.34)'
+                              },
+
+                                '& .MuiButton-startIcon': {
+                              marginRight: '4px',
+                              fontSize: '15px'
+                            }
+                             }}
+>
+                            Export Excel
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Box>
                   </Box>
 
-                  <TableContainer sx={{ px: 2 }}>
-                    <Table size="small" aria-labelledby={`orders-${stageName}`} sx={{ tableLayout: 'fixed' }}>
+                  <TableContainer sx={{ px: 2, overflowX: 'auto' }}>
+                    <Table size="small" aria-labelledby={`orders-${stageName}`} sx={{ tableLayout: 'auto', minWidth: 980 }}>
                       <OrdersTableHead />
                       <TableBody>
-                        {rows.map((order) => (
+                        {filteredRows.map((order) => (
                           <TableRow
                             hover
                             tabIndex={-1}
@@ -335,9 +510,14 @@ export default function OrderBoard() {
                             sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                           >
                             <TableCell>
-                              <IconButton size="small" onClick={(e) => handleActionClick(e, order)}>
-                                <EllipsisOutlined style={{ fontSize: '1rem' }} />
-                              </IconButton>
+                                <Button
+                                  variant="contained"
+                                  size="small"
+                                  color="error"
+                                  onClick={(e) => handleActionClick(e, order)}
+                                >
+                                  Action
+                                </Button>
                             </TableCell>
                             <TableCell>
                               <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
@@ -353,6 +533,17 @@ export default function OrderBoard() {
                                   {[order.customerPhone, order.customerEmail].filter(Boolean).join(' • ')}
                                 </Typography>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">{getUniversityName(order) ?? '—'}</Typography>
+                              {getUniversityName(order) && (
+                                <Typography variant="caption" color="text.secondary">
+                                  {order.university?.location ?? ''}
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">{getUniversityDept(order) ?? '—'}</Typography>
                             </TableCell>
                             <TableCell>
                               <Typography variant="body2">{order.orderStageName ?? order.stageName ?? order.stage ?? stageName}</Typography>
