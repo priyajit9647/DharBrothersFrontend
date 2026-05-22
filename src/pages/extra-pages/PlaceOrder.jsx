@@ -152,6 +152,7 @@ const INITIAL_CHECKOUT_FORM = {
   landmark: '',
   gst: '',
   universityName: '',
+  universityDepartment: '',
   customerAddress2: '',
   country: 'India',
   state: 'West Bengal',
@@ -181,6 +182,8 @@ function buildCustomerPayloadFromForm(checkoutForm) {
     pincode: checkoutForm.pincode || '',
     landmark: checkoutForm.landmark || '',
     universityName: checkoutForm.universityName || ''
+    ,
+    universityDepartment: checkoutForm.universityDepartment || ''
   };
 }
 
@@ -3021,6 +3024,10 @@ function CheckoutStep({ summary, checkoutForm, checkoutError, branchOptions, bra
               <Grid item xs={12}>
                 <FieldLabel>University Name</FieldLabel>
                 <TextField fullWidth value={checkoutForm.universityName} onChange={(event) => onFieldChange('universityName', event.target.value)} sx={inputSx} />
+              </Grid>
+              <Grid item xs={12}>
+                <FieldLabel>University Department</FieldLabel>
+                <TextField fullWidth value={checkoutForm.universityDepartment} onChange={(event) => onFieldChange('universityDepartment', event.target.value)} sx={inputSx} />
               </Grid>
               <Grid item xs={12}>
                 <FieldLabel>Address</FieldLabel>
