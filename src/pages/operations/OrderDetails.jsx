@@ -15,13 +15,7 @@ import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
 import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline } from 'api/customerPortal';
 import { getCustomerPortalSession } from 'utils/authTokens';
-import Timeline from '@mui/lab/Timeline';
-import TimelineItem from '@mui/lab/TimelineItem';
-import TimelineSeparator from '@mui/lab/TimelineSeparator';
-import TimelineConnector from '@mui/lab/TimelineConnector';
-import TimelineContent from '@mui/lab/TimelineContent';
-import TimelineOppositeContent from '@mui/lab/TimelineOppositeContent';
-import TimelineDot from '@mui/lab/TimelineDot';
+import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck } from 'lucide-react';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -293,51 +287,6 @@ export default function OrderDetails() {
 
             <Divider sx={{ my: 3 }} />
 
-            {timelineLoading ? (
-              <Box sx={{ py: 4, textAlign: 'center' }}>
-                <CircularProgress />
-              </Box>
-            ) : timelineError ? (
-              <Box sx={{ py: 2 }}>
-                <Typography color="error">{timelineError}</Typography>
-              </Box>
-            ) : timeline ? (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  Order Timeline
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  Current Stage: {timeline.currentStage || timeline.current_stage || '—'}
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2 }}>
-                  Payment Status: {timeline.paymentStatus || timeline.payment_status || '—'}
-                </Typography>
-
-                {Array.isArray(timeline.stages) && timeline.stages.length > 0 ? (
-                  <Timeline sx={{ py: 0 }}>
-                    {timeline.stages.map((s, idx) => (
-                      <TimelineItem key={s.stageHistoryId || s.id || `${s.stageName}-${s.updatedAt}`}>
-                        <TimelineOppositeContent sx={{ m: 'auto 0' }} color="text.secondary">
-                          {s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}
-                        </TimelineOppositeContent>
-                        <TimelineSeparator>
-                          <TimelineDot sx={{ bgcolor: s.isCompleted ? 'primary.main' : 'grey.400' }} />
-                          {idx < timeline.stages.length - 1 && <TimelineConnector />}
-                        </TimelineSeparator>
-                        <TimelineContent sx={{ py: '12px' }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{s.stageName}</Typography>
-                          {s.remarks && <Typography variant="body2" color="text.secondary">{s.remarks}</Typography>}
-                          <Typography variant="caption" color="text.secondary">{s.isCompleted ? 'Completed' : 'Pending'}</Typography>
-                        </TimelineContent>
-                      </TimelineItem>
-                    ))}
-                  </Timeline>
-                ) : (
-                  <Typography variant="body2">No timeline stages available.</Typography>
-                )}
-              </Box>
-            ) : null}
-
             <Grid container spacing={3}>
               <Grid item xs={12} md={6}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
@@ -376,6 +325,7 @@ export default function OrderDetails() {
                   {order.shippingAddress?.country || ''} {order.shippingAddress?.pincode || ''}
                 </Typography>
               </Grid>
+                  
               <Grid item xs={12} md={6}>
                 <Typography variant="h6" sx={{ mb: 1 }}>
                   Billing Address
@@ -494,6 +444,145 @@ export default function OrderDetails() {
             ) : (
               <Typography variant="body2">No binding information available.</Typography>
             )}
+            
+            {/* ================= MODERN COMPACT TIMELINE ================= */}
+
+            {timelineLoading ? (
+              <Box sx={{ py: 4, textAlign: 'center' }}>
+                <CircularProgress />
+              </Box>
+            ) : timelineError ? (
+              <Typography color="error">{timelineError}</Typography>
+            ) : timeline ? (
+              <Box
+                sx={{
+                  mt: 4,
+                  p: 3,
+                  borderRadius: '24px',
+                  background: '#fff',
+                  boxShadow: '0 4px 18px rgba(0,0,0,0.06)',
+                  border: '1px solid #eef2f7',
+                  overflowX: 'auto'
+                }}
+              >
+                {/* Header */}
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: 2,
+                    mb: 5
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        fontWeight: 700,
+                        color: '#111827'
+                      }}
+                    >
+                      Order Timeline
+                    </Typography>
+
+                    <Typography variant="body2" color="text.secondary">Track complete workflow</Typography>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+                    <Chip label={`Stage: ${timeline.currentStage || '—'}`} color="primary" size="small" sx={{ fontWeight: 600, borderRadius: '8px' }} />
+                    <Chip label={`Payment: ${timeline.paymentStatus || '—'}`} color="success" size="small" sx={{ fontWeight: 600, borderRadius: '8px' }} />
+                  </Box>
+                </Box>
+
+                {/* Timeline */}
+
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', minWidth: '1200px', position: 'relative' }}>
+                  {timeline.stages?.map((s, idx) => {
+                    const active = s.isCompleted;
+
+                    const icons = {
+                      'Order-Created': <Package color="#fff" size={20} />,
+                      'Order-Processing': <Settings color="#fff" size={20} />,
+                      'Document-Edit-Stage': <FileText color="#fff" size={20} />,
+                      'Printing-Done': <Printer color="#fff" size={20} />,
+                      'Binding-Done': <BookOpen color="#fff" size={20} />,
+                      'Order-Ready-Check': <CheckCircle color="#fff" size={20} />,
+                      'Ready-To-Dispatch': <Truck color="#fff" size={20} />
+                    };
+
+                    return (
+                      <Box
+                        key={idx}
+                        sx={{
+                          flex: 1,
+                          position: 'relative',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center'
+                        }}
+                      >
+                        {/* Connector */}
+
+                        {idx !== timeline.stages.length - 1 && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 24,
+                              left: '50%',
+                              width: '100%',
+                              borderTop: active ? '2px dashed #1976d2' : '2px dashed #d1d5db',
+                              zIndex: 0
+                            }}
+                          />
+                        )}
+
+                        {/* Circle */}
+
+                        <Box
+                          sx={{
+                            zIndex: 2,
+                            width: 48,
+                            height: 48,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: active ? 'linear-gradient(135deg,#1976d2,#42a5f5)' : '#d1d5db',
+                            color: '#fff',
+                            fontSize: '22px',
+                            boxShadow: active ? '0 6px 18px rgba(25,118,210,0.28)' : 'none'
+                          }}
+                        >
+                          {icons[s.stageName]}
+                        </Box>
+
+                        {/* Line */}
+
+                        <Box sx={{ width: 3, height: 24, background: active ? '#1976d2' : '#d1d5db' }} />
+
+                        {/* Card */}
+
+                        <Box sx={{ width: 180, background: '#fff', borderRadius: '18px', p: 2, textAlign: 'center', border: '1px solid #edf2f7', boxShadow: '0 4px 14px rgba(0,0,0,0.05)', transition: '0.3s', '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 22px rgba(0,0,0,0.10)' } }}>
+                          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, fontSize: '15px' }}>{s.stageName}</Typography>
+
+                          <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', minHeight: 36, mb: 1.5, fontSize: '12px' }}>{s.remarks || 'No remarks available'}</Typography>
+
+                          <Chip label={s.isCompleted ? 'Completed' : 'Pending'} color={s.isCompleted ? 'primary' : 'default'} size="small" sx={{ borderRadius: '8px', fontWeight: 600, fontSize: '11px' }} />
+                        </Box>
+
+                        {/* Time */}
+
+                        <Typography variant="caption" sx={{ mt: 1.5, fontWeight: 600, color: active ? '#1976d2' : '#94a3b8', textAlign: 'center', fontSize: '11px', px: 1 }}>{s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+            ) : null}
+            {/* ================= END TIMELINE ================= */}
           </Box>
         )}
       </MainCard>
