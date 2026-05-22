@@ -1,11 +1,10 @@
 // assets
-import { ProjectOutlined, ScheduleOutlined, ShoppingCartOutlined, SendOutlined, MailOutlined } from '@ant-design/icons';
+import { ProjectOutlined, ScheduleOutlined, SendOutlined, MailOutlined } from '@ant-design/icons';
 
 // icons
 const icons = {
   ProjectOutlined,
   ScheduleOutlined,
-  ShoppingCartOutlined,
   SendOutlined,
   MailOutlined
 };
@@ -46,13 +45,7 @@ const utilities = {
       icon: icons.MailOutlined,
       breadcrumbs: false
     },
-    {
-      id: 'orders-intake',
-      title: 'Orders & Intake',
-      type: 'item',
-      url: '/orders',
-      icon: icons.ShoppingCartOutlined
-    },
+    
     {
       id: 'delivery-dispatch',
       title: 'Delivery & Dispatch',
