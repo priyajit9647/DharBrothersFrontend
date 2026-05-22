@@ -38,6 +38,36 @@ function getDownloadHref(path) {
   return null;
 }
 
+// Normalize various error shapes into a user-friendly message for feedback
+function normalizeFeedbackErrorMessage(err) {
+  if (!err) return null;
+
+  // If it's already an object
+  if (typeof err === 'object') {
+    if (err.code === 'BMS-404' || /feedback not found/i.test(err.message || '') || /feedback not found/i.test(err.reason || '')) {
+      return 'No Feedback Present Yet';
+    }
+    return err.message || String(err);
+  }
+
+  // If it's a JSON string, try to parse and inspect
+  if (typeof err === 'string') {
+    try {
+      const parsed = JSON.parse(err);
+      if (parsed && (parsed.code === 'BMS-404' || /feedback not found/i.test(parsed.message || '') || /feedback not found/i.test(parsed.reason || '')) ) {
+        return 'No Feedback Present Yet';
+      }
+    } catch (e) {
+      // not JSON — fall through
+    }
+
+    if (/feedback not found/i.test(err) || /BMS-404/i.test(err)) return 'No Feedback Present Yet';
+    return err;
+  }
+
+  return String(err);
+}
+
 // renderDocumentRow removed — rendering is handled inside the component so it can call downloadDocument
 
 export default function OrderDetails() {
@@ -123,6 +153,7 @@ export default function OrderDetails() {
 
   const documentData = order?.documents || {};
   const isFeedbackSubmitted = feedback && feedback.length > 0;
+  const feedbackErrorMessage = normalizeFeedbackErrorMessage(feedbackError);
 
   const downloadDocument = async (documentName, suggestedFileName, fallbackPath) => {
     if (!order) return;
@@ -381,33 +412,7 @@ export default function OrderDetails() {
             </Grid>
 
             <Divider sx={{ my: 3 }} />
-
-            {feedbackLoading ? (
-              <Box sx={{ py: 6, textAlign: 'center' }}>
-                <CircularProgress size={24} />
-              </Box>
-            ) : feedbackError ? (
-              <Box sx={{ py: 6, textAlign: 'center' }}>
-                <Typography color="error">{feedbackError}</Typography>
-              </Box>
-            ) : isFeedbackSubmitted ? (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Customer Feedback
-                </Typography>
-                <Grid container spacing={2}>
-                  {feedback.map((f) => (
-                    <Grid item xs={12} key={f.questionNo}>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        {f.question}
-                      </Typography>
-                      <Rating name={`feedback-display-${f.questionNo}`} value={f.rating} readOnly precision={1} max={5} />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            ) : null}
-
+            
             <Typography variant="h6" sx={{ mb: 2 }}>
               Bindings
             </Typography>
@@ -444,7 +449,37 @@ export default function OrderDetails() {
             ) : (
               <Typography variant="body2">No binding information available.</Typography>
             )}
-            
+
+            {feedbackLoading ? (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : feedbackError ? (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <Typography color="error">{feedbackErrorMessage}</Typography>
+              </Box>
+            ) : isFeedbackSubmitted ? (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Customer Feedback
+                </Typography>
+                <Grid container spacing={2}>
+                  {feedback.map((f) => (
+                    <Grid item xs={12} key={f.questionNo}>
+                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                        {f.question}
+                      </Typography>
+                      <Rating name={`feedback-display-${f.questionNo}`} value={f.rating} readOnly precision={1} max={5} />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+            ) : (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <Typography color="error">No Feedback Present Yet</Typography>
+              </Box>
+            )}
+
             {/* ================= MODERN COMPACT TIMELINE ================= */}
 
             {timelineLoading ? (
