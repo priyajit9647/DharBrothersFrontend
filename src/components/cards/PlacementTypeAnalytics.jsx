@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import getPlacementTypeAnalytics from 'api/placementType';
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
+import CircularProgress from '@mui/material/CircularProgress'
 import TextField from '@mui/material/TextField'
 import Divider from '@mui/material/Divider'
 
@@ -45,49 +45,78 @@ export default function PlacementTypeAnalytics({ data = defaultData }) {
     return [];
   }
 
-  async function handleApply() {
-    setError(null);
-    setLoading(true);
-    try {
-      const payload = {};
-      if (startDate) payload.startDate = new Date(startDate).toISOString();
-      if (endDate) payload.endDate = new Date(endDate).toISOString();
+  // Auto-fetch analytics when both dates are available.
+  const lastQueryRef = useRef('');
+  const requestIdRef = useRef(0);
 
-      const resp = await getPlacementTypeAnalytics(payload);
-      const normalized = [
-  {
-    key: 'whatsapp',
-    label: 'WhatsApp Order Count',
-    count: Number(resp?.whatsapp?.count || 0),
-    percent: Number(resp?.whatsapp?.percentage || 0),
-    color: '#22c55e'
-  },
-  {
-    key: 'email',
-    label: 'Email Order Count',
-    count: Number(resp?.email?.count || 0),
-    percent: Number(resp?.email?.percentage || 0),
-    color: '#2563eb'
-  },
-  {
-    key: 'website',
-    label: 'Website Order Count',
-    count: Number(resp?.website?.count || 0),
-    percent: Number(resp?.website?.percentage || 0),
-    color: '#9333ea'
-  }
-];
+  useEffect(() => {
+    let mounted = true;
 
-setItemsData({
-  items: normalized,
-  totalOrders: Number(resp?.totalOrders || 0)
-});
-    } catch (e) {
-      setError(e?.message || String(e));
-    } finally {
-      setLoading(false);
+    async function fetchAnalytics() {
+      if (!startDate || !endDate) return;
+
+      const q = `${startDate}|${endDate}`;
+      if (q === lastQueryRef.current) return; // Prevent duplicate calls for same range
+
+      const s = new Date(startDate);
+      const e = new Date(endDate);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return;
+      if (s > e) {
+        setError('Start date cannot be after End date');
+        return;
+      }
+
+      setError(null);
+      setLoading(true);
+      const reqId = ++requestIdRef.current;
+
+      try {
+        const payload = { startDate: s.toISOString(), endDate: e.toISOString() };
+        const resp = await getPlacementTypeAnalytics(payload);
+
+        if (!mounted || requestIdRef.current !== reqId) return; // ignore stale responses
+
+        const normalized = [
+          {
+            key: 'whatsapp',
+            label: 'WhatsApp Order Count',
+            count: Number(resp?.whatsapp?.count || 0),
+            percent: Number(resp?.whatsapp?.percentage || 0),
+            color: '#22c55e'
+          },
+          {
+            key: 'email',
+            label: 'Email Order Count',
+            count: Number(resp?.email?.count || 0),
+            percent: Number(resp?.email?.percentage || 0),
+            color: '#2563eb'
+          },
+          {
+            key: 'website',
+            label: 'Website Order Count',
+            count: Number(resp?.website?.count || 0),
+            percent: Number(resp?.website?.percentage || 0),
+            color: '#9333ea'
+          }
+        ];
+
+        setItemsData({ items: normalized, totalOrders: Number(resp?.totalOrders || 0) });
+        lastQueryRef.current = q;
+      } catch (err) {
+        if (!mounted || requestIdRef.current !== reqId) return;
+        setError(err?.message || String(err));
+      } finally {
+        if (!mounted || requestIdRef.current !== reqId) return;
+        setLoading(false);
+      }
     }
-  }
+
+    fetchAnalytics();
+
+    return () => {
+      mounted = false;
+    };
+  }, [startDate, endDate]);
 
  const items = Array.isArray(itemsData?.items)
   ? itemsData.items
@@ -186,22 +215,11 @@ setItemsData({
             }}
           />
 
-          <Button
-            variant="contained"
-            onClick={handleApply}
-            disabled={loading}
-            sx={{
-              height: 40,
-              px: 3,
-              borderRadius: 3,
-              textTransform: 'none',
-              fontWeight: 700,
-              background: 'linear-gradient(135deg,#2563eb,#1d4ed8)',
-              boxShadow: 'none'
-            }}
-          >
-            {loading ? 'Loading...' : 'Apply'}
-          </Button>
+          {loading ? (
+            <Box sx={{ display: 'flex', alignItems: 'center', px: 1 }}>
+              <CircularProgress size={24} />
+            </Box>
+          ) : null}
 
         </Box>
 
