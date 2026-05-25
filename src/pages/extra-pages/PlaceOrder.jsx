@@ -20,6 +20,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { publicFetch } from 'api/auth';
 import { attachOrder, getOrderEstimation, getOrderPageDetails, uploadTempOrderFiles } from 'api/order';
 import Logo from 'components/logo';
+import SynopsisStep from './PlaceOrderComponents/SynopsisStep';
 
 const navItems = [
   { label: 'Home', to: '/order' },
@@ -38,6 +39,7 @@ const STEP_DEFINITIONS = {
   details: { label: 'Document Details', title: 'Document Details' },
   hard: { label: 'Hard Binding', title: 'Hard Binding' },
   soft: { label: 'Soft Binding', title: 'Soft Binding' },
+  synopsis: { label: 'Synopsis', title: 'Synopsis' },
   summary: { label: 'Order Summary', title: 'Order Summary' },
   checkout: { label: 'Checkout', title: 'Checkout' }
 };
@@ -47,6 +49,13 @@ const FALLBACK_PAGE_TYPES = [
   { id: 'blank', code: 'BLANK', name: 'Blank' },
   { id: 'color', code: 'COLOR', name: 'Color' }
 ];
+
+export const SYNOPSIS_COVER_PAGE_DEGIN_OPTIONS = {
+  upload_new_design: 'upload_new_design',
+  same_as_hard_binding_conver: 'same_as_hard_binding_conver',
+  same_as_soft_binding_conver: 'same_as_soft_binding_conver',
+  do_not_need_cover_printing: 'do_not_need_cover_printing',
+}
 
 async function getWebPageTypes() {
   return publicFetch('/api/v1/web/master/page-types', {
@@ -339,6 +348,9 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
   const [bindingMasterError, setBindingMasterError] = useState('');
   const [hardBindingConfig, setHardBindingConfig] = useState(() => createBindingConfiguration());
   const [softBindingConfig, setSoftBindingConfig] = useState(() => createBindingConfiguration());
+  const [synopsisBindingConfig, setSynopsisBindingConfig] = useState(() => createBindingConfiguration());
+  const [synopsisCoverPageType, setSynopsisCoverPageType] = useState(null);
+  const [synopsisCoverPageDesignFile, setSynopsisCoverPageDesignFile] = useState(null);
 
   const activeStepKeys = useMemo(() => {
     const bindingSteps = [];
@@ -351,8 +363,12 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
       bindingSteps.push('soft');
     }
 
+    if(synopsisDocument != null) {
+      bindingSteps.push('synopsis');
+    }
+
     return ['upload', 'details', ...bindingSteps, 'summary', 'checkout'];
-  }, [selectedBindings]);
+  }, [selectedBindings, synopsisDocument]);
   const currentStepKey = activeStepKeys[activeStep] || 'upload';
   const stepLabels = useMemo(() => activeStepKeys.map((key) => STEP_DEFINITIONS[key].label), [activeStepKeys]);
   const stepGroupIndex = activeStep;
@@ -531,6 +547,10 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
 
     if (synopsisDocument) {
       payload.append('synopsisDocument', synopsisDocument);
+
+      if(synopsisCoverPageType == SYNOPSIS_COVER_PAGE_DEGIN_OPTIONS.upload_new_design) {
+        payload.append('synopsisCoverPageDesignFile', synopsisCoverPageDesignFile);
+      }
     }
 
     if (selectedBindings.hard && hardBindingConfig.coverDesignFile) {
@@ -593,6 +613,16 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
       payload.softBinding = buildBindingEstimationPayload(softBindingConfig);
     }
 
+    if(synopsisDocument != null) {
+      payload.synopsisBinding = {
+        ...buildBindingEstimationPayload(synopsisBindingConfig),
+        "coverPageDesign": synopsisCoverPageType == SYNOPSIS_COVER_PAGE_DEGIN_OPTIONS.upload_new_design,
+        "sameAsSoftBindingCover": synopsisCoverPageType == SYNOPSIS_COVER_PAGE_DEGIN_OPTIONS.same_as_hard_binding_conver,
+        "sameAsHardBindingCover": synopsisCoverPageType == SYNOPSIS_COVER_PAGE_DEGIN_OPTIONS.same_as_soft_binding_conver,
+        "coverPrintNotRequired": synopsisCoverPageType == SYNOPSIS_COVER_PAGE_DEGIN_OPTIONS.do_not_need_cover_printing
+      };
+    }
+
     return payload;
   };
 
@@ -603,14 +633,14 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
 
   const shouldLoadEstimationBeforeNext = () => {
     if (currentStepKey === 'hard') {
-      return !selectedBindings.soft;
+      return !selectedBindings.soft && synopsisDocument == null;
     }
 
     if (currentStepKey === 'soft') {
-      return true;
+      return synopsisDocument == null;
     }
 
-    return false;
+    return currentStepKey == 'synopsis';
   };
 
   const handleNext = () => {
@@ -817,7 +847,7 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
 
       const pageDetails = await getOrderPageDetails(payload);
       const resolvedPageTypes = pageTypeOptions.length ? pageTypeOptions : FALLBACK_PAGE_TYPES;
-      
+
       setPageRows(normalizePageDetails({
         totalPages: pageDetails?.totalPages,
         pageAndPageTypeIdMap: pageDetails?.pageAndPageTypeIdMap
@@ -921,6 +951,16 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
       return;
     }
 
+    if (currentStepKey === 'synopsis') {
+      if(synopsisCoverPageType == null){
+        setBindingSelectionError('Please select synopsis cover page design!');
+        return;
+      } else if (synopsisCoverPageType == SYNOPSIS_COVER_PAGE_DEGIN_OPTIONS.upload_new_design && synopsisCoverPageDesignFile == null) {
+        setBindingSelectionError('Please upload synopsis new design!');
+        return;
+      }
+    }
+
     if (shouldLoadEstimationBeforeNext()) {
       const loaded = await loadOrderEstimation();
 
@@ -992,6 +1032,25 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
                   coverMaterials={softBindingCoverMaterials}
                   bindingConfig={softBindingConfig}
                   onBindingConfigChange={setSoftBindingConfig}
+                />
+              )}
+              {currentStepKey === 'synopsis' && (
+                <SynopsisStep
+                  printTitle="Synopsis Details"
+                  coverMaterials={hardBindingCoverMaterials}
+                  masterOptions={bindingMasterOptions}
+                  masterError={bindingMasterError}
+                  a4PocketsLabel="A4 Pockets"
+                  cdPocketsLabel="CD Pockets"
+                  showCdPockets={false}
+                  bindingConfig={synopsisBindingConfig}
+                  onBindingConfigChange={setSynopsisBindingConfig}
+                  synopsisCoverPageType={synopsisCoverPageType}
+                  onChangeSynopsisCoverPageType={setSynopsisCoverPageType}
+                  synopsisCoverPageDesignFile={synopsisCoverPageDesignFile}
+                  onSynopsisCoverPageDesignFileChange={setSynopsisCoverPageDesignFile}
+                  bindingSelectionError={bindingSelectionError}
+                  setBindingSelectionError={setBindingSelectionError}
                 />
               )}
               {currentStepKey === 'summary' && <OrderSummaryStep summary={orderSummary} loading={summaryLoading} error={summaryError} />}
@@ -2239,7 +2298,7 @@ function QuantityField({ label, value, onDecrease, onIncrease, onChange }) {
   );
 }
 
-function BindingPrintDetailsCard({
+export function BindingPrintDetailsCard({
   title,
   detail,
   masterOptions,
