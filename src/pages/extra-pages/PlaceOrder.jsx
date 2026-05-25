@@ -3270,7 +3270,7 @@ export function FooterSection() {
       <Box sx={{ bgcolor: 'info.main', color: 'common.white', py: 2 }}>
         <Container maxWidth="lg">
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
-            <Typography sx={{ fontSize: '0.82rem' }}>© 2024 DHAR PRINTERS AND GENERAL ORDER SUPPLIERS | All Rights Reserved</Typography>
+            <Typography sx={{ fontSize: '0.82rem' }}>© {new Date().getFullYear()} DHAR PRINTERS AND GENERAL ORDER SUPPLIERS | All Rights Reserved</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.75, sm: 2.5 }}>
               <Typography sx={{ fontSize: '0.82rem' }}>Terms and Conditions</Typography>
               <Typography sx={{ fontSize: '0.82rem' }}>Privacy Policy</Typography>
