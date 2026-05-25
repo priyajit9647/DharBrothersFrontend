@@ -57,6 +57,22 @@ async function blobToBase64(blob) {
   });
 }
 
+  /**
+   * Assign a staff/user to an order (admin)
+   * Endpoint: POST /api/v1/orders/admin/{orderId}/assign
+   * @param {string|number} orderId
+   * @param {{assignedStaffId: string, assignedDate?: string}} payload
+   */
+  export async function assignOrderStaff(orderId, payload) {
+    if (!orderId) throw new Error('orderId is required');
+    if (!payload || !payload.assignedStaffId) throw new Error('assignedStaffId is required');
+
+    return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}/assign`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  }
+
 function extractBase64String(value) {
   if (value == null) return undefined;
   const str = String(value).trim();

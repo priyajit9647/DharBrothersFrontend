@@ -35,6 +35,7 @@ import { getProcessStages } from 'api/processStage';
 import { getOrdersByStatus } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
 import ShippingQrModal from 'components/ShippingQrModal';
+import AssignUserDialog from 'components/AssignUserDialog';
 
 // ==============================|| ORDER BOARD (TABLE VIEW) ||============================== //
 
@@ -124,6 +125,8 @@ export default function OrderBoard() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [qrOrder, setQrOrder] = useState(null);
   const [designOrder, setDesignOrder] = useState(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assignTarget, setAssignTarget] = useState(null);
   const [downloading, setDownloading] = useState({});
   const [downloadError, setDownloadError] = useState('');
 
@@ -193,6 +196,42 @@ export default function OrderBoard() {
   const handleMenuClose = () => {
     setAnchorEl(null);
     // keep selectedOrder until dialog opens; clear when menu fully closed
+    setSelectedOrder(null);
+  };
+
+  const handleOpenAssign = () => {
+    setAssignTarget(selectedOrder);
+    setAssignOpen(true);
+    setAnchorEl(null);
+  };
+
+  const handleAssigned = ({ user, dateAssigned }) => {
+    // update the local UI to show assigned staff immediately
+    if (!assignTarget) return;
+
+    setOrdersByStage((prev) => {
+      const map = { ...prev };
+      Object.keys(map).forEach((stage) => {
+        const items = map[stage]?.items || [];
+        const idx = items.findIndex((o) => String(renderOrderId(o)) === String(renderOrderId(assignTarget)));
+        if (idx >= 0) {
+          const updated = {
+            ...items[idx],
+            assignedStaffName: user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userName || user.email || '' : items[idx].assignedStaffName,
+            assignedStaffEmail: user?.email || items[idx].assignedStaffEmail,
+            assignedStaffPhone: user?.mobile || user?.phone || items[idx].assignedStaffPhone,
+            assignedDate: dateAssigned || new Date().toISOString()
+          };
+          const newItems = items.slice();
+          newItems[idx] = updated;
+          map[stage] = { ...(map[stage] || {}), items: newItems };
+        }
+      });
+      return map;
+    });
+
+    setAssignOpen(false);
+    setAssignTarget(null);
     setSelectedOrder(null);
   };
 
@@ -568,9 +607,7 @@ export default function OrderBoard() {
                     transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                   >
                     <MenuItem onClick={handleViewOrder}>View Order</MenuItem>
-                    <MenuItem onClick={handleMenuClose}>Assign</MenuItem>
-                    <MenuItem onClick={handleMenuClose}>Edit</MenuItem>
-                    <MenuItem onClick={openDesignDialog}>Design Details</MenuItem>
+                    <MenuItem onClick={handleOpenAssign}>Assign</MenuItem>
                   </Menu>
 
                   <Dialog open={Boolean(designOrder)} onClose={() => setDesignOrder(null)} fullWidth maxWidth="sm">
@@ -625,6 +662,7 @@ export default function OrderBoard() {
                   </Dialog>
 
                   {qrOrder && <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} />}
+                  <AssignUserDialog open={assignOpen} onClose={() => { setAssignOpen(false); setAssignTarget(null); }} order={assignTarget} onAssigned={handleAssigned} />
                 </MainCard>
               </Grid>
             );
