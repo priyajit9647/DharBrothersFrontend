@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { CloudUploadOutlined, DeleteOutlined, EditOutlined, EnvironmentOutlined, FacebookFilled, InfoCircleOutlined, InstagramOutlined, MailOutlined, PhoneOutlined, TwitterOutlined } from '@ant-design/icons';
+import { CloudUploadOutlined, DeleteOutlined, EnvironmentOutlined, FacebookFilled, InfoCircleOutlined, InstagramOutlined, MailOutlined, PhoneOutlined, TwitterOutlined } from '@ant-design/icons';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Container from '@mui/material/Container';
@@ -182,8 +182,6 @@ function buildCustomerPayloadFromForm(checkoutForm) {
     pincode: checkoutForm.pincode || '',
     landmark: checkoutForm.landmark || '',
     universityName: checkoutForm.universityName || ''
-    ,
-    universityDepartment: checkoutForm.universityDepartment || ''
   };
 }
 
@@ -320,6 +318,8 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
   const [pageTypesError, setPageTypesError] = useState('');
   const [pageRows, setPageRows] = useState([]);
   const [pageEditorOpen, setPageEditorOpen] = useState(false);
+  const [synopsisPageRows, setSynopsisPageRows] = useState([]);
+  const [synopsisPageEditorOpen, setSynopsisPageEditorOpen] = useState(false);
   const [pageDetailsLoading, setPageDetailsLoading] = useState(false);
   const [selectedBindings, setSelectedBindings] = useState({ hard: false, soft: false });
   const [checkoutForm, setCheckoutForm] = useState(INITIAL_CHECKOUT_FORM);
@@ -368,6 +368,18 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
       { label: 'BW page', value: bwPages }
     ];
   }, [pageRows, pageTypeMap]);
+
+  const synopsisPageStats = useMemo(() => {
+    const totalPages = synopsisPageRows.length;
+    const colourPages = synopsisPageRows.filter((row) => isColourPageType(pageTypeMap.get(String(row.pageTypeId)))).length;
+    const bwPages = synopsisPageRows.filter((row) => isBwPageType(pageTypeMap.get(String(row.pageTypeId)))).length;
+
+    return [
+      { label: 'Total page', value: totalPages },
+      { label: 'Color page', value: colourPages },
+      { label: 'BW page', value: bwPages }
+    ];
+  }, [synopsisPageRows, pageTypeMap]);
 
   useEffect(() => {
     let ignore = false;
@@ -493,6 +505,20 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
   }, [thesisDocument, pageTypeOptions]);
 
   useEffect(() => {
+    if (!synopsisDocument) {
+      setSynopsisPageRows([]);
+      setSynopsisPageEditorOpen(false);
+      return;
+    }
+
+    if (!pageTypeOptions.length) {
+      return;
+    }
+
+    setSynopsisPageRows((prev) => sanitizePageRows(prev, pageTypeOptions));
+  }, [synopsisDocument, pageTypeOptions]);
+
+  useEffect(() => {
     setActiveStep((prev) => Math.min(prev, activeStepKeys.length - 1));
   }, [activeStepKeys]);
 
@@ -539,11 +565,20 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
 
   const buildOrderEstimationPayload = () => {
     const payload = {
+      thesisUploaded: !!thesisDocument,
       totalPages: Number(pageStats[0].value || 0),
       colourPages: Number(pageStats[1].value || 0),
       bWPages: Number(pageStats[2].value || 0),
       bwpages: Number(pageStats[2].value || 0),
       pageAndPageTypeIdMap: pageRows.reduce((accumulator, row) => {
+        accumulator[row.pageNumber] = Number(row.pageTypeId);
+        return accumulator;
+      }, {}),
+      synopsisUploaded: !!synopsisDocument,
+      synopsisTotalPages: Number(synopsisPageStats[0].value || 0),
+      synopsisColourPages: Number(synopsisPageStats[1].value || 0),
+      synopsisBWPages: Number(synopsisPageStats[2].value || 0),
+      synopsisPageAndPageTypeIdMap: synopsisPageRows.reduce((accumulator, row) => {
         accumulator[row.pageNumber] = Number(row.pageTypeId);
         return accumulator;
       }, {}),
@@ -609,6 +644,8 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
     }
 
     setSynopsisDocument(file || null);
+    setSubmitError('');
+    setSynopsisPageRows([]);
   };
 
   const handleCheckoutFieldChange = (field, value) => {
@@ -744,6 +781,22 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
     setPageRows((prev) => prev.map((row) => (row.pageNumber === pageNumber ? { ...row, pageTypeId: String(pageTypeId) } : row)));
   };
 
+  const handleOpenSynopsisPageEditor = () => {
+    if (!synopsisDocument) {
+      return;
+    }
+
+    setSynopsisPageEditorOpen(true);
+  };
+
+  const handleCloseSynopsisPageEditor = () => {
+    setSynopsisPageEditorOpen(false);
+  };
+
+  const handleSynopsisPageTypeChange = (pageNumber, pageTypeId) => {
+    setSynopsisPageRows((prev) => prev.map((row) => (row.pageNumber === pageNumber ? { ...row, pageTypeId: String(pageTypeId) } : row)));
+  };
+
   const handleLoadPageDetails = async () => {
     if (!thesisDocument) {
       setUploadError('Please upload the thesis document.');
@@ -764,7 +817,19 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
 
       const pageDetails = await getOrderPageDetails(payload);
       const resolvedPageTypes = pageTypeOptions.length ? pageTypeOptions : FALLBACK_PAGE_TYPES;
-      setPageRows(normalizePageDetails(pageDetails, resolvedPageTypes));
+      
+      setPageRows(normalizePageDetails({
+        totalPages: pageDetails?.totalPages,
+        pageAndPageTypeIdMap: pageDetails?.pageAndPageTypeIdMap
+      }, resolvedPageTypes));
+
+      if (synopsisDocument) {
+        setSynopsisPageRows(normalizePageDetails({
+          totalPages: pageDetails?.synopsisTotalPages,
+          pageAndPageTypeIdMap: pageDetails?.synopsisPageAndPageTypeIdMap
+        }, resolvedPageTypes));
+      }
+
       return true;
     } catch (error) {
       setSubmitError(error.message || 'Failed to load page details.');
@@ -903,6 +968,9 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
                   pageStats={pageStats}
                   pageTypesError={pageTypesError}
                   onEditPageDetails={handleOpenPageEditor}
+                  synopsisDocument={synopsisDocument}
+                  synopsisPageStats={synopsisPageStats}
+                  onEditSynopsisPageDetails={handleOpenSynopsisPageEditor}
                   selectedBindings={selectedBindings}
                   bindingSelectionError={bindingSelectionError}
                   onToggleBinding={handleToggleBinding}
@@ -1017,6 +1085,18 @@ export default function PlaceOrder({ pageTitle = 'Order Thesis Online', hideHead
         pageTypes={pageTypeOptions}
         onClose={handleClosePageEditor}
         onPageTypeChange={handlePageTypeChange}
+        title="Thesis Document Pages"
+      />
+
+      <PageEditorDialog
+        open={synopsisPageEditorOpen}
+        loading={pageTypesLoading}
+        error={pageTypesError}
+        pageRows={synopsisPageRows}
+        pageTypes={pageTypeOptions}
+        onClose={handleCloseSynopsisPageEditor}
+        onPageTypeChange={handleSynopsisPageTypeChange}
+        title="Synopsis Document Pages"
       />
 
       {!hideFooter && <FooterSection />}
@@ -1736,6 +1816,9 @@ function DocumentDetailsStep({
   pageStats,
   pageTypesError,
   onEditPageDetails,
+  synopsisDocument,
+  synopsisPageStats,
+  onEditSynopsisPageDetails,
   selectedBindings,
   bindingSelectionError,
   onToggleBinding
@@ -1836,6 +1919,97 @@ function DocumentDetailsStep({
         </Box>
       </Paper>
 
+      {synopsisDocument && (
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 0,
+            border: '1px solid',
+            borderColor: 'divider',
+            overflow: 'hidden',
+            mt: 2
+          }}
+        >
+          <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 2.5, md: 3 } }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: { xs: 'flex-start', md: 'center' },
+                justifyContent: 'space-between',
+                gap: 2,
+                pb: 1.75,
+                mb: 1.75,
+                borderBottom: '1px solid',
+                borderColor: 'divider'
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  letterSpacing: 0.6,
+                  textTransform: 'uppercase'
+                }}
+              >
+                SYNOPSIS FILE NAME :
+              </Typography>
+
+              <Typography sx={{ fontSize: '0.92rem', color: 'text.secondary', flex: 1 }}>{synopsisDocument?.name}</Typography>
+
+              <Button
+                onClick={onEditSynopsisPageDetails}
+                variant="contained"
+                sx={{
+                  px: 3,
+                  py: 1.1,
+                  borderRadius: 0,
+                  bgcolor: theme.palette.info.main,
+                  color: 'common.white',
+                  boxShadow: 'none',
+                  fontSize: '0.8rem',
+                  letterSpacing: 0.4,
+                  '&:hover': {
+                    bgcolor: theme.palette.info.dark,
+                    boxShadow: 'none'
+                  }
+                }}
+              >
+                Edit
+              </Button>
+            </Box>
+
+            <Grid container spacing={1.5}>
+              {synopsisPageStats.map((item, index) => (
+                <Grid
+                  key={item.label}
+                  item
+                  xs={12}
+                  sm={4}
+                  sx={{
+                    display: 'flex'
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: '100%',
+                      px: { xs: 2, md: 2.5 },
+                      py: 2,
+                      bgcolor: index % 2 === 0 ? alpha(theme.palette.info.main, 0.06) : alpha(theme.palette.info.main, 0.02),
+                      border: '1px solid',
+                      borderColor: alpha(theme.palette.info.main, 0.12)
+                    }}
+                  >
+                    <Typography sx={{ mb: 1, fontSize: '0.82rem', color: 'text.secondary' }}>{item.label}</Typography>
+                    <Typography sx={{ fontSize: '1.15rem', fontWeight: 600, color: 'text.primary' }}>{item.value}</Typography>
+                  </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        </Paper>
+      )}
+
       <Box sx={{ mt: 4 }}>
         <Typography sx={{ fontSize: '1rem', fontWeight: 500, mb: 2 }}>Select type of Binding</Typography>
         <Grid container>
@@ -1866,12 +2040,10 @@ function DocumentDetailsStep({
   );
 }
 
-function PageEditorDialog({ open, loading, error, pageRows, pageTypes, onClose, onPageTypeChange }) {
-  const theme = useTheme();
-
+function PageEditorDialog({ open, loading, error, pageRows, pageTypes, onClose, onPageTypeChange, title = 'Thesis Document Pages' }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ pb: 1.25, fontWeight: 600 }}>Thesis Document Pages</DialogTitle>
+      <DialogTitle sx={{ pb: 1.25, fontWeight: 600 }}>{title}</DialogTitle>
       <DialogContent dividers>
         <Grid container sx={{ mb: 1.5, borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>
           <Grid item xs={4}>
@@ -1923,7 +2095,7 @@ function PageEditorDialog({ open, loading, error, pageRows, pageTypes, onClose, 
           sx={{ mt: 2.5 }}
         >
           <Typography sx={{ maxWidth: 360, fontSize: '0.88rem', color: 'text.secondary' }}>
-            Change page types from the dropdown. Updates are applied immediately to the thesis page totals.
+            Change page types from the dropdown. Updates are applied immediately to the page totals.
           </Typography>
           <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 0 }}>
             Close
@@ -3277,7 +3449,7 @@ export function FooterSection() {
       <Box sx={{ bgcolor: 'info.main', color: 'common.white', py: 2 }}>
         <Container maxWidth="lg">
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
-            <Typography sx={{ fontSize: '0.82rem' }}>© {new Date().getFullYear()} DHAR PRINTERS AND GENERAL ORDER SUPPLIERS | All Rights Reserved</Typography>
+            <Typography sx={{ fontSize: '0.82rem' }}>© {new Date().getFullYear()} Dhar Brothers</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.75, sm: 2.5 }}>
               <Typography sx={{ fontSize: '0.82rem' }}>Terms and Conditions</Typography>
               <Typography sx={{ fontSize: '0.82rem' }}>Privacy Policy</Typography>
