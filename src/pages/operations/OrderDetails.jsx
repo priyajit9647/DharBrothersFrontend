@@ -363,6 +363,9 @@ export default function OrderDetails() {
                 </Typography>
                 <Typography variant="body2">{order.billingAddress?.address1 || '—'}</Typography>
                 {order.billingAddress?.address2 && <Typography variant="body2">{order.billingAddress.address2}</Typography>}
+
+                {/* University Department (show if present) */}
+                <Typography variant="body2">{order.billingAddress?.universityDepartment || '—'}</Typography>
                 <Typography variant="body2">
                   {order.billingAddress?.city || ''} {order.billingAddress?.state || ''}
                 </Typography>
