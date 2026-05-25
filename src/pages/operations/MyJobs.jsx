@@ -117,7 +117,8 @@ export default function MyJobs() {
     if (!activeJob) return;
     const id = activeJob.orderId || activeJob.id || activeJob.orderNo || activeJob.code;
     if (id) {
-      navigate(`/orders/view/${encodeURIComponent(String(id))}`);
+      // Navigate to admin-only order details page
+      navigate(`/admin/orders/view/${encodeURIComponent(String(id))}`);
     }
     handleActionsClose();
   };

@@ -14,6 +14,7 @@ import InputAdornment from '@mui/material/InputAdornment';
 import SearchOutlined from '@ant-design/icons/SearchOutlined';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Dialog from '@mui/material/Dialog';
@@ -28,7 +29,7 @@ import MainCard from 'components/MainCard';
 
 // icons
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
-import FileExcelOutlined from '@ant-design/icons/FileExcelOutlined';
+import { FileSpreadsheet } from 'lucide-react';
 
 import { getProcessStages } from 'api/processStage';
 import { getOrdersByStatus } from 'api/orders';
@@ -203,7 +204,8 @@ export default function OrderBoard() {
 
     const id = selectedOrder.orderId || selectedOrder.id || selectedOrder.orderNo || selectedOrder.code;
     if (id) {
-      navigate(`/orders/view/${encodeURIComponent(String(id))}`);
+      // Navigate to admin-only order details page
+      navigate(`/admin/orders/view/${encodeURIComponent(String(id))}`);
     }
     handleMenuClose();
   };
@@ -448,51 +450,28 @@ export default function OrderBoard() {
                             })}
                           />
 
-                          <Button
-                          variant="contained"
-                          startIcon={<span>📊</span>}
-                          sx={{
-                              minWidth: '145px',
-                              height: '42px',
-
-                          background:
-                              'linear-gradient(135deg,#16a34a,#22c55e)',
-
-                               color: '#fff',
-
-                               fontWeight: 700,
-
-                              fontSize: '13px',
-
-                              textTransform: 'none',
-
-                              borderRadius: '12px',
-
-                              px: 1.8,
-
-                              boxShadow:
-                                '0 5px 14px rgba(34,197,94,0.24)',
-
-                              transition: 'all .25s ease',
-
+                          <Tooltip title="Export CSV (Excel)">
+                            <IconButton
+                              onClick={() => exportStageToCsv(stageName)}
+                              aria-label={`export-${stageName}`}
+                              sx={(theme) => ({
+                                width: 42,
+                                height: 42,
+                                bgcolor: 'transparent',
+                                color: theme.palette.success.contrastText,
+                                borderRadius: '10px',
+                                background: 'linear-gradient(135deg,#16a34a,#22c55e)',
+                                boxShadow: '0 5px 14px rgba(34,197,94,0.24)',
                                 '&:hover': {
-                              background:
-                                'linear-gradient(135deg,#15803d,#16a34a)',
-
-                              transform: 'translateY(-2px)',
-
-                              boxShadow:
-                                '0 8px 18px rgba(34,197,94,0.34)'
-                              },
-
-                                '& .MuiButton-startIcon': {
-                              marginRight: '4px',
-                              fontSize: '15px'
-                            }
-                             }}
->
-                            Export Excel
-                          </Button>
+                                  background: 'linear-gradient(135deg,#15803d,#16a34a)',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 8px 18px rgba(34,197,94,0.34)'
+                                }
+                              })}
+                            >
+                              <FileSpreadsheet size={16} style={{ color: '#fff' }} />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       </Box>
                     </Box>
