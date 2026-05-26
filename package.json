@@ -26,6 +26,7 @@
     "@mui/lab": "7.0.1-beta.20",
     "@mui/material": "7.3.6",
     "@mui/system": "7.3.6",
+    "@mui/icons-material": "5.11.16",
     "@mui/x-charts": "8.22.1",
     "@vitejs/plugin-react": "5.1.2",
     "firebase": "^12.13.0",

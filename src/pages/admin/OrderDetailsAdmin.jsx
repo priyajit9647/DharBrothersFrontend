@@ -12,16 +12,23 @@ import TableContainer from '@mui/material/TableContainer';
 import TableRow from '@mui/material/TableRow';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
-import Select from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import FormControl from '@mui/material/FormControl';
-import InputLabel from '@mui/material/InputLabel';
+// Removed Select/MenuItem/FormControl/InputLabel (Order Status card removed)
 import TextField from '@mui/material/TextField';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
+
+import {
+  Download,
+  User,
+  Truck,
+  Receipt,
+  Upload
+} from 'lucide-react';
 
 import { getOrderById, /* updateOrderStatus */ } from 'api/orders';
 import { uploadDocumentVersionFormData } from 'api/document';
@@ -29,17 +36,34 @@ import { authorizedFetch } from 'api/auth';
 
 function DetailsRow({ label, value }) {
   return (
-    <TableRow>
-      <TableCell sx={{ fontWeight: 700, width: 160 }}>{label}</TableCell>
-      <TableCell>{value ?? '—'}</TableCell>
-    </TableRow>
+    <Box
+      sx={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        py: 1.5,
+        borderBottom: '1px solid #edf2f7'
+      }}
+    >
+      <Typography
+        sx={{
+          fontWeight: 600,
+          fontSize: 14
+        }}
+      >
+        {label}
+      </Typography>
+
+      <Box color="text.secondary">
+        {value ?? '—'}
+      </Box>
+    </Box>
   );
 }
 
 export default function OrderDetailsAdmin() {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
-  const [status, setStatus] = useState('New Order');
   const [uploadFiles, setUploadFiles] = useState({});
 
   useEffect(() => {
@@ -193,167 +217,544 @@ export default function OrderDetailsAdmin() {
     })();
   };
 
-  const handleSaveStatus = async () => {
-    if (!order) return;
-    try {
-      // Prefer dedicated status endpoint; fallback to put on order resource
-      try {
-        await authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(order.orderId))}/status`, {
-          method: 'POST',
-          body: JSON.stringify({ status })
-        });
-      } catch (err) {
-        // fallback
-        await authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(order.orderId))}`, {
-          method: 'PUT',
-          body: JSON.stringify({ status })
-        });
-      }
-      alert('Status saved');
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to save status', err);
-      alert('Failed to save status: ' + (err?.message || String(err)));
-    }
-  };
+  // Order status control removed; admin status updates handled elsewhere
 
   if (!order) return null;
-  return (
-    <Box sx={{ p: 3 }}>
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Typography variant="h5">Orders #{order?.orderId ?? ''}</Typography>
-            <Button variant="contained" color="primary">Download Invoice</Button>
-          </Box>
-        </Grid>
+return (
+<Box
+sx={{
+p:3,
+background:'#f5f7fb',
+minHeight:'100vh',
+width:'100%'
+}}
+>
 
-        <Grid item xs={12} md={9}>
-          <Card sx={{ borderTop: '4px solid #7b1fa2', boxShadow: '0 6px 20px rgba(0,0,0,0.06)', borderRadius: 2 }}>
-            <CardContent>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 700 }}>Hard Printing and Binding Details</Typography>
+<Box
+sx={{
+display:'flex',
+justifyContent:'space-between',
+alignItems:'center',
+mb:3,
+flexWrap:'wrap',
+gap:2
+}}
+>
 
-              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
-                <Table size="small">
-                  <TableBody>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 700 }}>Description</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Paper Size</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Colour/ BW</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Printing Type</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>A4 Pockets</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>CD Pockets</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Information</TableCell>
-                    </TableRow>
-                    {(order.printingDetails || []).map((r, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>{r.desc}</TableCell>
-                        <TableCell>{r.size}</TableCell>
-                        <TableCell>{r.color}</TableCell>
-                        <TableCell>{r.printingType}</TableCell>
-                        <TableCell>{r.a4Pockets}</TableCell>
-                        <TableCell>{r.cdPockets}</TableCell>
-                        <TableCell>{r.additionalInformation}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+<Box>
 
-              <Divider sx={{ my: 2 }} />
+<Typography
+variant="h4"
+fontWeight={700}
+>
+Order #{order?.orderId}
+</Typography>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>Detail</Typography>
-                      <List sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
-                        {(order.files || []).map((f) => (
-                          <ListItem key={f.key} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                            <ListItemText primary={f.label} />
-                            <Button variant="contained" size="small" sx={{ ml: 2 }}>View</Button>
-                          </ListItem>
-                        ))}
-                      </List>
-                    </Grid>
+<Typography
+variant="body2"
+color="text.secondary"
+>
+Manage and track order details
+</Typography>
 
-                    <Grid item xs={12} md={6}>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>Upload Documents for Approval</Typography>
-                      <Box component="form" noValidate sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                        <input id="thesis-file" type="file" onChange={(e) => handleFileChange('thesis', e)} />
-                        <input id="cover-file" type="file" onChange={(e) => handleFileChange('coverDesign', e)} />
-                        <input id="add1" type="file" onChange={(e) => handleFileChange('add1', e)} />
-                        <input id="add2" type="file" onChange={(e) => handleFileChange('add2', e)} />
-                        <Button variant="contained" sx={{ mt: 1, alignSelf: 'flex-start' }} onClick={handleSubmitForReview}>Submit For Review</Button>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
+</Box>
 
-        <Grid item xs={12} md={3}>
-          <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-            {/* Order Status card removed as requested */}
 
-            <Card sx={{ borderTop: '4px solid #7b1fa2', boxShadow: '0 6px 18px rgba(0,0,0,0.06)', borderRadius: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Order Details</Typography>
-                <TableContainer>
-                  <Table size="small">
-                    <TableBody>
-                      <DetailsRow label="Order ID:" value={order.orderId} />
-                      <DetailsRow label="Order Date:" value={order.date} />
-                      <DetailsRow label="Order Amount:" value={order.amount} />
-                      <DetailsRow label="Shipping Status:" value={order.shippingStatus} />
-                      <DetailsRow label="Shipping Amount:" value={order.shippingAmount} />
-                      <DetailsRow label="CGST Amount (9%):" value={order.cgst} />
-                      <DetailsRow label="SGST Amount (9%):" value={order.sgst} />
-                      <DetailsRow label="Total Amount:" value={order.total} />
-                      <DetailsRow label="Payment Status:" value={order.paymentStatus} />
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
+<Button
+variant="contained"
+startIcon={<Download size={18}/>}
 
-            <Card sx={{ borderTop: '4px solid #7b1fa2', boxShadow: '0 6px 18px rgba(0,0,0,0.06)', borderRadius: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Customer Details</Typography>
-                <Typography variant="body2"><strong>Name:</strong> {order.customer?.name ?? '—'}</Typography>
-                <Typography variant="body2"><strong>Email:</strong> {order.customer?.email ?? '—'}</Typography>
-                <Typography variant="body2"><strong>Phone:</strong> {order.customer?.phone ?? '—'}</Typography>
-              </CardContent>
-            </Card>
+sx={{
+borderRadius:3,
+textTransform:'none',
+fontWeight:600,
+px:3
+}}
+>
+Download Invoice
+</Button>
 
-            <Card sx={{ borderTop: '4px solid #7b1fa2', boxShadow: '0 6px 18px rgba(0,0,0,0.06)', borderRadius: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Billing Details</Typography>
-                <Typography variant="body2"><strong>Apartment:</strong> {order.billing?.apartment ?? '—'}</Typography>
-                <Typography variant="body2"><strong>Street:</strong> {order.billing?.street ?? 'BEGAMPUR,HOOGHLY'}</Typography>
-                <Typography variant="body2"><strong>City:</strong> {order.billing?.city ?? '—'}</Typography>
-                <Typography variant="body2"><strong>State:</strong> {order.billing?.state ?? '—'}</Typography>
-                <Typography variant="body2"><strong>PIN:</strong> {order.billing?.pin ?? '—'}</Typography>
-                <Typography variant="body2"><strong>Country:</strong> {order.billing?.country ?? '—'}</Typography>
-              </CardContent>
-            </Card>
-            <Card sx={{ borderTop: '4px solid #7b1fa2', boxShadow: '0 6px 18px rgba(0,0,0,0.06)', borderRadius: 2 }}>
-              <CardContent>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>Shipping Details</Typography>
-                <Typography variant="body2"><strong>Address 1:</strong> {order.shipping?.address1 ?? order.shipping?.apartment ?? '—'}</Typography>
-                <Typography variant="body2"><strong>Address 2:</strong> {order.shipping?.address2 ?? order.shipping?.street ?? '—'}</Typography>
-                <Typography variant="body2"><strong>City:</strong> {order.shipping?.city ?? '—'}</Typography>
-                <Typography variant="body2"><strong>State:</strong> {order.shipping?.state ?? '—'}</Typography>
-                <Typography variant="body2"><strong>PIN:</strong> {order.shipping?.pincode ?? order.shipping?.pin ?? '—'}</Typography>
-                <Typography variant="body2"><strong>Country:</strong> {order.shipping?.country ?? '—'}</Typography>
-              </CardContent>
-            </Card>
-          </Box>
-        </Grid>
-      </Grid>
-    </Box>
-  );
+</Box>
+
+
+<Grid container spacing={3}>
+
+<Grid item xs={12} lg={9}>
+
+<Stack spacing={3}>
+
+
+<Card
+sx={{
+borderRadius:4,
+boxShadow:'0 4px 18px rgba(0,0,0,.08)'
+}}
+>
+
+<CardContent>
+
+<Typography
+fontWeight={700}
+mb={2}
+>
+Hard Printing & Binding Details
+</Typography>
+
+
+<TableContainer
+component={Paper}
+variant="outlined"
+sx={{
+borderRadius:3
+}}
+>
+
+<Table>
+
+<TableBody>
+
+<TableRow
+sx={{
+background:'#f8fafc'
+}}
+>
+
+<TableCell><b>Description</b></TableCell>
+<TableCell><b>Paper Size</b></TableCell>
+<TableCell><b>Colour</b></TableCell>
+<TableCell><b>Printing</b></TableCell>
+<TableCell><b>A4</b></TableCell>
+<TableCell><b>CD</b></TableCell>
+
+
+</TableRow>
+
+
+{order.printingDetails?.map((r,index)=>(
+
+<TableRow
+key={index}
+hover
+>
+
+<TableCell>{r.desc}</TableCell>
+
+<TableCell>{r.size}</TableCell>
+
+<TableCell>{r.color}</TableCell>
+
+<TableCell>{r.printingType}</TableCell>
+
+<TableCell>{r.a4Pockets}</TableCell>
+
+<TableCell>{r.cdPockets}</TableCell>
+
+
+</TableRow>
+
+))}
+
+</TableBody>
+
+</Table>
+
+</TableContainer>
+
+</CardContent>
+
+</Card>
+
+
+
+
+<Grid container spacing={3}>
+
+<Grid item xs={12} md={6}>
+
+<Card
+sx={{
+borderRadius:4,
+height:'100%'
+}}
+>
+
+<CardContent>
+
+<Typography
+fontWeight={700}
+mb={2}
+>
+Document Details
+</Typography>
+
+
+<Stack spacing={2}>
+
+{order.files?.map((f)=>(
+
+<Box
+key={f.key}
+sx={{
+display:'flex',
+justifyContent:'space-between',
+alignItems:'center',
+border:'1px solid #e5e7eb',
+borderRadius:2,
+p:2
+}}
+>
+
+<Typography>
+
+{f.label}
+
+</Typography>
+
+
+<Button
+variant="contained"
+size="small"
+sx={{
+textTransform:'none'
+}}
+>
+View
+</Button>
+
+</Box>
+
+))}
+
+</Stack>
+
+</CardContent>
+
+</Card>
+
+</Grid>
+
+
+
+
+
+<Grid item xs={12} md={6}>
+
+<Card
+sx={{
+borderRadius:4,
+height:'100%'
+}}
+>
+
+<CardContent>
+
+
+<Stack
+direction="row"
+spacing={1}
+alignItems="center"
+mb={2}
+>
+
+<Upload size={18}/>
+
+<Typography
+fontWeight={700}
+>
+Upload Documents
+</Typography>
+
+</Stack>
+
+
+
+<Stack spacing={2}>
+
+
+<TextField
+size="small"
+type="file"
+onChange={(e)=>
+handleFileChange(
+'thesis',
+e
+)
 }
+/>
 
+
+<TextField
+size="small"
+type="file"
+onChange={(e)=>
+handleFileChange(
+'coverDesign',
+e
+)
+}
+/>
+
+
+<TextField
+size="small"
+type="file"
+onChange={(e)=>
+handleFileChange(
+'add1',
+e
+)
+}
+/>
+
+
+<TextField
+size="small"
+type="file"
+onChange={(e)=>
+handleFileChange(
+'add2',
+e
+)
+}
+/>
+
+
+<Button
+variant="contained"
+onClick={handleSubmitForReview}
+sx={{
+mt:2,
+borderRadius:2,
+textTransform:'none'
+}}
+>
+
+Submit For Review
+
+</Button>
+
+
+</Stack>
+
+</CardContent>
+
+</Card>
+
+</Grid>
+
+</Grid>
+
+</Stack>
+
+</Grid>
+
+
+
+
+
+<Grid item xs={12} lg={3}>
+
+<Stack spacing={3}>
+
+
+
+
+
+<Card sx={{borderRadius:4}}>
+
+<CardContent>
+
+<Stack
+direction="row"
+spacing={1}
+alignItems="center"
+mb={2}
+>
+
+<Receipt size={18}/>
+
+<Typography
+fontWeight={700}
+>
+Order Details
+</Typography>
+
+</Stack>
+
+
+<DetailsRow
+label="Order ID"
+value={order.orderId}
+/>
+
+<DetailsRow
+label="Date"
+value={order.date}
+/>
+
+<DetailsRow
+label="Amount"
+value={`₹${order.amount}`}
+/>
+
+
+<DetailsRow
+label="Payment"
+value={
+<Chip
+label={order.paymentStatus}
+color="success"
+size="small"
+/>
+}
+/>
+
+</CardContent>
+
+</Card>
+
+
+
+
+
+<Card sx={{borderRadius:4}}>
+
+<CardContent>
+
+<Stack
+direction="row"
+spacing={1}
+alignItems="center"
+mb={2}
+>
+
+<User size={18}/>
+
+<Typography
+fontWeight={700}
+>
+Customer Details
+</Typography>
+
+</Stack>
+
+
+<DetailsRow
+label="Name"
+value={order.customer?.name}
+/>
+
+<DetailsRow
+label="Email"
+value={order.customer?.email}
+/>
+
+<DetailsRow
+label="Phone"
+value={order.customer?.phone}
+/>
+
+</CardContent>
+
+</Card>
+
+
+
+
+<Card sx={{borderRadius:4}}>
+
+<CardContent>
+
+<Typography
+fontWeight={700}
+mb={2}
+>
+Billing Details
+</Typography>
+
+
+<DetailsRow
+label="Apartment"
+value={order.billing?.apartment}
+/>
+
+<DetailsRow
+label="City"
+value={order.billing?.city}
+/>
+
+<DetailsRow
+label="State"
+value={order.billing?.state}
+/>
+
+<DetailsRow
+label="PIN"
+value={order.billing?.pin}
+/>
+
+</CardContent>
+
+</Card>
+
+
+
+
+<Card sx={{borderRadius:4}}>
+
+<CardContent>
+
+<Stack
+direction="row"
+spacing={1}
+alignItems="center"
+mb={2}
+>
+
+<Truck size={18}/>
+
+<Typography
+fontWeight={700}
+>
+Shipping Details
+</Typography>
+
+</Stack>
+
+
+<DetailsRow
+label="Address"
+value={order.shipping?.address1}
+/>
+
+<DetailsRow
+label="City"
+value={order.shipping?.city}
+/>
+
+<DetailsRow
+label="State"
+value={order.shipping?.state}
+/>
+
+<DetailsRow
+label="PIN"
+value={
+order.shipping?.pincode ||
+order.shipping?.pin
+}
+/>
+
+</CardContent>
+
+</Card>
+
+</Stack>
+
+</Grid>
+
+</Grid>
+
+</Box>
+);
+}
