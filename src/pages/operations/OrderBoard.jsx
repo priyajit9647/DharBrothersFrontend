@@ -398,7 +398,7 @@ export default function OrderBoard() {
   };
 
   return (
-    <Grid container rowSpacing={3} columnSpacing={2.75}>
+    <Grid container rowSpacing={3} columnSpacing={2.75} alignItems="stretch">
       <Grid item xs={12}>
         <Grid container alignItems="center" spacing={2}>
           <Grid item xs={12} md={6}>
@@ -442,8 +442,8 @@ export default function OrderBoard() {
                 })
               : rows;
             return (
-              <Grid item xs={12} md={6} lg={4} key={stageName}>
-                <MainCard content={false} sx={{ minHeight: 200 }}>
+              <Grid item xs={12} md={6} lg={4} key={stageName} sx={{ display: 'flex' }}>
+                <MainCard content={false} sx={{ minHeight: 200, display: 'flex', flexDirection: 'column', width: '100%' }}>
                   <Box sx={{ p: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
                       <Box sx={{ flex: '1 1 auto' }}>
@@ -516,8 +516,8 @@ export default function OrderBoard() {
                     </Box>
                   </Box>
 
-                  <TableContainer sx={{ px: 2, overflowX: 'auto' }}>
-                    <Table size="small" aria-labelledby={`orders-${stageName}`} sx={{ tableLayout: 'auto', minWidth: 980 }}>
+                  <TableContainer sx={{ px: 2, overflowX: 'auto', flex: 1 }}>
+                    <Table size="small" aria-labelledby={`orders-${stageName}`} sx={{ tableLayout: 'auto', minWidth: '100%' }}>
                       <OrdersTableHead />
                       <TableBody>
                         {filteredRows.map((order) => (
@@ -528,14 +528,30 @@ export default function OrderBoard() {
                             sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                           >
                             <TableCell>
-                                <Button
-                                  variant="contained"
-                                  size="small"
-                                  color="error"
-                                  onClick={(e) => handleActionClick(e, order)}
-                                >
+                              <Button
+                                onClick={(e) => handleActionClick(e, order)}
+                                variant="outlined"
+                                size="small"
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  textTransform: 'none',
+                                  minWidth: 86,
+                                  height: 64,
+                                  borderRadius: 1.5,
+                                  boxShadow: 1,
+                                  px: 1,
+                                  bgcolor: 'background.paper',
+                                  color: 'text.primary'
+                                }}
+                              >
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                                   Action
-                                </Button>
+                                </Typography>
+                                <EllipsisOutlined style={{ fontSize: '1rem', marginTop: 8 }} />
+                              </Button>
                             </TableCell>
                             <TableCell>
                               <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
