@@ -253,7 +253,7 @@ export default function OrderDetailsAdmin() {
                         <TableCell>{r.printingType}</TableCell>
                         <TableCell>{r.a4Pockets}</TableCell>
                         <TableCell>{r.cdPockets}</TableCell>
-                        <TableCell>College : Narula Institute of Technology</TableCell>
+                        <TableCell>{r.additionalInformation}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
