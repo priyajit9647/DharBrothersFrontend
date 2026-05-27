@@ -23,6 +23,7 @@ const DelayReports = Loadable(lazy(() => import('pages/reports/DelayReports')));
 const OpenJobsReport = Loadable(lazy(() => import('pages/reports/OpenJobsReport')));
 const ReadyToDispatch = Loadable(lazy(() => import('pages/reports/ReadyToDispatch')));
 const CompleteJobsReport = Loadable(lazy(() => import('pages/reports/CompleteJobsReport')));
+const SalesReport = Loadable(lazy(() => import('pages/reports/SalesReport')));
 const Branches = Loadable(lazy(() => import('pages/admin/Branches')));
 const Teams = Loadable(lazy(() => import('pages/admin/Teams')));
 const DocumentVersionController = Loadable(lazy(() => import('pages/admin/DocumentVersionController')));
@@ -121,6 +122,10 @@ const MainRoutes = {
         {
           path: 'complete-jobs',
           element: <CompleteJobsReport />
+        },
+        {
+          path: 'sales',
+          element: <SalesReport />
         },
         {
           path: 'notifications',
