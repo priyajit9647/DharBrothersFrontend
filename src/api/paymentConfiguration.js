@@ -11,7 +11,7 @@ export async function getPaymentConfigurations(branchId) {
   });
 }
 
-export async function createPaymentConfiguration({ id = '', branchId, merchantId, aggregatorId, secretKey, percentage, active }) {
+export async function createPaymentConfiguration({ id = '', branchId, merchantId, aggregatorId, secretKey, percentage, active, accountNumber, accountHolderName, ifscCode, bankName }) {
   // eslint-disable-next-line no-console
   console.log('Calling POST /api/v1/payment/config/create', {
     id,
@@ -20,7 +20,11 @@ export async function createPaymentConfiguration({ id = '', branchId, merchantId
     aggregatorId,
     secretKey,
     percentage,
-    active
+    active,
+    accountNumber,
+    accountHolderName,
+    ifscCode,
+    bankName
   });
 
   return authorizedFetch('/api/v1/payment/config/create', {
@@ -32,12 +36,16 @@ export async function createPaymentConfiguration({ id = '', branchId, merchantId
       aggregatorId,
       secretKey,
       percentage,
-      active
+      active,
+      accountNumber,
+      accountHolderName,
+      ifscCode,
+      bankName
     })
   });
 }
 
-export async function editPaymentConfiguration(id, { branchId, merchantId, aggregatorId, secretKey, percentage, active }) {
+export async function editPaymentConfiguration(id, { branchId, merchantId, aggregatorId, secretKey, percentage, active, accountNumber, accountHolderName, ifscCode, bankName }) {
   // eslint-disable-next-line no-console
   console.log(`Calling PUT /api/v1/payment/config/edit/${id}`, {
     id,
@@ -46,7 +54,11 @@ export async function editPaymentConfiguration(id, { branchId, merchantId, aggre
     aggregatorId,
     secretKey,
     percentage,
-    active
+    active,
+    accountNumber,
+    accountHolderName,
+    ifscCode,
+    bankName
   });
 
   return authorizedFetch(`/api/v1/payment/config/edit/${encodeURIComponent(id)}`, {
@@ -58,7 +70,11 @@ export async function editPaymentConfiguration(id, { branchId, merchantId, aggre
       aggregatorId,
       secretKey,
       percentage,
-      active
+      active,
+      accountNumber,
+      accountHolderName,
+      ifscCode,
+      bankName
     })
   });
 }
