@@ -112,7 +112,13 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
   };
 
   return (
-    <Dialog open={Boolean(open)} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={Boolean(open)}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      BackdropProps={{ sx: { backgroundColor: 'transparent' } }}
+    >
       <DialogTitle>Assign — {order ? (order.orderId || order.id || '') : ''}</DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" sx={{ mb: 1 }} color="text.secondary">
