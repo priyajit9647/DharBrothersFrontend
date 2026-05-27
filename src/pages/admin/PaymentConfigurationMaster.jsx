@@ -37,7 +37,11 @@ export default function PaymentConfigurationMaster() {
     aggregatorId: '',
     secretKey: '',
     percentage: '1',
-    active: 'true'
+    active: 'true',
+    accountNumber: '',
+    accountHolderName: '',
+    ifscCode: '',
+    bankName: ''
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -61,6 +65,10 @@ export default function PaymentConfigurationMaster() {
         merchantId: item.merchantId || '',
         aggregatorId: item.aggregatorId || '',
         secretKey: item.secretKey || '',
+        accountNumber: item.accountNumber || '',
+        accountHolderName: item.accountHolderName || '',
+        ifscCode: item.ifscCode || '',
+        bankName: item.bankName || '',
         percentage: Number(item.percentage ?? 0),
         active: item.active
       }));
@@ -115,7 +123,7 @@ export default function PaymentConfigurationMaster() {
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true' });
+    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true', accountNumber: '', accountHolderName: '', ifscCode: '', bankName: '' });
     setError('');
     setDialogOpen(true);
   };
@@ -127,7 +135,11 @@ export default function PaymentConfigurationMaster() {
       aggregatorId: row.aggregatorId || '',
       secretKey: row.secretKey || '',
       percentage: String(row.percentage ?? '1'),
-      active: String(row.active ?? true)
+      active: String(row.active ?? true),
+      accountNumber: row.accountNumber || '',
+      accountHolderName: row.accountHolderName || '',
+      ifscCode: row.ifscCode || '',
+      bankName: row.bankName || ''
     });
     setError('');
     setDialogOpen(true);
@@ -150,6 +162,10 @@ export default function PaymentConfigurationMaster() {
     const merchantId = formValues.merchantId.trim();
     const aggregatorId = formValues.aggregatorId.trim();
     const secretKey = formValues.secretKey.trim();
+    const accountNumber = formValues.accountNumber?.trim();
+    const accountHolderName = formValues.accountHolderName?.trim();
+    const ifscCode = formValues.ifscCode?.trim();
+    const bankName = formValues.bankName?.trim();
     const percentage = Number(formValues.percentage);
     const active = String(formValues.active) === 'true';
 
@@ -178,6 +194,10 @@ export default function PaymentConfigurationMaster() {
           merchantId,
           aggregatorId,
           secretKey,
+          accountNumber,
+          accountHolderName,
+          ifscCode,
+          bankName,
           percentage,
           active
         });
@@ -190,6 +210,10 @@ export default function PaymentConfigurationMaster() {
           merchantId,
           aggregatorId,
           secretKey,
+          accountNumber,
+          accountHolderName,
+          ifscCode,
+          bankName,
           percentage,
           active
         });
@@ -282,6 +306,10 @@ export default function PaymentConfigurationMaster() {
             <TextField label="Merchant ID" value={formValues.merchantId} onChange={handleFormChange('merchantId')} fullWidth />
             <TextField label="Aggregator ID" value={formValues.aggregatorId} onChange={handleFormChange('aggregatorId')} fullWidth />
             <TextField label="Secret Key" value={formValues.secretKey} onChange={handleFormChange('secretKey')} fullWidth />
+            <TextField label="Account Number" value={formValues.accountNumber} onChange={handleFormChange('accountNumber')} fullWidth />
+            <TextField label="Account Holder Name" value={formValues.accountHolderName} onChange={handleFormChange('accountHolderName')} fullWidth />
+            <TextField label="IFSC Code" value={formValues.ifscCode} onChange={handleFormChange('ifscCode')} fullWidth />
+            <TextField label="Bank Name" value={formValues.bankName} onChange={handleFormChange('bankName')} fullWidth />
             <FormControl fullWidth>
               <InputLabel id="payment-config-percentage-label">Percentage</InputLabel>
               <Select

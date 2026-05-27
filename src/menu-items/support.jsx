@@ -47,6 +47,13 @@ const support = {
           type: 'item',
           url: '/reports/complete-jobs'
         }
+        ,
+        {
+          id: 'sales-report',
+          title: 'Sales Report',
+          type: 'item',
+          url: '/reports/sales'
+        }
       ]
     },
     {
@@ -81,13 +88,7 @@ const support = {
         }
       ]
     },
-    {
-      id: 'materials-inventory',
-      title: 'Materials & Inventory',
-      type: 'item',
-      url: '/admin/materials',
-      icon: icons.DatabaseOutlined
-    },
+    
     {
       id: 'notification-templates',
       title: 'Notification History',
