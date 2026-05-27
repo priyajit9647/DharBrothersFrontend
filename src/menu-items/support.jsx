@@ -81,13 +81,7 @@ const support = {
         }
       ]
     },
-    {
-      id: 'materials-inventory',
-      title: 'Materials & Inventory',
-      type: 'item',
-      url: '/admin/materials',
-      icon: icons.DatabaseOutlined
-    },
+    
     {
       id: 'notification-templates',
       title: 'Notification History',
