@@ -165,6 +165,30 @@ export async function getOrderById(orderId) {
 }
 
 /**
+ * Download a file from server (admin)
+ * Endpoint: POST /api/v1/orders/admin/download
+ * Body: { filePath: string, fileName?: string }
+ * Returns a Blob representing the file content.
+ */
+export async function downloadOrderFile(payload) {
+  if (!payload || typeof payload !== 'object') {
+    throw new Error('payload is required and must be an object');
+  }
+
+  const { filePath, fileName } = payload;
+  if (!filePath) {
+    throw new Error('filePath is required');
+  }
+
+  const response = await authorizedFetchRaw('/api/v1/orders/admin/download', {
+    method: 'POST',
+    body: JSON.stringify({ filePath, fileName })
+  });
+
+  return response.blob();
+}
+
+/**
  * Confirm order received by customer
  * Endpoint: POST /api/v1/customer/orders/{orderId}/confirm-received
  * Body: { receivedByCustomer: boolean, ...optional order summary }
