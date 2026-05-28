@@ -1,4 +1,4 @@
-import { authorizedFetch } from './auth';
+import { authorizedFetch, authorizedFetchRaw } from './auth';
 
 function buildQueryString(params = {}) {
   const searchParams = new URLSearchParams();
@@ -112,4 +112,45 @@ export async function getCompleteJobsReport(params = {}) {
   const pageSize = Number(response?.size ?? size);
 
   return { items, total, page: currentPage, size: pageSize, raw: response };
+}
+
+/**
+ * Fetch sales report.
+ * Endpoint: GET /api/v1/report/sales
+ * Supports pagination and common filters (fromDate, toDate, state, customerId, orderNumber, search)
+ */
+export async function getSalesReport(params = {}) {
+  const { page = 0, size = 10, sort } = params;
+
+  const qs = buildQueryString(params);
+  const url = `/api/v1/report/sales${qs}`;
+
+  const response = await authorizedFetch(url, { method: 'GET' });
+
+  const items = Array.isArray(response)
+    ? response
+    : response?.content ?? response?.items ?? response?.data ?? response?.list ?? [];
+
+  const total = Number(
+    response?.totalElements ?? response?.total ?? response?.totalItems ?? response?.totalCount ?? items.length
+  );
+
+  const currentPage = Number(response?.number ?? response?.pageNumber ?? page ?? 0);
+  const pageSize = Number(response?.size ?? size);
+
+  return { items, total, page: currentPage, size: pageSize, raw: response };
+}
+
+/**
+ * Export sales report as a file.
+ * Endpoint: GET /api/v1/report/sales/export
+ * Accepts same filters as getSalesReport and an optional `format` param (csv|xlsx).
+ * Returns the raw Response so callers can stream/download the file blob.
+ */
+export async function exportSalesReport(params = {}) {
+  const qs = buildQueryString(params);
+  const url = `/api/v1/report/sales/export${qs}`;
+
+  const response = await authorizedFetchRaw(url, { method: 'GET' });
+  return response;
 }
