@@ -23,13 +23,13 @@ import Logo from 'components/logo';
 import SynopsisStep from './PlaceOrderComponents/SynopsisStep';
 
 const navItems = [
-  { label: 'Home', to: '/order' },
+  { label: 'Home', to: '/home' },
   { label: 'About Us' },
   { label: 'What We Do' },
-  { label: 'How We Work' },
-  { label: 'Testimonial' },
+  { label: 'How We Can' },
+  { label: 'Testimonials' },
   { label: 'Price', to: '/price' },
-  { label: 'Faq' },
+  { label: 'FAQ' },
   { label: 'Contact Us' }
 ];
 const socialIcons = [FacebookFilled, TwitterOutlined, InstagramOutlined];
@@ -1182,9 +1182,26 @@ export function TopInfoBar() {
           sx={{ py: 1.5 }}
         >
           <HeaderInfo icon={EnvironmentOutlined} text="79, Lenin Sarani Rd, near COMMERCIAL POINT Kolkata, West Bengal 700013" />
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 1.5, sm: 3 }}>
+
+          <Stack direction="row" spacing={3} alignItems="center" sx={{ ml: 'auto' }}>
             <HeaderInfo icon={PhoneOutlined} text="+ ( 91 ) 983 006 6537" />
             <HeaderInfo icon={MailOutlined} text="contactus@dharbrothers.com" />
+
+            <Typography
+              component={RouterLink}
+              to="/login"
+              sx={{
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                letterSpacing: 1,
+                textDecoration: 'none',
+                color: 'text.primary',
+                ml: 2,
+                '&:hover': { color: 'info.main' }
+              }}
+            >
+              LOGIN
+            </Typography>
           </Stack>
         </Stack>
       </Container>
@@ -1624,64 +1641,58 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
   return (
     <Box sx={{ bgcolor: 'common.white' }}>
       <Container maxWidth="lg">
-        <Stack
-          direction={{ xs: 'column', lg: 'row' }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', lg: 'center' }}
-          spacing={{ xs: 2, lg: 3 }}
-          sx={{ py: 2.5 }}
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'auto 1fr auto',
+            alignItems: 'center',
+            gap: 2,
+            py: 2.5
+          }}
         >
-          <Stack direction="row" spacing={3} alignItems="center" sx={{ width: '100%', justifyContent: { xs: 'space-between', lg: 'flex-start' } }}>
+          <Box>
             <Logo to="/" logoHeight={58} />
-            <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: '0.82rem', fontWeight: 600, letterSpacing: 0.8 }}>
-              LOGIN
-            </Typography>
-          </Stack>
+          </Box>
 
-          <Stack
-            direction={{ xs: 'column', md: 'row' }}
-            spacing={{ xs: 1.25, md: 2.2 }}
-            alignItems={{ xs: 'flex-start', md: 'center' }}
-            sx={{ width: '100%', justifyContent: 'flex-end' }}
-          >
+          <Box component="nav" sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center', gap: 6, alignItems: 'center' }}>
             {navItems.map((item) => (
               <Typography
                 key={item.label}
                 component={item.to ? RouterLink : 'span'}
                 to={item.to}
                 sx={{
-                  fontSize: '0.76rem',
+                  fontSize: '0.95rem',
                   fontWeight: 500,
                   color: 'text.primary',
                   cursor: item.to ? 'pointer' : 'default',
                   textDecoration: 'none',
                   whiteSpace: 'nowrap',
-                  '&:hover': item.to
-                    ? {
-                        color: 'info.main'
-                      }
-                    : undefined
+                  letterSpacing: 0.3,
+                  '&:hover': item.to ? { color: 'info.main' } : undefined
                 }}
               >
                 {item.label}
               </Typography>
             ))}
+          </Box>
 
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
             {!hideOrderButton && (
               <Button
                 variant="contained"
                 component={RouterLink}
                 to="/order"
                 sx={{
-                  ml: { md: 1 },
-                  px: 3,
-                  py: 1.4,
-                  borderRadius: 0,
-                  bgcolor: theme.palette.warning.lighter,
-                  color: theme.palette.text.primary,
+                  px: 4,
+                  py: 1.6,
+                  borderRadius: 1,
+                  bgcolor: '#f5e8a8',
+                  color: '#1f2937',
                   boxShadow: 'none',
+                  fontWeight: 600,
+                  textTransform: 'none',
                   '&:hover': {
-                    bgcolor: theme.palette.warning.light,
+                    bgcolor: '#f2df7f',
                     boxShadow: 'none'
                   }
                 }}
@@ -1689,8 +1700,8 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
                 {pageTitle}
               </Button>
             )}
-          </Stack>
-        </Stack>
+          </Box>
+        </Box>
       </Container>
     </Box>
   );
