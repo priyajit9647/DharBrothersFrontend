@@ -24,12 +24,12 @@ import SynopsisStep from './PlaceOrderComponents/SynopsisStep';
 
 const navItems = [
   { label: 'Home', to: '/home' },
-  { label: 'About Us' },
-  { label: 'What We Do' },
-  { label: 'How We Can' },
-  { label: 'Testimonials' },
+  { label: 'About Us', to: '/about' },
+  { label: 'What We Do', to: '/what-we-do' },
+  { label: 'How We Work' },
+  { label: 'Testimonial' },
   { label: 'Price', to: '/price' },
-  { label: 'FAQ' },
+  { label: 'Faq', to: '/faq' },
   { label: 'Contact Us' }
 ];
 const socialIcons = [FacebookFilled, TwitterOutlined, InstagramOutlined];
@@ -1187,21 +1187,38 @@ export function TopInfoBar() {
             <HeaderInfo icon={PhoneOutlined} text="+ ( 91 ) 983 006 6537" />
             <HeaderInfo icon={MailOutlined} text="contactus@dharbrothers.com" />
 
-            <Typography
-              component={RouterLink}
-              to="/login"
-              sx={{
-                fontSize: '0.88rem',
-                fontWeight: 600,
-                letterSpacing: 1,
-                textDecoration: 'none',
-                color: 'text.primary',
-                ml: 2,
-                '&:hover': { color: 'info.main' }
-              }}
-            >
-              LOGIN
-            </Typography>
+            <Box sx={{ display: 'inline-flex', alignItems: 'center', ml: 2 }}>
+              <Typography
+                component={RouterLink}
+                to="/login"
+                sx={{
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  letterSpacing: 1,
+                  textDecoration: 'none',
+                  color: 'text.primary',
+                  '&:hover': { color: 'info.main' }
+                }}
+              >
+                Login/
+              </Typography>
+
+              <Typography
+                component={RouterLink}
+                to="/customer"
+                sx={{
+                  fontSize: '0.88rem',
+                  fontWeight: 600,
+                  letterSpacing: 1,
+                  textDecoration: 'none',
+                  color: 'text.primary',
+                  ml: 0,
+                  '&:hover': { color: 'info.main' }
+                }}
+              >
+                Customer Login
+              </Typography>
+            </Box>
           </Stack>
         </Stack>
       </Container>
@@ -1639,7 +1656,7 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
   const theme = useTheme();
 
   return (
-    <Box sx={{ bgcolor: 'common.white' }}>
+    <Box sx={{ bgcolor: 'common.white', position: 'sticky', top: 0, zIndex: 1400 }}>
       <Container maxWidth="lg">
         <Box
           sx={{
@@ -3533,13 +3550,34 @@ export function FooterSection() {
 }
 
 function FooterLinkList({ items }) {
+  const linkMap = {
+    Home: '/home',
+    'What We Do': '/what-we-do',
+    'About Us': '/about',
+    Testimonials: '/home',
+    Faq: '/faq',
+    'Contact us': '/contact'
+  };
+
   return (
     <Stack spacing={1.5}>
-      {items.map((item) => (
-        <Typography key={item} sx={{ fontSize: '0.95rem', color: 'text.primary' }}>
-          {item}
-        </Typography>
-      ))}
+      {items.map((item) => {
+        const to = linkMap[item];
+        return to ? (
+          <Typography
+            key={item}
+            component={RouterLink}
+            to={to}
+            sx={{ fontSize: '0.95rem', color: 'text.primary', textDecoration: 'none', '&:hover': { color: 'info.main' } }}
+          >
+            {item}
+          </Typography>
+        ) : (
+          <Typography key={item} sx={{ fontSize: '0.95rem', color: 'text.primary' }}>
+            {item}
+          </Typography>
+        );
+      })}
     </Stack>
   );
 }

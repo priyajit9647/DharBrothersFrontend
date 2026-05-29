@@ -8,9 +8,13 @@ import Loadable from 'components/Loadable';
 const LoginPage = Loadable(lazy(() => import('pages/auth/Login')));
 const PlaceOrderPage = Loadable(lazy(() => import('pages/extra-pages/PlaceOrder')));
 const PricePage = Loadable(lazy(() => import('pages/extra-pages/Price')));
+const AboutPage = Loadable(lazy(() => import('pages/extra-pages/About')));
+const WhatWeDoPage = Loadable(lazy(() => import('pages/extra-pages/WhatWeDo')));
 const HomeReplicaPage = Loadable(lazy(() => import('pages/extra-pages/HomeReplica')));
 const OrderPaymentCallbackPage = Loadable(lazy(() => import('pages/extra-pages/OrderPaymentCallback')));
 const SelectCoverPage = Loadable(lazy(() => import('pages/extra-pages/SelectCover')));
+const FaqPage = Loadable(lazy(() => import('pages/extra-pages/Faq')));
+const ContactPage = Loadable(lazy(() => import('pages/extra-pages/Contact')));
 
 // customer portal (public, OTP-based)
 const CustomerPortalEntryPage = Loadable(lazy(() => import('pages/customer/CustomerPortalEntry')));
@@ -35,6 +39,14 @@ const LoginRoutes = {
       element: <HomeReplicaPage />
     },
     {
+      path: 'what-we-do',
+      element: <WhatWeDoPage />
+    },
+    {
+      path: 'about',
+      element: <AboutPage />
+    },
+    {
       path: 'order',
       element: <PlaceOrderPage />
     },
@@ -49,6 +61,14 @@ const LoginRoutes = {
     {
       path: 'price',
       element: <PricePage />
+    },
+    {
+      path: 'faq',
+      element: <FaqPage />
+    },
+    {
+      path: 'contact',
+      element: <ContactPage />
     },
     {
       path: 'customer',

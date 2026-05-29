@@ -45,6 +45,7 @@ const PaperSizeMaster = Loadable(lazy(() => import('pages/admin/masters/PaperSiz
 const PageTypeMaster = Loadable(lazy(() => import('pages/admin/masters/PageTypeMaster')));
 const BindingTypeMaster = Loadable(lazy(() => import('pages/admin/masters/BindingTypeMaster')));
 const BindingCoverMaterialMaster = Loadable(lazy(() => import('pages/admin/masters/BindingCoverMaterialMaster')));
+const WebServicesMaster = Loadable(lazy(() => import('pages/admin/masters/WebServicesMaster')));
 const PrintingRateMaster = Loadable(lazy(() => import('pages/admin/masters/PrintingRateMaster')));
 const OtherChargeMaster = Loadable(lazy(() => import('pages/admin/masters/OtherChargeMaster')));
 const BindingRateMaster = Loadable(lazy(() => import('pages/admin/masters/BindingRateMaster')));
@@ -262,6 +263,11 @@ const MainRoutes = {
             {
               path: 'binding-rates',
               element: <BindingRateMaster />
+            }
+            ,
+            {
+              path: 'web-services',
+              element: <WebServicesMaster />
             }
           ]
         }
