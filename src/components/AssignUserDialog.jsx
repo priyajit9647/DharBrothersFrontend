@@ -123,23 +123,41 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
     setSaving(true);
     setError('');
     try {
+      const selectedUser = users.find((u) => String(u.id) === selectedUserId);
       const staffId = String(selectedUserId);
-      // jobId is the order ID (adjust if your backend expects a different field)
-      const jobId = order?.id;
-      if (!jobId) throw new Error('Order ID missing');
+
+      // Extract jobId from order — try multiple property names
+      const jobId = order?.jobId || order?.documentStageId || order?.stageId;
+
+      // Debug logging
+      console.log('Assign order =', order);
+      console.log('jobId =', jobId);
+      console.log('selected user =', selectedUser);
+
+      // Validate jobId before proceeding
+      if (!jobId) {
+        console.error('Missing jobId', order);
+        setError('Job ID missing');
+        return;
+      }
 
       // Optional document initialisation (ignore errors)
       if (order?.id) {
         try {
           await initDocument({ orderDetailsId: String(order.id), assignedStaffId: staffId });
-        } catch (err) { console.warn('initDocument failed', err); }
+        } catch (err) {
+          console.warn('initDocument failed', err);
+        }
       }
 
-      // Use the reassign API (no date, just jobId and staffId)
-      await reassignOrderStaff(jobId, staffId);
+      // Use the reassign API with jobId and staffId
+      await reassignOrderStaff(jobId, staffId, '');
 
-      const selectedUser = users.find((u) => String(u.id) === staffId);
-      onAssigned?.({ user: selectedUser, branchId: selectedBranchId });
+      // Trigger callback with user and dateAssigned
+      onAssigned?.({
+        user: selectedUser,
+        dateAssigned: new Date().toISOString()
+      });
       onClose?.();
     } catch (err) {
       setError(err?.message || String(err));
@@ -150,9 +168,7 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>
-        Assign user — {order ? (order.orderId || order.id || '') : ''}
-      </DialogTitle>
+      <DialogTitle>Assign user — {order ? order.orderId || order.id || '' : ''}</DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary">
           Select a branch (if not automatically detected) and then choose a user.
@@ -209,15 +225,12 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
                   </Typography>
                 ) : (
                   filteredUsers.map((user) => {
-                    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-                                     user.userName || user.email || `User ${user.id}`;
+                    const fullName =
+                      `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userName || user.email || `User ${user.id}`;
                     const secondaryText = [user.email, user.mobile || user.phone].filter(Boolean).join(' • ');
                     return (
                       <div key={user.id}>
-                        <ListItemButton
-                          selected={String(user.id) === selectedUserId}
-                          onClick={() => setSelectedUserId(String(user.id))}
-                        >
+                        <ListItemButton selected={String(user.id) === selectedUserId} onClick={() => setSelectedUserId(String(user.id))}>
                           <ListItemAvatar>
                             <Avatar>{(user.firstName || user.userName || 'U')[0].toUpperCase()}</Avatar>
                           </ListItemAvatar>
@@ -243,11 +256,7 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
         <Button onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button
-          variant="contained"
-          onClick={handleAssign}
-          disabled={!selectedUserId || saving || !selectedBranchId}
-        >
+        <Button variant="contained" onClick={handleAssign} disabled={!selectedUserId || saving || !selectedBranchId}>
           {saving ? 'Assigning...' : 'Assign'}
         </Button>
       </DialogActions>
