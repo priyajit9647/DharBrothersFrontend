@@ -54,6 +54,13 @@ const support = {
           type: 'item',
           url: '/reports/sales'
         }
+        ,
+        {
+          id: 'task-reports',
+          title: 'Task Reports',
+          type: 'item',
+          url: '/reports/task-reports'
+        }
       ]
     },
     {

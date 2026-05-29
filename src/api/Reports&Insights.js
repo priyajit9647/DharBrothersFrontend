@@ -91,6 +91,34 @@ export async function getReadyToDispatchReport(params = {}) {
   return { items, total, page: currentPage, size: pageSize, raw: response };
 }
 
+/**
+ * Fetch today's due tasks.
+ * Endpoint: GET /api/v1/admin/task-list/today-due-tasks
+ * @param {{branchId?: number|string, processStageId?: number|string, page?: number, size?: number, sort?: string|Array<string>}} params
+ * @returns {Promise<{items:Array, total:number, page:number, size:number, raw: any}>}
+ */
+export async function getTodayDueTasks(params = {}) {
+  const { branchId, processStageId, page = 0, size = 10, sort } = params;
+
+  const qs = buildQueryString({ branchId, processStageId, page, size, sort });
+  const url = `/api/v1/admin/task-list/today-due-tasks${qs}`;
+
+  const response = await authorizedFetch(url, { method: 'GET' });
+
+  const items = Array.isArray(response)
+    ? response
+    : response?.content ?? response?.items ?? response?.data ?? response?.list ?? [];
+
+  const total = Number(
+    response?.totalElements ?? response?.total ?? response?.totalItems ?? response?.totalCount ?? items.length
+  );
+
+  const currentPage = Number(response?.number ?? response?.pageNumber ?? page ?? 0);
+  const pageSize = Number(response?.size ?? size);
+
+  return { items, total, page: currentPage, size: pageSize, raw: response };
+}
+
 export async function getCompleteJobsReport(params = {}) {
   // Endpoint: GET /api/v1/admin/reports/completed-jobs
   const { branchId, page = 0, size = 10, sort } = params;
