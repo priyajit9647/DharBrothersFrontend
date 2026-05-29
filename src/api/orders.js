@@ -306,3 +306,20 @@ export async function getOrderShippingAddressQr(orderId) {
     reader.readAsDataURL(blob);
   });
 }
+
+export async function reassignOrderStaff(jobId, toStaffId, comment = '') {
+  if (!jobId) throw new Error('jobId is required');
+  if (!toStaffId) throw new Error('toStaffId is required');
+
+  // If jobId is a numeric string, convert to Number; otherwise keep as string
+  const normalizedJobId = /^\d+$/.test(String(jobId)) ? Number(jobId) : String(jobId);
+
+  return authorizedFetch('/api/v1/admin/user-job/reassign-staff', {
+    method: 'PUT',
+    body: JSON.stringify({
+      jobId: normalizedJobId,
+      toStaffId: String(toStaffId),
+      comment
+    })
+  });
+}
