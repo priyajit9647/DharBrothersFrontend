@@ -8,6 +8,7 @@ import Loadable from 'components/Loadable';
 const LoginPage = Loadable(lazy(() => import('pages/auth/Login')));
 const PlaceOrderPage = Loadable(lazy(() => import('pages/extra-pages/PlaceOrder')));
 const PricePage = Loadable(lazy(() => import('pages/extra-pages/Price')));
+const HomeReplicaPage = Loadable(lazy(() => import('pages/extra-pages/HomeReplica')));
 const OrderPaymentCallbackPage = Loadable(lazy(() => import('pages/extra-pages/OrderPaymentCallback')));
 const SelectCoverPage = Loadable(lazy(() => import('pages/extra-pages/SelectCover')));
 
@@ -28,6 +29,10 @@ const LoginRoutes = {
     {
       path: 'login',
       element: <LoginPage />
+    },
+    {
+      path: 'home',
+      element: <HomeReplicaPage />
     },
     {
       path: 'order',
