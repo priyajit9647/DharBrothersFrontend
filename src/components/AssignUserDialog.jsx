@@ -167,7 +167,48 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+   <Dialog
+  open={open}
+  onClose={onClose}
+  fullWidth
+  maxWidth="md"
+  sx={{
+    '& .MuiBackdrop-root': {
+      backgroundColor: 'rgba(90, 98, 118, 0.18)',
+    },
+
+    '& .MuiDialog-paper': {
+      borderRadius: 2,
+      overflow: 'hidden',
+      background: '#fff',
+      border: '1px solid #eef2f7',
+      boxShadow: 'none',
+      maxWidth: 800
+    },
+
+    '& .MuiDialogTitle-root': {
+      px: 3,
+      py: 1.5,
+      fontWeight: 400,
+      fontSize: '1.2rem',
+      borderBottom: '1px solid #f1f5f9',
+      background: '#fafcff'
+    },
+
+    '& .MuiDialogContent-root': {
+      padding: 3,
+      fontWeight: 400,
+      fontSize: '0.95rem',
+      color: '#0b0b0b'
+    },
+
+    '& .MuiDialogActions-root': {
+      padding: '18px 24px',
+      borderTop: '1px solid #f1f5f9',
+      background: '#fafcff'
+    }
+  }}
+>
       <DialogTitle>Assign user — {order ? order.orderId || order.id || '' : ''}</DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" sx={{ mb: 2 }} color="text.secondary">
