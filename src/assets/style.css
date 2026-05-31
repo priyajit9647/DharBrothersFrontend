@@ -1,3 +1,32 @@
 * {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Global font and basic typographic scale */
+html, body, #root {
+  height: 100%;
+}
+body {
+  font-family: 'Montserrat', 'Public Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 400;
+  color: #222;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings */
+h1 { font-size: 3rem; font-weight: 700; letter-spacing: 0.2px; }
+h2 { font-size: 2rem; font-weight: 600; }
+h3 { font-size: 1.25rem; font-weight: 600; }
+
+/* Navigation links in header */
+.MuiContainer-root nav a, .MuiContainer-root nav span, .MuiContainer-root nav .MuiTypography-root {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem; /* ~16px */
+  font-weight: 600;
+}
+
+/* Footer adjustments */
+.footer-links .MuiTypography-root, .footer-contact .MuiTypography-root {
+  font-size: 0.95rem;
+}

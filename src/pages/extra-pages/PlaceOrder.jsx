@@ -27,7 +27,7 @@ const navItems = [
   { label: 'About Us', to: '/about' },
   { label: 'What We Do', to: '/what-we-do' },
   { label: 'How We Work' },
-  { label: 'Testimonial' },
+  { label: 'Testimonial', to: '/testimonial' },
   { label: 'Price', to: '/price' },
   { label: 'Faq', to: '/faq' },
   { label: 'Contact Us' }
@@ -1678,15 +1678,15 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
                 component={item.to ? RouterLink : 'span'}
                 to={item.to}
                 sx={{
-                  fontSize: '0.95rem',
-                  fontWeight: 500,
-                  color: 'text.primary',
-                  cursor: item.to ? 'pointer' : 'default',
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                  letterSpacing: 0.3,
-                  '&:hover': item.to ? { color: 'info.main' } : undefined
-                }}
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: 'text.primary',
+                    cursor: item.to ? 'pointer' : 'default',
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    letterSpacing: 0.3,
+                    '&:hover': item.to ? { color: 'info.main' } : undefined
+                  }}
               >
                 {item.label}
               </Typography>

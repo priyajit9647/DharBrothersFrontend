@@ -11,6 +11,7 @@ const PricePage = Loadable(lazy(() => import('pages/extra-pages/Price')));
 const AboutPage = Loadable(lazy(() => import('pages/extra-pages/About')));
 const WhatWeDoPage = Loadable(lazy(() => import('pages/extra-pages/WhatWeDo')));
 const HomeReplicaPage = Loadable(lazy(() => import('pages/extra-pages/HomeReplica')));
+const TestimonialPage = Loadable(lazy(() => import('pages/extra-pages/Testimonial')));
 const OrderPaymentCallbackPage = Loadable(lazy(() => import('pages/extra-pages/OrderPaymentCallback')));
 const SelectCoverPage = Loadable(lazy(() => import('pages/extra-pages/SelectCover')));
 const FaqPage = Loadable(lazy(() => import('pages/extra-pages/Faq')));
@@ -61,6 +62,10 @@ const LoginRoutes = {
     {
       path: 'price',
       element: <PricePage />
+    },
+    {
+      path: 'testimonial',
+      element: <TestimonialPage />
     },
     {
       path: 'faq',
