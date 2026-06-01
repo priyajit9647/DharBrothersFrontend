@@ -26,11 +26,11 @@ const navItems = [
   { label: 'Home', to: '/home' },
   { label: 'About Us', to: '/about' },
   { label: 'What We Do', to: '/what-we-do' },
-  { label: 'How We Work' },
+  { label: 'How We Work', to: '/how-we-work' },
   { label: 'Testimonial', to: '/testimonial' },
   { label: 'Price', to: '/price' },
   { label: 'Faq', to: '/faq' },
-  { label: 'Contact Us' }
+  { label: 'Contact Us', to: '/contact' }
 ];
 const socialIcons = [FacebookFilled, TwitterOutlined, InstagramOutlined];
 
@@ -1170,57 +1170,39 @@ export function TopInfoBar() {
     <Box
       sx={{
         bgcolor: 'common.white',
-        borderBottom: `1px solid ${alpha(theme.palette.secondary.main, 0.12)}`
+        borderBottom: `1px solid ${theme.palette.divider}`
       }}
     >
       <Container maxWidth="lg">
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={{ xs: 1.5, md: 2 }}
-          justifyContent="space-between"
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-          sx={{ py: 1.5 }}
-        >
-          <HeaderInfo icon={EnvironmentOutlined} text="79, Lenin Sarani Rd, near COMMERCIAL POINT Kolkata, West Bengal 700013" />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' }, alignItems: 'center', py: { xs: 1, md: 1.25 } }}>
+          <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-start' } }}>
+            <HeaderInfo icon={EnvironmentOutlined} text="79, Lenin Sarani Rd, near COMMERCIAL POINT Kolkata, West Bengal 700013" />
+          </Box>
 
-          <Stack direction="row" spacing={3} alignItems="center" sx={{ ml: 'auto' }}>
-            <HeaderInfo icon={PhoneOutlined} text="+ ( 91 ) 983 006 6537" />
-            <HeaderInfo icon={MailOutlined} text="contactus@dharbrothers.com" />
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
+            <Stack direction="row" spacing={3} alignItems="center">
+              <HeaderInfo icon={PhoneOutlined} text="+ (91) 983 006 6537" />
+              <HeaderInfo icon={MailOutlined} text="contactus@dharbrothers.com" />
+            </Stack>
+          </Box>
 
-            <Box sx={{ display: 'inline-flex', alignItems: 'center', ml: 2 }}>
-              <Typography
-                component={RouterLink}
-                to="/login"
-                sx={{
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  letterSpacing: 1,
-                  textDecoration: 'none',
-                  color: 'text.primary',
-                  '&:hover': { color: 'info.main' }
-                }}
-              >
-                Login/
-              </Typography>
-
-              <Typography
-                component={RouterLink}
-                to="/customer"
-                sx={{
-                  fontSize: '0.88rem',
-                  fontWeight: 600,
-                  letterSpacing: 1,
-                  textDecoration: 'none',
-                  color: 'text.primary',
-                  ml: 0,
-                  '&:hover': { color: 'info.main' }
-                }}
-              >
-                Customer Login
-              </Typography>
-            </Box>
-          </Stack>
-        </Stack>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <Typography
+              component={RouterLink}
+              to="/login"
+              sx={{
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                letterSpacing: 1,
+                textDecoration: 'none',
+                color: 'text.primary',
+                '&:hover': { color: 'info.main' }
+              }}
+            >
+              LOGIN
+            </Typography>
+          </Box>
+        </Box>
       </Container>
     </Box>
   );
@@ -1631,7 +1613,7 @@ function HeaderInfo({ icon: Icon, text }) {
   const theme = useTheme();
 
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
+    <Stack direction="row" spacing={1.25} alignItems="center">
       <Box
         sx={{
           width: 22,
@@ -1640,12 +1622,14 @@ function HeaderInfo({ icon: Icon, text }) {
           display: 'grid',
           placeItems: 'center',
           color: theme.palette.info.main,
-          border: `1px solid ${alpha(theme.palette.info.main, 0.22)}`
+          border: `1px solid ${alpha(theme.palette.info.main, 0.22)}`,
+          flexShrink: 0,
+          bgcolor: 'transparent'
         }}
       >
-        <Icon style={{ fontSize: 12 }} />
+        <Icon style={{ fontSize: 12, color: theme.palette.info.main }} />
       </Box>
-      <Typography variant="caption" sx={{ fontSize: '0.72rem', color: 'text.secondary', letterSpacing: 0.15 }}>
+      <Typography variant="caption" sx={{ fontSize: '0.76rem', color: 'text.secondary', letterSpacing: 0.15 }}>
         {text}
       </Typography>
     </Stack>
@@ -1671,7 +1655,7 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
             <Logo to="/" logoHeight={58} />
           </Box>
 
-          <Box component="nav" sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center', gap: 6, alignItems: 'center' }}>
+          <Box component="nav" sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center', gap: 4, alignItems: 'center' }}>
             {navItems.map((item) => (
               <Typography
                 key={item.label}
@@ -1679,7 +1663,7 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
                 to={item.to}
                 sx={{
                     fontSize: '1rem',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     color: 'text.primary',
                     cursor: item.to ? 'pointer' : 'default',
                     textDecoration: 'none',
@@ -1714,7 +1698,7 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
                   }
                 }}
               >
-                {pageTitle}
+                Order Thesis Online
               </Button>
             )}
           </Box>
@@ -1767,62 +1751,6 @@ function ProgressHeader({ activeIndex, stepLabels }) {
             );
           })}
         </Stack>
-      </Box>
-    </Box>
-  );
-}
-
-function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChange }) {
-  return (
-    <Box>
-      <Paper
-        elevation={0}
-        sx={{
-          borderRadius: 0,
-          border: '1px solid',
-          borderColor: 'divider',
-          overflow: 'hidden'
-        }}
-      >
-        <Grid container>
-          <Grid item xs={12} md={6}>
-            <UploadCard
-              title="UPLOAD THESIS DOCUMENT"
-              fieldName="thesisDocument"
-              file={thesisDocument}
-              onFileChange={onFileChange}
-              errorMessage={uploadError}
-            />
-          </Grid>
-          <Grid item xs={12} md={6} sx={{ borderLeft: { md: '1px solid' }, borderColor: 'divider' }}>
-            <UploadCard
-              title="UPLOAD SYNOPSIS DOCUMENT (Optional)"
-              fieldName="synopsisDocument"
-              file={synopsisDocument}
-              onFileChange={onFileChange}
-            />
-          </Grid>
-        </Grid>
-      </Paper>
-
-      <Box
-        sx={{
-          mt: 0,
-          px: { xs: 2, md: 2.5 },
-          py: 2.5,
-          bgcolor: '#f7f7f5',
-          borderLeft: (theme) => `3px solid ${theme.palette.info.main}`
-        }}
-      >
-        <Typography sx={{ fontSize: '1rem', fontWeight: 500, mb: 1.25 }}>Additional Information</Typography>
-        <Box component="ol" sx={{ m: 0, pl: 2.25, color: 'text.primary' }}>
-          <Typography component="li" sx={{ fontSize: '0.82rem', mb: 0.75 }}>
-            Upload only one thesis per order
-          </Typography>
-          <Typography component="li" sx={{ fontSize: '0.82rem' }}>
-            We prefer pdf.
-          </Typography>
-        </Box>
       </Box>
     </Box>
   );
