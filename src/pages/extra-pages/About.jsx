@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Container, Grid, Typography, Paper, Stack, Button } from '@mui/material';
+import { Box, Container, Grid, Typography, Paper, Stack, Button, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Link as RouterLink } from 'react-router-dom';
 
 import banner1 from 'assets/banner/banner1.jpg';
 import banner2 from 'assets/banner/banner2.jpg';
 import banner3 from 'assets/banner/banner3.jpg';
-import avatar1 from 'assets/images/users/avatar-1.png';
-import avatar2 from 'assets/images/users/avatar-4.png';
-import avatar3 from 'assets/images/users/avatar-3.png';
+import avatar1 from 'assets/images/users/avatar-6.png';
+import avatar2 from 'assets/images/users/avatar-7.png';
+import avatar3 from 'assets/images/users/avatar-8.png';
 import avatar4 from 'assets/images/users/avatar-4.png';
+import { Building, Globe, Trophy, DollarSign } from 'lucide-react';
 
 // reuse header/footer pieces
 import { HeaderNav, TopInfoBar, FooterSection } from './PlaceOrder';
@@ -75,6 +76,7 @@ function TestimonialsSlider() {
           ))}
         </Box>
       </Box>
+      
 
       {/* dots */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 1 }}>
@@ -88,6 +90,30 @@ function TestimonialsSlider() {
 
 export default function About() {
   const theme = useTheme();
+  const [selectedPerson, setSelectedPerson] = useState(null);
+
+  const PEOPLE = [
+    {
+      id: 0,
+      name: 'Rashmohan Dhar',
+      image: avatar1,
+      description:
+        "Back in 1930, Late Rashmohan Dhar started the journey with a golden dream of being the pioneer in book binding. On that time the company was in book sewing, book binding, panjika binding and restoration of old books. It was a simple and honest start to what would re-define printing and binding in India in the years to come."
+    },
+    {
+      id: 1,
+      name: 'Hiralal Dhar',
+      image: avatar2,
+      description: "Hiralal Dhar carried forward the tradition and helped modernize the operations. His leadership expanded the company's reach and introduced new binding techniques to improve quality."
+    },
+    {
+      id: 2,
+      name: 'Mr. Kishore Dhar',
+      image: avatar3,
+      description:
+        "After the demise of Late Hiralal Dhar, his youngest son, Mr. Kishore Dhar took on the responsibility as the Director of Dhar Brothers. Mr. Kishore Dhar quickly realized that their current business is giving them high volume of work but low returns and he decided to give the company a new direction, installing letterpress and photocopier machines and later introduced digital printing."
+    }
+  ];
 
   const StatsCard = ({ value, label, IconSvg }) => (
     <Box sx={{ position: 'relative', pt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -122,112 +148,201 @@ export default function About() {
       </Box>
 
       {/* Main content - Who We Are with large left image and right text/stats */}
-      <Box sx={{ bgcolor: 'common.white' }}>
-        <Container maxWidth="lg" sx={{ py: { xs: 4, md: 8 } }}>
-          <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
-              <Box sx={{ display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' } }}>
-                <Box component="img" src={banner2} alt="books" sx={{ width: { xs: '80%', md: '100%' }, maxWidth: 520, borderRadius: 2, boxShadow: 6 }} />
+      {/* ================= WHO WE ARE ================= */}
+<Box sx={{ backgroundColor: '#fff', py: { xs: 6, md: 10 } }}>
+  <Container maxWidth="lg">
+
+    <Box
+      sx={{
+        maxWidth: '1100px',
+        mx: 'auto'
+      }}
+    >
+      <Typography
+        sx={{
+          fontFamily: 'Georgia, serif',
+          fontSize: { xs: '2.5rem', md: '3.8rem' },
+          fontWeight: 400,
+          color: '#222',
+          textAlign: 'center'
+        }}
+      >
+        Who We Are
+      </Typography>
+
+      <Box
+        sx={{
+          width: 72,
+          height: 4,
+          bgcolor: '#12b7c9',
+          mx: 'auto',
+          mt: 2,
+          mb: 5
+        }}
+      />
+
+      <Typography
+        sx={{
+          color: '#555',
+          fontSize: '17px',
+          lineHeight: '2.2',
+          mb: 4,
+          textAlign: 'center'
+        }}
+      >
+        We, Dhar Brothers, had a humble start back in the 1930s and today we
+        take pride in saying that we have reached the pinnacle of
+        thesis/dissertation composing, printing and binding. Our works have
+        been submitted to all major universities around the globe. We have a
+        happy customer base of over a thousand to our credit. We have an
+        experience of more than 85 years in the thesis/dissertation printing
+        and binding.
+      </Typography>
+
+      <Typography
+        sx={{
+          color: '#555',
+          fontSize: '17px',
+          lineHeight: '2.2',
+          mb: 8,
+          textAlign: 'center'
+        }}
+      >
+        We compete with the best in the world in terms of thesis printing and
+        binding and our work has often been appreciated for being leagues ahead
+        of our global competitors. We are currently trying to redefine the
+        age-old practice of binding by skillfully balancing modern technology
+        and human touch. The blend of the traditional and the new is what makes
+        us who we are today.
+      </Typography>
+
+      <Grid container spacing={4}>
+        {[
+          {
+            value: '1930',
+            label: 'Year Since Established',
+            Icon: Building
+          },
+          {
+            value: '9',
+            label: 'Clients in How Many Countries/States/Cities',
+            Icon: Globe
+          },
+          {
+            value: '90',
+            label: 'Years/Hours of Experience of All Employee',
+            Icon: Trophy
+          },
+          {
+            value: '500000',
+            label: 'Total Units Sold',
+            Icon: DollarSign
+          }
+        ].map((item, index) => (
+          <Grid item xs={12} sm={6} md={3} key={index}>
+            <Box sx={{ position: 'relative', pt: '34px' }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  height: 160,
+                  borderRadius: 2,
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  border: '1px solid #f0f0f0',
+                  boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                  transition: 'transform 260ms ease, box-shadow 260ms ease',
+                  '&:hover': {
+                    transform: 'translateY(-10px)',
+                    boxShadow: '0 30px 60px rgba(0,0,0,0.14)'
+                  }
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: '2.2rem',
+                    fontWeight: 700,
+                    color: '#222',
+                    mb: 1
+                  }}
+                >
+                  {item.value}
+                </Typography>
+
+                <Typography
+                  sx={{
+                    fontSize: '14px',
+                    color: '#666',
+                    px: 2
+                  }}
+                >
+                  {item.label}
+                </Typography>
+              </Paper>
+
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  width: 74,
+                  height: 74,
+                  borderRadius: '50%',
+                  bgcolor: '#12b7c9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 10px 20px rgba(18,183,201,.18)',
+                  border: '6px solid #fff'
+                }}
+                >
+                {item.Icon ? <item.Icon color="#fff" size={28} /> : null}
               </Box>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <Typography sx={{ fontFamily: 'serif', fontSize: { xs: '1.6rem', md: '2.25rem' }, fontWeight: 400, mb: 1 }}>Who We Are</Typography>
-              <Box sx={{ width: 84, height: 3, bgcolor: '#14a0a5', mb: 3 }} />
-
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.9, mb: 2 }}>
-                We, Dhar Brothers, had a humble start back in the 1930s and today we take pride in saying that we have reached the pinnacle of thesis/dissertation composing, printing and binding. Our works have been submitted to all major universities around the globe. We have a happy customer base of over a thousand to our credit. We have an experience of more than 85 years in the thesis/dissertation printing and binding.
-              </Typography>
-
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.9, mb: 4 }}>
-                We compete with the best in the world in terms of thesis printing and binding and our work has often been appreciated for being leagues ahead of our global competitors. We are currently trying to redefine the age-old practice of binding by skillfully balancing modern technology and human touch.
-              </Typography>
-
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <StatsCard
-                    value="1930"
-                    label="Year Since Established"
-                    IconSvg={() => (
-                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 21V7a1 1 0 011-1h16v15" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M21 6h-6v4h6V6z" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <StatsCard
-                    value="9"
-                    label="Clients in How Many Countries/States/Cities"
-                    IconSvg={() => (
-                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2v4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M12 18v4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M4.9 4.9l2.8 2.8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M16.3 16.3l2.8 2.8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <StatsCard
-                    value="90"
-                    label="Years/Hours of Experience of All Employee N"
-                    IconSvg={() => (
-                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 12a5 5 0 100-10 5 5 0 000 10z" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M21 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6}>
-                  <StatsCard
-                    value="500000"
-                    label="Total units Sold"
-                    IconSvg={() => (
-                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 1v22" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        <path d="M17 5H9a4 4 0 000 8h6a4 4 0 010 8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  />
-                </Grid>
-              </Grid>
-            </Grid>
+            </Box>
           </Grid>
-        </Container>
-      </Box>
+        ))}
+      </Grid>
 
+    </Box>
+
+  </Container>
+</Box>
       {/* Trust Scene 1930 */}
       <Box sx={{ py: { xs: 4, md: 6 }, bgcolor: '#fff' }}>
         <Container maxWidth="lg">
           <Typography sx={{ textAlign: 'center', fontSize: '1.6rem', fontFamily: 'serif', mb: 1 }}>Trust Scene 1930</Typography>
           <Box sx={{ width: 64, height: 3, bgcolor: '#14a0a5', mx: 'auto', mb: 4 }} />
 
-          <Grid container spacing={4}>
-            {[avatar1, avatar2, avatar3, avatar4].map((src, idx) => (
+          <Grid container spacing={4} sx={{ alignItems: 'stretch' }}>
+            {[avatar1, avatar2, avatar3].map((src, idx) => (
               <Grid key={idx} item xs={12} sm={6} md={3}>
-                <Box
-                  sx={{
-                    textAlign: 'center',
-                    transition: 'transform 240ms ease, box-shadow 240ms ease',
-                    '&:hover': {
-                      transform: 'translateY(-8px) scale(1.02)',
-                      boxShadow: '0 20px 40px rgba(0,0,0,0.12)'
-                    }
-                  }}
-                >
-                  <Paper elevation={0} sx={{ p: 0, borderRadius: 2, overflow: 'hidden' }}>
-                    <Box component="img" src={src} alt={`trust-${idx}`} sx={{ width: '100%', height: { xs: 260, md: 300 }, objectFit: 'cover', display: 'block' }} />
+                <Box sx={{ textAlign: 'left' }}>
+                  <Paper
+                    elevation={3}
+                    sx={{
+                      p: 0,
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      border: '4px solid rgba(0,0,0,0.06)',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+                      transition: 'transform 260ms ease, box-shadow 260ms ease',
+                      '&:hover': {
+                        transform: 'translateY(-12px)',
+                        boxShadow: '0 40px 80px rgba(0,0,0,0.12)'
+                      }
+                    }}
+                  >
+                    <Box component="img" src={src} alt={`trust-${idx}`} sx={{ width: '100%', height: { xs: 260, md: 360 }, objectFit: 'cover', display: 'block' }} />
                   </Paper>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                    <Typography sx={{ mt: 1, fontSize: '0.98rem', fontWeight: 600 }}>{['Rashmohan Dhar','Hiralal Dhar','Mr. Kishore Dhar','Mr. Abhradip Dhar'][idx]}</Typography>
-                    <Typography sx={{ color: 'text.secondary', fontSize: '1.15rem' }}>→</Typography>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2 }}>
+                    <Box component="button" onClick={() => setSelectedPerson(PEOPLE[idx])} sx={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}>
+                      <Typography sx={{ mt: 1, fontSize: '0.98rem', fontWeight: 600, textDecoration: 'underline', textDecorationColor: 'transparent', '&:hover': { textDecorationColor: 'inherit' } }}>{PEOPLE[idx].name}</Typography>
+                    </Box>
+                    <Typography sx={{ color: 'text.secondary', fontSize: '1.15rem', ml: 2 }}>→</Typography>
                   </Box>
                 </Box>
               </Grid>
@@ -235,6 +350,24 @@ export default function About() {
           </Grid>
         </Container>
       </Box>
+
+      {/* Person detail dialog */}
+      <Dialog open={Boolean(selectedPerson)} onClose={() => setSelectedPerson(null)} maxWidth="md" fullWidth>
+        <DialogContent dividers>
+          {selectedPerson && (
+            <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start', p: { xs: 1, md: 2 } }}>
+              <Box component="img" src={selectedPerson.image} alt={selectedPerson.name} sx={{ width: { xs: 180, md: 320 }, height: { xs: 180, md: 360 }, objectFit: 'cover' }} />
+              <Box>
+                <Typography sx={{ fontSize: '1.4rem', fontWeight: 700, textDecoration: 'underline', mb: 1 }}>{selectedPerson.name}</Typography>
+                <Typography sx={{ color: 'text.secondary', lineHeight: 1.8 }}>{selectedPerson.description}</Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedPerson(null)}>Close</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Mission & Vision with full-width background and overlapping cards */}
       <Box
