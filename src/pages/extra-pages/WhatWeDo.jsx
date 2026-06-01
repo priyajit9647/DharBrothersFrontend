@@ -14,6 +14,13 @@ import { HeaderNav, TopInfoBar, FooterSection } from './PlaceOrder';
 export default function WhatWeDo() {
   const theme = useTheme();
 
+  const FALLBACK_SERVICES = [
+    { id: 'f1', title: 'Hard Thesis Binding', shortDescription: 'Premium hard binding using traditional craftsmanship for lasting presentation.', image: banner1, displayOrder: 1, active: true },
+    { id: 'f2', title: 'Soft Thesis Binding', shortDescription: 'Economical and elegant soft binding suitable for quick submissions.', image: banner2, displayOrder: 2, active: true },
+    { id: 'f3', title: 'Synopsis', shortDescription: 'Professional synopsis formatting and printing to university standards.', image: banner3, displayOrder: 3, active: true },
+    { id: 'f4', title: 'Thesis Printing', shortDescription: 'High-quality thesis printing with careful finishing and binding options.', image: banner1, displayOrder: 4, active: true }
+  ];
+
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -40,9 +47,16 @@ export default function WhatWeDo() {
               .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
           : [];
 
-        if (mounted) setServices(normalized);
+        if (mounted) setServices(normalized.length ? normalized : FALLBACK_SERVICES);
       } catch (e) {
-        if (mounted) setError(e.message || 'Failed to load services');
+        // Log detailed error for debugging, but show a friendly message to users
+        // eslint-disable-next-line no-console
+        console.error('Failed to load public web services:', e);
+        if (mounted) {
+          // Show fallback content instead of an error message so the page remains useful
+          setServices(FALLBACK_SERVICES);
+          setError('');
+        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -54,7 +68,7 @@ export default function WhatWeDo() {
   }, []);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'common.white' }}>
+    <Box className="what-we-do" sx={{ minHeight: '100vh', bgcolor: 'common.white' }}>
       <TopInfoBar />
       <HeaderNav pageTitle="What We Do" hideOrderButton={false} />
 
@@ -71,7 +85,7 @@ export default function WhatWeDo() {
       </Box>
 
       {/* Services grid */}
-      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 10 }, bgcolor: 'common.white' }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 12 }, bgcolor: 'common.white' }}>
         <Typography sx={{ textAlign: 'center', fontSize: { xs: '1.6rem', md: '1.9rem' }, fontWeight: 700, mb: 4 }}>What We Do</Typography>
 
         {loading ? (
@@ -94,8 +108,7 @@ export default function WhatWeDo() {
           </Grid>
         ) : (
           <>
-            {/* Row 1: Images */}
-            <Grid container spacing={4} alignItems="stretch" sx={{ mb: 2 }}>
+            <Grid container spacing={4}>
               {services.map((card, idx) => {
                 const src = card.image
                   ? String(card.image).startsWith('http') || String(card.image).startsWith('data:')
@@ -104,64 +117,30 @@ export default function WhatWeDo() {
                   : banner1;
 
                 return (
-                  <Grid item xs={12} sm={6} md={3} key={`img-${card.id || idx}`}>
-                    <Box component="img" src={src} alt={card.title} sx={{ width: '100%', height: { xs: 160, md: 220 }, objectFit: 'cover', display: 'block', borderRadius: 0 }} />
-                  </Grid>
-                );
-              })}
-            </Grid>
+                  <Grid item xs={12} sm={6} md={3} key={card.id || idx}>
+                    <Box className="service-card">
+                      <Box component="img" className="service-image" src={src} alt={card.title} />
 
-            {/* Row 2: Titles */}
-            <Grid container spacing={4} sx={{ mb: 1 }}>
-              {services.map((card, idx) => (
-                <Grid item xs={12} sm={6} md={3} key={`title-${card.id || idx}`}>
-                  <Typography sx={{ fontFamily: 'serif', fontSize: { xs: '1rem', md: '1.05rem' }, fontWeight: 600, mb: 1 }}>{card.title}</Typography>
-                </Grid>
-              ))}
-            </Grid>
+                      <Box className="service-content">
+                        <Typography className="service-title">{card.title}</Typography>
+                        <Typography className="service-desc">{card.shortDescription}</Typography>
+                      </Box>
 
-            {/* Row 3: Descriptions */}
-            <Grid container spacing={4} sx={{ mb: 2 }}>
-              {services.map((card, idx) => (
-                <Grid item xs={12} sm={6} md={3} key={`desc-${card.id || idx}`}>
-                  <Typography sx={{ color: 'text.secondary', fontSize: { xs: '0.9rem', md: '0.95rem' }, lineHeight: 1.85 }}>{card.shortDescription}</Typography>
-                </Grid>
-              ))}
-            </Grid>
-
-            {/* Row 4: Dashed arrow buttons */}
-            <Grid container spacing={4}>
-              {services.map((card, idx) => (
-                <Grid item xs={12} sm={6} md={3} key={`arrow-${card.id || idx}`}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <Box sx={{ width: '70%', height: 1, borderBottom: `2px dashed ${theme.palette.divider}`, position: 'relative' }}>
-                      <Box sx={{ position: 'absolute', left: '50%', top: -20, transform: 'translateX(-50%)' }}>
-                        <Box
-                          component="button"
-                          aria-label={`more-${idx}`}
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '50%',
-                            border: `2px dashed ${theme.palette.divider}`,
-                            display: 'grid',
-                            placeItems: 'center',
-                            bgcolor: 'common.white',
-                            cursor: 'pointer',
-                            boxShadow: '0 6px 18px rgba(0,0,0,0.06)',
-                            transition: 'transform 150ms ease',
-                            '&:hover': { transform: 'translateY(-3px)' }
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12h14M13 5l6 7-6 7" stroke="#111827" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        <Box className="service-line">
+                          <Box sx={{ position: 'absolute', left: '50%', top: -20, transform: 'translateX(-50%)' }}>
+                            <Box component="button" aria-label={`more-${idx}`} className="service-arrow">
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12h14M13 5l6 7-6 7" stroke="#111827" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </Box>
+                          </Box>
                         </Box>
                       </Box>
                     </Box>
-                  </Box>
-                </Grid>
-              ))}
+                  </Grid>
+                );
+              })}
             </Grid>
           </>
         )}
