@@ -327,11 +327,11 @@ export default function About() {
                       borderRadius: 2,
                       overflow: 'hidden',
                       border: '4px solid rgba(0,0,0,0.06)',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+                      boxShadow: 'none',
                       transition: 'transform 260ms ease, box-shadow 260ms ease',
                       '&:hover': {
                         transform: 'translateY(-12px)',
-                        boxShadow: '0 40px 80px rgba(0,0,0,0.12)'
+                        boxShadow: 'none'
                       }
                     }}
                   >

@@ -6,6 +6,8 @@ import banner1 from 'assets/banner/banner1.jpg';
 import banner2 from 'assets/banner/banner2.jpg';
 import banner3 from 'assets/banner/banner3.jpg';
 import headerLogo from 'assets/logo/hader-logo.png';
+import { FileText, Globe, Users, Package } from 'lucide-react';
+// icons removed from this page
 // Note: avoid importing @mui icons here to prevent missing-package resolution errors
 
 // reuse the public header pieces from PlaceOrder (visual header only)
@@ -77,11 +79,14 @@ export default function HomeReplica() {
   };
 
   const stats = [
-    { emoji: '📜', value: '1930', label: 'Years Established' },
-    { emoji: '🌍', value: '9', label: 'Countries, States & Cities Reached' },
-    { emoji: '👥', value: '90', label: 'Total Employees' },
-    { emoji: '📦', value: '500000', label: 'Total Units Sold' }
+    { icon: FileText, value: '1930', label: 'Year Since Established' },
+    { icon: Globe, value: '9', label: 'Clients in How Many Countries/States/Cities' },
+    { icon: Users, value: '90', label: 'Years/Hours of Experience of All Employee N' },
+    { icon: Package, value: '500000', label: 'Total Units Sold' }
   ];
+
+  // Per-icon vertical offsets (translateY) to fine-tune overlap visual
+  const iconOffsets = ['-56%', '-48%', '-52%', '-48%'];
 
   const servicesList = [
     { key: 'hard', label: 'Hard Thesis Binding' },
@@ -279,65 +284,119 @@ export default function HomeReplica() {
 
       {/* Services block moved below to appear after About/Statistics */}
 
-      {/* About */}
-      <Box component="section" sx={{ py: { xs: 6, md: 10 } }}>
+      {/* About (redesigned to match About page references) */}
+      <Box component="section" sx={{ py: { xs: 6, md: 12 }, bgcolor: '#fff' }}>
         <Container maxWidth="lg">
-          <Typography sx={{ textAlign: 'center', fontSize: '1.6rem', fontWeight: 700, mb: 3 }}>About Dhar Brothers</Typography>
-
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 3, md: 6 },
-              border: '1px solid #efeef0',
-              position: 'relative'
-            }}
-          >
-            <Typography sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.9 }}>
-              We, Dhar Brothers, had a humble start back in the 1930s and today we take pride in saying that we have reached the
-              pinnacle of thesis/dissertation composing, printing and binding. Our works have been submitted to all major universities around the globe.
-              We have a happy customer base of over a thousand to our credit.
-            </Typography>
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button
-                component={RouterLink}
-                to="/about"
-                sx={{ px: 3, py: 1.1, bgcolor: '#f5e8a8', color: '#1f2937', borderRadius: 0, boxShadow: 'none', fontWeight: 600 }}
-              >
-                Know More
-              </Button>
-            </Box>
-          </Paper>
-
-          <Grid container spacing={2} sx={{ mt: 3 }}>
-            {stats.map((s) => (
-              <Grid item xs={12} md={3} key={s.label}>
-                <Box sx={{ p: 2, textAlign: 'center', border: '1px solid #f1f1f1', bgcolor: 'common.white' }}>
-                  <Typography sx={{ fontSize: '1.25rem', fontWeight: 700 }}>{s.value}</Typography>
-                  <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{s.label}</Typography>
+          <Box sx={{ maxWidth: 1100, mx: 'auto' }}>
+            <Box sx={{ position: 'relative' }}>
+              <Paper elevation={0} sx={{ border: '1px solid #e8e3de', p: { xs: 4, md: 6 }, position: 'relative', overflow: 'visible' }}>
+                {/* floating centered heading */}
+                <Box sx={{ position: 'absolute', top: -48, left: '50%', transform: 'translateX(-50%)', bgcolor: '#fff', px: 4, zIndex: 6 }}>
+                  <Typography sx={{ textAlign: 'center', fontSize: { xs: '1.9rem', md: '3.2rem' }, fontWeight: 400, fontFamily: '"Playfair Display", Georgia, serif', zIndex: 7 }}>
+                    About Dhar Brothers
+                  </Typography>
                 </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
 
-      {/* Statistics */}
-      <Box component="section" sx={{ py: { xs: 4, md: 6 }, bgcolor: '#fff' }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={2}>
-            {stats.map((s, i) => (
-              <Grid item xs={6} md={3} key={s.label}>
-                <Paper sx={{ p: 3, textAlign: 'center', border: '1px solid #f1f1f1' }} elevation={0}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-                    <Typography sx={{ fontSize: 28 }}>{s.emoji}</Typography>
+                {/* thin decorative lines inside the border (left & right) */}
+                <Box sx={{ position: 'absolute', top: 14, left: { xs: 20, md: 32 }, width: { xs: '18%', md: '20%' }, height: 2, bgcolor: '#e6e0da', zIndex: 2 }} />
+                <Box sx={{ position: 'absolute', top: 14, right: { xs: 20, md: 32 }, width: { xs: '18%', md: '20%' }, height: 2, bgcolor: '#e6e0da', zIndex: 2 }} />
+
+                <Box sx={{ mt: { xs: 1, md: 2 } }}>
+                  <Box sx={{ width: 72, height: 4, bgcolor: '#14a0a5', mx: 'auto', mt: 2, mb: 4 }} />
+
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.98rem', lineHeight: 1.9, mb: 2, textAlign: 'center' }}>
+                    We, Dhar Brothers, had a humble start back in the 1930s and today we take pride in saying that we have reached the pinnacle
+                    of thesis/dissertation composing, printing and binding. Our works have been submitted to all major universities around the globe.
+                    We have a happy customer base of over a thousand to our credit. We have an experience of more than 85 years in the thesis/dissertation printing and binding.
+                  </Typography>
+
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.98rem', lineHeight: 1.9, mb: 3, textAlign: 'center' }}>
+                    We compete with the best in the world in terms of thesis printing and binding and our work has often been appreciated for
+                    being leagues ahead of our global competitors. We are currently trying to redefine the age-old practice of binding by skillfully
+                    balancing modern technology and human touch. The blend of the traditional and the new is what makes us who we are today.
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
+                    <Button component={RouterLink} to="/about" sx={{ px: 4, py: 1.2, bgcolor: '#f5e8a8', color: '#1f2937', borderRadius: 0, boxShadow: 'none', fontWeight: 600 }}>
+                      Know More
+                    </Button>
                   </Box>
-                  <Typography sx={{ fontSize: '1.4rem', fontWeight: 700 }}>{s.value}</Typography>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>{s.label}</Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
+                </Box>
+              </Paper>
+
+              {/* Stats cards placed below the About paper; centered single row */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 4,
+                  justifyContent: 'center',
+                  alignItems: 'stretch',
+                  mt: { xs: 8, md: 12 },
+                  pb: 6,
+                  position: 'relative',
+                  zIndex: 3,
+                  flexWrap: 'nowrap',
+                  overflowX: 'visible',
+                  width: '100%'
+                }}
+              >
+                {stats.map((s, idx) => (
+                  <Box key={'stat-' + idx} sx={{ flex: '0 0 auto', width: { xs: 220, sm: 260, md: 260 }, mx: { xs: 1, md: 2 } }}>
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        textAlign: 'center',
+                        height: '100%',
+                        '&:hover .stat-card': { transform: 'translateY(-8px)', boxShadow: '0 16px 40px rgba(16,24,40,0.12)', bgcolor: '#fbfbfb' },
+                        '&:hover .stat-icon': { transform: 'translate(-50%, -60%) scale(1.06)' }
+                      }}
+                    >
+                      <Paper
+                        className="stat-card"
+                        elevation={3}
+                        sx={{
+                          p: 3,
+                          pt: 6,
+                          height: { xs: 170, md: 170 },
+                          borderRadius: 1,
+                          boxShadow: '0 8px 28px rgba(16,24,40,0.06)',
+                          transition: 'transform 220ms ease, box-shadow 220ms ease, background 220ms ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Typography sx={{ fontSize: { xs: '1.35rem', md: '1.8rem' }, fontWeight: 700 }}>{s.value}</Typography>
+                        <Typography sx={{ color: 'text.secondary', fontSize: '0.95rem', mt: 1, textAlign: 'center' }}>{s.label}</Typography>
+                      </Paper>
+
+                      <Box
+                        className="stat-icon"
+                        sx={{
+                          position: 'absolute',
+                          left: '50%',
+                          top: 0,
+                          transform: `translate(-50%, ${iconOffsets[idx] || '-48%'})`,
+                          width: 72,
+                          height: 72,
+                          borderRadius: '50%',
+                          bgcolor: '#14a0a5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 8px 24px rgba(20,160,165,0.16)',
+                          transition: 'transform 220ms ease'
+                        }}
+                      >
+                        {s.icon ? <s.icon size={28} color="#fff" /> : <Typography sx={{ color: '#fff', fontSize: 28 }}>{s.emoji}</Typography>}
+                      </Box>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          </Box>
         </Container>
       </Box>
 
