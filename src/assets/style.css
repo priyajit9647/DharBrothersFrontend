@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap');
+
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -26,7 +28,34 @@ h3 { font-size: 1.25rem; font-weight: 600; }
   font-weight: 600;
 }
 
+/* Header and top info adjustments to match screenshot */
+.top-info-bar { padding: 8px 0; font-size: 0.95rem; }
+.top-info-bar .left { text-align: left; }
+.header-main { padding: 18px 0; }
+.header-main .logo { display: inline-block; vertical-align: middle; }
+.header-main nav { display: inline-block; margin-left: 40px; vertical-align: middle; }
+.header-main .cta { float: right; }
+.hero-title { letter-spacing: 0.3px; }
+
+/* Contact page specific */
+.contact-page .MuiPaper-root { border-radius: 4px; }
+.contact-page .MuiTextField-root .MuiOutlinedInput-root { border-radius: 0; }
+
 /* Footer adjustments */
 .footer-links .MuiTypography-root, .footer-contact .MuiTypography-root {
   font-size: 0.95rem;
 }
+
+/* What We Do page styles */
+.what-we-do .service-card { display: flex; flex-direction: column; height: 100%; background: transparent; }
+.what-we-do .service-image { width: 100%; height: 220px; object-fit: cover; display: block; }
+@media (max-width: 768px) {
+  .what-we-do .service-image { height: 160px; }
+}
+.what-we-do .service-content { padding: 18px 16px 22px; flex: 1 1 auto; }
+.what-we-do .service-title { font-family: 'Playfair Display', Georgia, 'Times New Roman', Times, serif; font-size: 1.12rem; font-weight: 700; margin-bottom: 10px; color: #111111; }
+.what-we-do .service-desc { color: #666666; line-height: 1.85; font-size: 0.95rem; }
+.what-we-do .service-line { width: 72%; border-bottom: 2px dashed #e6e6e6; margin: 0 auto; position: relative; padding-top: 18px; }
+.what-we-do .service-arrow { width: 36px; height: 36px; border-radius: 50%; border: 2px dashed #e6e6e6; display: grid; place-items: center; background: #fff; box-shadow: 0 6px 18px rgba(0,0,0,0.06); margin: -18px auto 0; cursor: pointer; transition: transform 150ms ease; }
+.what-we-do .service-arrow:hover { transform: translateY(-3px); }
+.what-we-do .service-arrow svg path { stroke: #222222; }

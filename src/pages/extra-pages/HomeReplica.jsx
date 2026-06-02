@@ -1,23 +1,23 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Box, Container, Stack, Typography, Button, Grid, Paper, TextField, IconButton } from '@mui/material';
-import { alpha, useTheme } from '@mui/material/styles';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 
 import banner1 from 'assets/banner/banner1.jpg';
 import banner2 from 'assets/banner/banner2.jpg';
 import banner3 from 'assets/banner/banner3.jpg';
 import headerLogo from 'assets/logo/hader-logo.png';
+import { FileText, Globe, Users, Package } from 'lucide-react';
+// icons removed from this page
 // Note: avoid importing @mui icons here to prevent missing-package resolution errors
 
 // reuse the public header pieces from PlaceOrder (visual header only)
 import { TopInfoBar, HeaderNav } from './PlaceOrder';
 
 export default function HomeReplica() {
-  const theme = useTheme();
   const slides = [
-    { id: 0, image: banner1, text: 'Setting Global Standards\nSince the 1930s' },
-    { id: 1, image: banner2, text: 'From Humble Beginnings to Global Recognition' },
-    { id: 2, image: banner3, text: 'Your Trusted Partner in Thesis Printing & Binding' }
+    { id: 0, image: banner1, small: 'Crafting Excellence Since 1930', title: 'Your Trusted Partner in Thesis Printing and Binding' },
+    { id: 1, image: banner2, small: '95 Years of Thesis Mastery', title: 'From Humble Beginnings to Global Recognition' },
+    { id: 2, image: banner3, small: 'Pioneers of Thesis Composition', title: 'Setting Global Standards Since the 1930s' }
   ];
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -79,11 +79,14 @@ export default function HomeReplica() {
   };
 
   const stats = [
-    { emoji: '📜', value: '1930', label: 'Year Since Established' },
-    { emoji: '🌍', value: '9', label: 'Clients in How Many Countries/States/Cities' },
-    { emoji: '⏳', value: '90', label: 'Years/Hours of Experience of All Employee N' },
-    { emoji: '📦', value: '500000', label: 'Total units Sold' }
+    { icon: FileText, value: '1930', label: 'Year Since Established' },
+    { icon: Globe, value: '9', label: 'Clients in How Many Countries/States/Cities' },
+    { icon: Users, value: '90', label: 'Years/Hours of Experience of All Employee N' },
+    { icon: Package, value: '500000', label: 'Total Units Sold' }
   ];
+
+  // Per-icon vertical offsets (translateY) to fine-tune overlap visual
+  const iconOffsets = ['-56%', '-48%', '-52%', '-48%'];
 
   const servicesList = [
     { key: 'hard', label: 'Hard Thesis Binding' },
@@ -188,33 +191,28 @@ export default function HomeReplica() {
                     color: 'rgba(255,255,255,0.9)'
                   }}
                 >
-                  Pioneers in Thesis Composition
+                  {slides[activeIndex].small}
                 </Typography>
                 <Box sx={{ flex: 1, height: 1, bgcolor: 'rgba(255,255,255,0.18)' }} />
               </Box>
 
               <Typography
                 sx={{
-                  fontSize: { xs: '1.9rem', md: '4.6rem' },
+                  fontSize: { xs: '1.9rem', md: '3.6rem' },
                   fontWeight: 700,
                   lineHeight: 1.02,
                   mt: 2,
                   letterSpacing: 0.5
                 }}
               >
-                {slides[activeIndex].text.split('\n').map((line, i) => (
-                  <React.Fragment key={i}>
-                    {line}
-                    <br />
-                  </React.Fragment>
-                ))}
+                {slides[activeIndex].title}
               </Typography>
 
-              <Typography sx={{ fontSize: { xs: '1.8rem', md: '3.8rem' }, mt: 1.5, letterSpacing: 4, fontWeight: 300 }}>
+              <Typography sx={{ fontSize: { xs: '1.6rem', md: '3rem' }, mt: 1.5, letterSpacing: 4, fontWeight: 300 }}>
                 DHARBROTHERS
               </Typography>
 
-              <Box sx={{ mt: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Box sx={{ mt: 3, display: 'flex', gap: 3, alignItems: 'flex-start' }}>
                 <Button
                   component={RouterLink}
                   to="/order"
@@ -230,22 +228,37 @@ export default function HomeReplica() {
                     '&:hover': { bgcolor: '#f2df7f' }
                   }}
                 >
-                  Order Thesis Online
+                  Dhar Brothers Online
                 </Button>
 
-                <Button
-                  component={RouterLink}
-                  to="/contact"
-                  sx={{
-                    color: 'rgba(255,255,255,0.95)',
-                    textTransform: 'none',
-                    borderBottom: '2px solid rgba(255,255,255,0.3)',
-                    fontSize: '0.95rem',
-                    pl: 0
-                  }}
-                >
-                  Need Help? Contact Us
-                </Button>
+                <Stack spacing={0.5} sx={{ mt: 0.25 }}>
+                  <Button
+                    component={RouterLink}
+                    to="/contact"
+                    sx={{
+                      color: 'rgba(255,255,255,0.95)',
+                      textTransform: 'none',
+                      fontSize: '0.95rem',
+                      pl: 0,
+                      justifyContent: 'flex-start'
+                    }}
+                  >
+                    Need Help?
+                  </Button>
+                  <Button
+                    component={RouterLink}
+                    to="/contact"
+                    sx={{
+                      color: 'rgba(255,255,255,0.95)',
+                      textTransform: 'none',
+                      fontSize: '0.95rem',
+                      pl: 0,
+                      justifyContent: 'flex-start'
+                    }}
+                  >
+                    Contact Us
+                  </Button>
+                </Stack>
               </Box>
             </Box>
           </Stack>
@@ -269,104 +282,155 @@ export default function HomeReplica() {
         </Box>
       </Box>
 
-      {/* What We Do (grid of service cards matching reference) */}
-      <Box component="section" id="what-we-do" sx={{ py: { xs: 6, md: 10 }, bgcolor: 'common.white' }}>
+      {/* Services block moved below to appear after About/Statistics */}
+
+      {/* About (redesigned to match About page references) */}
+      <Box component="section" sx={{ py: { xs: 6, md: 12 }, bgcolor: '#fff' }}>
         <Container maxWidth="lg">
-          <Typography sx={{ textAlign: 'center', fontSize: { xs: '1.6rem', md: '1.9rem' }, fontWeight: 700, mb: 4 }}>What We Do</Typography>
+          <Box sx={{ maxWidth: 1100, mx: 'auto' }}>
+            <Box sx={{ position: 'relative' }}>
+              <Paper elevation={0} sx={{ border: '1px solid #e8e3de', p: { xs: 4, md: 6 }, position: 'relative', overflow: 'visible' }}>
+                {/* floating centered heading */}
+                <Box sx={{ position: 'absolute', top: -48, left: '50%', transform: 'translateX(-50%)', bgcolor: '#fff', px: 4, zIndex: 6 }}>
+                  <Typography sx={{ textAlign: 'center', fontSize: { xs: '1.9rem', md: '3.2rem' }, fontWeight: 400, fontFamily: '"Playfair Display", Georgia, serif', zIndex: 7 }}>
+                    About Dhar Brothers
+                  </Typography>
+                </Box>
 
-          <Grid container spacing={4} alignItems="stretch">
-            {[
-              { title: 'Hard Thesis Binding', img: banner1, desc: 'At Dhar Brothers, we understand the significance of presenting your thesis or dissertation in a manner that reflects the dedication and rigor you’ve invested in your research.' },
-              { title: 'Soft Thesis Binding', img: banner2, desc: 'Soft binding is an art form that requires precision, care, and attention to detail. At Dhar Brothers, we have perfected the craft of soft binding to offer you a solution that is both elegant and durable.' },
-              { title: 'Synopsis', img: banner3, desc: 'At Dhar Brothers, we understand the importance of succinctly summarizing complex scholarly works. Our Synopsis Service offers a professional solution for condensing the essence of your work.' },
-              { title: 'Thesis Binding', img: banner2, desc: 'Dhar Brothers is proud to present Thesis on Demand, a convenient and streamlined service designed to simplify the process of thesis submission.' }
-            ].map((card, idx) => (
-              <Grid item xs={12} sm={6} md={3} key={card.title}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                  <Box component="img" src={card.img} alt={card.title} sx={{ width: '100%', height: { xs: 180, md: 220 }, objectFit: 'cover', display: 'block', mb: 2 }} />
+                {/* thin decorative lines inside the border (left & right) */}
+                <Box sx={{ position: 'absolute', top: 14, left: { xs: 20, md: 32 }, width: { xs: '18%', md: '20%' }, height: 2, bgcolor: '#e6e0da', zIndex: 2 }} />
+                <Box sx={{ position: 'absolute', top: 14, right: { xs: 20, md: 32 }, width: { xs: '18%', md: '20%' }, height: 2, bgcolor: '#e6e0da', zIndex: 2 }} />
 
-                  <Typography sx={{ fontSize: { xs: '1rem', md: '1.05rem' }, fontWeight: 600, mb: 1 }}>{card.title}</Typography>
-                  <Typography sx={{ color: 'text.secondary', fontSize: { xs: '0.9rem', md: '0.95rem' }, lineHeight: 1.85, flex: 1 }}>{card.desc}</Typography>
+                <Box sx={{ mt: { xs: 1, md: 2 } }}>
+                  <Box sx={{ width: 72, height: 4, bgcolor: '#14a0a5', mx: 'auto', mt: 2, mb: 4 }} />
 
-                  <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <Box sx={{ width: '70%', height: 1, bgcolor: 'divider', position: 'relative' }}>
-                      <Box sx={{ position: 'absolute', left: '50%', top: -18, transform: 'translateX(-50%)' }}>
-                        <Box sx={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid', borderColor: 'divider', display: 'grid', placeItems: 'center', bgcolor: 'common.white' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12h14M13 5l6 7-6 7" stroke="#111827" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        </Box>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.98rem', lineHeight: 1.9, mb: 2, textAlign: 'center' }}>
+                    We, Dhar Brothers, had a humble start back in the 1930s and today we take pride in saying that we have reached the pinnacle
+                    of thesis/dissertation composing, printing and binding. Our works have been submitted to all major universities around the globe.
+                    We have a happy customer base of over a thousand to our credit. We have an experience of more than 85 years in the thesis/dissertation printing and binding.
+                  </Typography>
+
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.98rem', lineHeight: 1.9, mb: 3, textAlign: 'center' }}>
+                    We compete with the best in the world in terms of thesis printing and binding and our work has often been appreciated for
+                    being leagues ahead of our global competitors. We are currently trying to redefine the age-old practice of binding by skillfully
+                    balancing modern technology and human touch. The blend of the traditional and the new is what makes us who we are today.
+                  </Typography>
+
+                  <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
+                    <Button component={RouterLink} to="/about" sx={{ px: 4, py: 1.2, bgcolor: '#f5e8a8', color: '#1f2937', borderRadius: 0, boxShadow: 'none', fontWeight: 600 }}>
+                      Know More
+                    </Button>
+                  </Box>
+                </Box>
+              </Paper>
+
+              {/* Stats cards placed below the About paper; centered single row */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 4,
+                  justifyContent: 'center',
+                  alignItems: 'stretch',
+                  mt: { xs: 8, md: 12 },
+                  pb: 6,
+                  position: 'relative',
+                  zIndex: 3,
+                  flexWrap: 'nowrap',
+                  overflowX: 'visible',
+                  width: '100%'
+                }}
+              >
+                {stats.map((s, idx) => (
+                  <Box key={'stat-' + idx} sx={{ flex: '0 0 auto', width: { xs: 220, sm: 260, md: 260 }, mx: { xs: 1, md: 2 } }}>
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        textAlign: 'center',
+                        height: '100%',
+                        '&:hover .stat-card': { transform: 'translateY(-8px)', boxShadow: '0 16px 40px rgba(16,24,40,0.12)', bgcolor: '#fbfbfb' },
+                        '&:hover .stat-icon': { transform: 'translate(-50%, -60%) scale(1.06)' }
+                      }}
+                    >
+                      <Paper
+                        className="stat-card"
+                        elevation={3}
+                        sx={{
+                          p: 3,
+                          pt: 6,
+                          height: { xs: 170, md: 170 },
+                          borderRadius: 1,
+                          boxShadow: '0 8px 28px rgba(16,24,40,0.06)',
+                          transition: 'transform 220ms ease, box-shadow 220ms ease, background 220ms ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Typography sx={{ fontSize: { xs: '1.35rem', md: '1.8rem' }, fontWeight: 700 }}>{s.value}</Typography>
+                        <Typography sx={{ color: 'text.secondary', fontSize: '0.95rem', mt: 1, textAlign: 'center' }}>{s.label}</Typography>
+                      </Paper>
+
+                      <Box
+                        className="stat-icon"
+                        sx={{
+                          position: 'absolute',
+                          left: '50%',
+                          top: 0,
+                          transform: `translate(-50%, ${iconOffsets[idx] || '-48%'})`,
+                          width: 72,
+                          height: 72,
+                          borderRadius: '50%',
+                          bgcolor: '#14a0a5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 8px 24px rgba(20,160,165,0.16)',
+                          transition: 'transform 220ms ease'
+                        }}
+                      >
+                        {s.icon ? <s.icon size={28} color="#fff" /> : <Typography sx={{ color: '#fff', fontSize: 28 }}>{s.emoji}</Typography>}
                       </Box>
                     </Box>
                   </Box>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* About */}
-      <Box component="section" sx={{ py: { xs: 6, md: 10 } }}>
-        <Container maxWidth="lg">
-          <Typography sx={{ textAlign: 'center', fontSize: '1.6rem', fontWeight: 700, mb: 3 }}>About Dhar Brothers</Typography>
-
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 3, md: 6 },
-              border: '1px solid #efeef0',
-              position: 'relative'
-            }}
-          >
-            <Typography sx={{ color: 'text.secondary', fontSize: '0.95rem', lineHeight: 1.9 }}>
-              We, Dhar Brothers, had a humble start back in the 1930s and today we take pride in saying that we have reached the
-              pinnacle of thesis/dissertation composing, printing and binding. Our works have been submitted to all major universities around the globe.
-              We have a happy customer base of over a thousand to our credit.
-            </Typography>
-
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Button
-                component={RouterLink}
-                to="/about"
-                sx={{ px: 3, py: 1.1, bgcolor: '#f5e8a8', color: '#1f2937', borderRadius: 0, boxShadow: 'none', fontWeight: 600 }}
-              >
-                Know More
-              </Button>
+                ))}
+              </Box>
             </Box>
-          </Paper>
-
-          <Grid container spacing={2} sx={{ mt: 3 }}>
-            {stats.map((s) => (
-              <Grid item xs={12} md={3} key={s.label}>
-                <Box sx={{ p: 2, textAlign: 'center', border: '1px solid #f1f1f1', bgcolor: 'common.white' }}>
-                  <Typography sx={{ fontSize: '1.25rem', fontWeight: 700 }}>{s.value}</Typography>
-                  <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>{s.label}</Typography>
-                </Box>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Statistics */}
-      <Box component="section" sx={{ py: { xs: 4, md: 6 }, bgcolor: '#fff' }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={2}>
-            {stats.map((s, i) => (
-              <Grid item xs={6} md={3} key={s.label}>
-                <Paper sx={{ p: 3, textAlign: 'center', border: '1px solid #f1f1f1' }} elevation={0}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
-                    <Typography sx={{ fontSize: 28 }}>{s.emoji}</Typography>
-                  </Box>
-                  <Typography sx={{ fontSize: '1.4rem', fontWeight: 700 }}>{s.value}</Typography>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.9rem' }}>{s.label}</Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
+          </Box>
         </Container>
       </Box>
 
       
+
+      {/* Why Dhar Brothers */}
+      <Box component="section" sx={{ py: { xs: 6, md: 10 }, bgcolor: '#fafafa' }}>
+        <Container maxWidth="lg">
+          <Typography sx={{ textAlign: 'center', fontSize: '1.6rem', fontWeight: 700, mb: 3 }}>Why Dhar Brothers</Typography>
+
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={4}>
+              <Paper elevation={0} sx={{ p: 3, textAlign: 'left', minHeight: 140 }}>
+                <Typography sx={{ fontSize: '1rem', fontWeight: 700, mb: 1 }}>Experienced Craftsmanship</Typography>
+                <Typography sx={{ color: 'text.secondary' }}>Over 85 years of experience in thesis printing and binding, combining tradition with modern techniques.</Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Paper elevation={0} sx={{ p: 3, textAlign: 'left', minHeight: 140 }}>
+                <Typography sx={{ fontSize: '1rem', fontWeight: 700, mb: 1 }}>Quality Materials</Typography>
+                <Typography sx={{ color: 'text.secondary' }}>We source the finest materials to ensure your thesis looks professional and lasts for years.</Typography>
+              </Paper>
+            </Grid>
+
+            <Grid item xs={12} md={4}>
+              <Paper elevation={0} sx={{ p: 3, textAlign: 'left', minHeight: 140 }}>
+                <Typography sx={{ fontSize: '1rem', fontWeight: 700, mb: 1 }}>Dedicated Support</Typography>
+                <Typography sx={{ color: 'text.secondary' }}>Friendly customer service and clear order tracking help you through every step of the process.</Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
 
       {/* Testimonials */}
       <Box component="section" sx={{ py: { xs: 6, md: 10 } }}>

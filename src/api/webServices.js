@@ -7,9 +7,25 @@ export async function getPublicWebServices() {
   // Expected response: [{ id, title, shortDescription, image, displayOrder, active }]
   // eslint-disable-next-line no-console
   console.log('Fetching public web services');
-  return publicFetch('/api/v1/web/master/services', {
-    method: 'GET'
-  });
+  // Some deployments expose this resource under slightly different paths.
+  // Try a small set of candidate endpoints and return the first successful result.
+  const candidates = ['/api/v1/web/master/services', '/api/v1/web/master/web-services'];
+  let lastErr = null;
+
+  for (const path of candidates) {
+    try {
+      const data = await publicFetch(path, { method: 'GET' });
+      return data;
+    } catch (err) {
+      // Log the specific failure and try the next candidate
+      // eslint-disable-next-line no-console
+      console.warn(`getPublicWebServices: failed to fetch ${path}:`, err?.message || err);
+      lastErr = err;
+    }
+  }
+
+  // If all candidates failed, rethrow the last error for the caller to handle
+  throw lastErr || new Error('Failed to fetch public web services');
 }
 
 export async function getAdminWebServices() {

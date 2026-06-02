@@ -43,15 +43,14 @@ const DEFAULT_SERVICES = [
 
 export default function WhatWeDo() {
   const theme = useTheme();
-
-  const [services, setServices] = useState(DEFAULT_SERVICES);
+  const [services] = useState(DEFAULT_SERVICES);
   const [selectedService, setSelectedService] = useState(null);
 
   const handleOpen = (service) => setSelectedService(service);
   const handleClose = () => setSelectedService(null);
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'common.white' }}>
+    <Box className="what-we-do" sx={{ minHeight: '100vh', bgcolor: 'common.white' }}>
       <TopInfoBar />
       <HeaderNav pageTitle="What We Do" hideOrderButton={false} />
 
@@ -67,16 +66,15 @@ export default function WhatWeDo() {
         </Container>
       </Box>
 
-      {/* Services grid (static demo layout matching reference) */}
+      {/* Services grid (static demo layout) */}
       <Container
-  maxWidth="xl"
-  sx={{
-    py: { xs: 8, md: 12 },
-    px: { xs: 3, md: 6 },
-    bgcolor: '#f7f7f7'
-  }}
->
-
+        maxWidth="xl"
+        sx={{
+          py: { xs: 8, md: 12 },
+          px: { xs: 3, md: 6 },
+          bgcolor: '#f7f7f7'
+        }}
+      >
         <Grid container spacing={4}>
           {services.map((card) => (
             <Grid item xs={12} sm={6} md={3} key={card.id}>
@@ -84,10 +82,12 @@ export default function WhatWeDo() {
                 <Box sx={{ mb: 2 }}>
                   <Box component="img" src={card.image} alt={card.title} sx={{ width: '100%', height: { xs: 180, md: 200 }, objectFit: 'cover', display: 'block' }} />
                 </Box>
+
                 <Box sx={{ px: { xs: 0, md: 0 }, flex: 1 }}>
                   <Typography sx={{ fontFamily: 'serif', fontSize: { xs: '0.98rem', md: '1.02rem' }, fontWeight: 600, mb: 0.75 }}>{card.title}</Typography>
                   <Typography sx={{ color: 'text.secondary', fontSize: '0.78rem', lineHeight: 1.85, mt: 1 }}>{card.shortDescription}</Typography>
                 </Box>
+
                 <Box sx={{ mt: 2.5, display: 'flex', justifyContent: 'center' }}>
                   <Box sx={{ width: '75%', height: 1, borderBottom: `2px dashed ${alpha(theme.palette.divider, 0.5)}`, position: 'relative' }}>
                     <Box sx={{ position: 'absolute', left: '50%', top: -18, transform: 'translateX(-50%)' }}>
@@ -121,7 +121,7 @@ export default function WhatWeDo() {
         </Grid>
 
         {/* Service detail dialog */}
-        <Dialog open={!!selectedService} onClose={handleClose} maxWidth="sm" fullWidth>
+        <Dialog open={Boolean(selectedService)} onClose={handleClose} maxWidth="sm" fullWidth>
           <DialogTitle>{selectedService?.title}</DialogTitle>
           <DialogContent dividers>
             {selectedService && (
