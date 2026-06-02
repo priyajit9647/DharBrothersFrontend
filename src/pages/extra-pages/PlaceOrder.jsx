@@ -1175,8 +1175,29 @@ export function TopInfoBar() {
     >
       <Container maxWidth="lg">
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' }, alignItems: 'center', py: { xs: 1, md: 1.25 } }}>
-          <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-start' } }}>
-            <HeaderInfo icon={EnvironmentOutlined} text="79, Lenin Sarani Rd, near COMMERCIAL POINT Kolkata, West Bengal 700013" />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Stack direction="row" spacing={1.25} sx={{ display: { xs: 'none', md: 'flex' } }}>
+              {socialIcons.map((Icon, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: '50%',
+                    display: 'grid',
+                    placeItems: 'center',
+                    bgcolor: 'transparent',
+                    color: 'text.primary'
+                  }}
+                >
+                  <Icon style={{ fontSize: 14 }} />
+                </Box>
+              ))}
+            </Stack>
+
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <HeaderInfo icon={EnvironmentOutlined} text="79, Lenin Sarani Rd, near COMMERCIAL POINT Kolkata, West Bengal 700013" />
+            </Box>
           </Box>
 
           <Box sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center' }}>
@@ -1186,21 +1207,34 @@ export function TopInfoBar() {
             </Stack>
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Typography
-              component={RouterLink}
-              to="/login"
-              sx={{
-                fontSize: '0.88rem',
-                fontWeight: 600,
-                letterSpacing: 1,
-                textDecoration: 'none',
-                color: 'text.primary',
-                '&:hover': { color: 'info.main' }
-              }}
-            >
-              LOGIN
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', transform: 'translateX(8px)', gap: 0 }}>
+              <Typography
+                component={RouterLink}
+                to="/login"
+                sx={{
+                  fontSize: '0.92rem',
+                  fontWeight: 600,
+                  letterSpacing: 0.6,
+                  textDecoration: 'none',
+                  color: 'text.primary',
+                  '&:hover': { color: 'info.main' },
+                  display: 'inline-block'
+                }}
+              >Login</Typography><Box component="span" sx={{ color: 'text.primary', mx: 0, display: 'inline-block' }}>/</Box><Typography
+                component={RouterLink}
+                to="/customer"
+                sx={{
+                  fontSize: '0.92rem',
+                  fontWeight: 600,
+                  letterSpacing: 0.45,
+                  textDecoration: 'none',
+                  color: 'text.primary',
+                  '&:hover': { color: 'info.main' },
+                  display: 'inline-block'
+                }}
+              >Customer Login</Typography>
+            </Box>
           </Box>
         </Box>
       </Container>
@@ -3464,7 +3498,7 @@ export function FooterSection() {
       <Box sx={{ bgcolor: 'info.main', color: 'common.white', py: 2 }}>
         <Container maxWidth="lg">
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }}>
-            <Typography sx={{ fontSize: '0.82rem' }}>© {new Date().getFullYear()} Dhar Brothers</Typography>
+            <Typography sx={{ fontSize: '0.82rem' }}>© 2026 Dhar Brothers. All Rights Reserved.</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 0.75, sm: 2.5 }}>
               <Typography sx={{ fontSize: '0.82rem' }}>Terms and Conditions</Typography>
               <Typography sx={{ fontSize: '0.82rem' }}>Privacy Policy</Typography>
