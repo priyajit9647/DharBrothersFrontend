@@ -44,7 +44,7 @@ export default function ContactPage() {
       <Box component="section" sx={{ py: { xs: 6, md: 10 } }}>
         <Container maxWidth="lg">
           <Grid container spacing={4} alignItems="stretch" sx={{ columnGap: { md: '72px' } }}>
-            <Grid item xs={12} md={5} sx={{ display: 'flex', alignItems: 'stretch' }}>
+            <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'stretch' }}>
               <Paper
                 elevation={0}
                 sx={{
@@ -52,7 +52,7 @@ export default function ContactPage() {
                   border: '1px solid rgba(0,0,0,0.06)',
                   borderRadius: 1,
                   width: '100%',
-                  maxWidth: 340,
+                  maxWidth: 420,
                   mx: { xs: 'auto', md: 0 },
                   mt: { xs: 2, md: 0 }
                 }}
@@ -102,7 +102,7 @@ export default function ContactPage() {
               </Paper>
             </Grid>
 
-            <Grid item xs={12} md={7} sx={{ display: 'flex', alignItems: 'flex-start' }}>
+            <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'flex-start' }}>
               <Box sx={{ bgcolor: '#14a0a5', color: 'common.white', py: { xs: 4, md: 6 }, px: { xs: 2, md: 6 }, position: 'relative', overflow: 'hidden' }}>
                 <Box sx={{ maxWidth: 700, mx: 'auto' }}>
                   <Paper elevation={0} sx={{ bgcolor: 'transparent', border: '1px solid rgba(255,255,255,0.18)' }}>

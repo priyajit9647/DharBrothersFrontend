@@ -1176,25 +1176,6 @@ export function TopInfoBar() {
       <Container maxWidth="lg">
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto 1fr' }, alignItems: 'center', py: { xs: 1, md: 1.25 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Stack direction="row" spacing={1.25} sx={{ display: { xs: 'none', md: 'flex' } }}>
-              {socialIcons.map((Icon, index) => (
-                <Box
-                  key={index}
-                  sx={{
-                    width: 26,
-                    height: 26,
-                    borderRadius: '50%',
-                    display: 'grid',
-                    placeItems: 'center',
-                    bgcolor: 'transparent',
-                    color: 'text.primary'
-                  }}
-                >
-                  <Icon style={{ fontSize: 14 }} />
-                </Box>
-              ))}
-            </Stack>
-
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <HeaderInfo icon={EnvironmentOutlined} text="79, Lenin Sarani Rd, near COMMERCIAL POINT Kolkata, West Bengal 700013" />
             </Box>
