@@ -5,6 +5,7 @@ import { Link as RouterLink, useLocation } from 'react-router-dom';
 import banner1 from 'assets/banner/banner1.jpg';
 import banner2 from 'assets/banner/banner2.jpg';
 import banner3 from 'assets/banner/banner3.jpg';
+import banner4 from 'assets/banner/banner4.jpg';
 import headerLogo from 'assets/logo/hader-logo.png';
 import { FileText, Globe, Users, Package } from 'lucide-react';
 // icons removed from this page
@@ -111,6 +112,79 @@ export default function HomeReplica() {
       text: 'Very good experience. Delivery timing is also very good. Service provided is methodical, systematic and particular.'
     }
   ];
+
+  // richer demo data similar to About.jsx
+  const testimonialsData = [
+    { name: 'Suparna Biswas', initial: 'S', rating: 4, text: 'Best place for thesis biding, they are highly professional, very sincere to their work, service is really very good. Thank you Dhar brothers team.' },
+    { name: 'sonai barman', initial: 's', rating: 5, text: "I'm really impressed. They are simply the best, very prompt service, specially in pandemic situation. They delivered book at my house, wow, speachless." },
+    { name: 'Mr Mazician', initial: 'M', rating: 5, text: 'Very nice place for thesis printing. Very professional, systematic and with modern printing machines. All the staffs are knowledgeable and helpful.' },
+    { name: 'Rakesh Das', initial: 'R', rating: 4, text: "It's one of the famous printing place in Kolkata. They are very professional. Any kind of binding and printing is done here." },
+    { name: 'Akash bose', initial: 'A', rating: 5, text: 'The behavior of all the staff members is very friendly and polite. They are experts in editing, binding, printing your thesis.' },
+    { name: 'Srijit Ghosh', initial: 'S', rating: 5, text: 'One of the best places for thesis binding. Their quality is top notch with on time delivery.' }
+  ];
+
+  function TestimonialsSlider() {
+    const [index, setIndex] = useState(0);
+    const [perPage, setPerPage] = useState(3);
+
+    useEffect(() => {
+      function update() {
+        const w = window.innerWidth;
+        if (w < 700) setPerPage(1);
+        else if (w < 1100) setPerPage(2);
+        else setPerPage(3);
+      }
+      update();
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }, []);
+
+    const slides = [];
+    for (let i = 0; i < testimonialsData.length; i += perPage) {
+      slides.push(testimonialsData.slice(i, i + perPage));
+    }
+
+    useEffect(() => {
+      const t = setInterval(() => setIndex((s) => (s + 1) % slides.length), 3000);
+      return () => clearInterval(t);
+    }, [slides.length]);
+
+    return (
+      <Box>
+        <Box sx={{ overflow: 'hidden' }}>
+          <Box sx={{ display: 'flex', transition: 'transform 450ms ease', width: `${slides.length * 100}%`, transform: `translateX(-${(index * 100) / slides.length}%)` }}>
+            {slides.map((slide, sIdx) => (
+              <Box key={sIdx} sx={{ width: `${100 / slides.length}%`, display: 'flex', gap: 3, px: 1, boxSizing: 'border-box' }}>
+                {slide.map((t, i) => (
+                  <Paper key={i} elevation={0} sx={{ flex: 1, border: '1px solid #eee', p: 3, minHeight: 180 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                      <Box>
+                        {Array.from({ length: 5 }).map((_, ii) => (
+                          <Box key={ii} component="span" sx={{ color: ii < t.rating ? '#ffb400' : '#ddd', fontSize: 18, ml: 0.5 }}>★</Box>
+                        ))}
+                      </Box>
+                    </Box>
+                    <Typography sx={{ color: '#555', lineHeight: 1.9, mb: 2, fontSize: { xs: '0.95rem', md: '1rem' }, fontFamily: 'Georgia, serif' }}>{t.text}</Typography>
+                    <Box sx={{ borderTop: '1px solid #eee', pt: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ width: 44, height: 44, borderRadius: '50%', bgcolor: '#14a0a5', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>{t.initial}</Box>
+                      <Typography sx={{ fontWeight: 700 }}>{t.name}</Typography>
+                    </Box>
+                  </Paper>
+                ))}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        {/* dots */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 1 }}>
+          {slides.map((_, i) => (
+            <Box key={i} onClick={() => setIndex(i)} sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: i === index ? '#14a0a5' : '#000', opacity: i === index ? 1 : 0.25, cursor: 'pointer' }} />
+          ))}
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'common.white' }}>
@@ -403,77 +477,118 @@ export default function HomeReplica() {
       
 
       {/* Why Dhar Brothers */}
-      <Box component="section" sx={{ py: { xs: 6, md: 10 }, bgcolor: '#fafafa' }}>
+      {/* Our Services (replica of reference image) */}
+      <Box component="section" sx={{ py: { xs: 6, md: 10 }, bgcolor: '#f4f4f4' }}>
         <Container maxWidth="lg">
-          <Typography sx={{ textAlign: 'center', fontSize: '1.6rem', fontWeight: 700, mb: 3 }}>Why Dhar Brothers</Typography>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Typography sx={{ fontSize: '1.8rem', fontWeight: 700 }}>Our Services</Typography>
+            <Box sx={{ width: 64, height: 3, bgcolor: '#14a0a5', mx: 'auto', mt: 1 }} />
+          </Box>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <Paper elevation={0} sx={{ p: 3, textAlign: 'left', minHeight: 140 }}>
-                <Typography sx={{ fontSize: '1rem', fontWeight: 700, mb: 1 }}>Experienced Craftsmanship</Typography>
-                <Typography sx={{ color: 'text.secondary' }}>Over 85 years of experience in thesis printing and binding, combining tradition with modern techniques.</Typography>
+          <Grid container spacing={3} alignItems="center">
+            <Grid item xs={12} md={3}>
+              <Paper elevation={0} sx={{ p: 2, bgcolor: 'transparent' }}>
+                <Stack spacing={1}>
+                  {servicesList.map((s) => (
+                    <Button
+                      key={s.key}
+                      onClick={() => setActiveService(s.key)}
+                      disableRipple
+                      sx={{
+                        justifyContent: 'flex-start',
+                        textTransform: 'none',
+                        pl: 0,
+                        py: 1.5,
+                        color: activeService === s.key ? '#14a0a5' : 'text.secondary',
+                        fontWeight: activeService === s.key ? 700 : 500,
+                        borderLeft: activeService === s.key ? '4px solid #14a0a5' : '4px solid transparent',
+                        bgcolor: activeService === s.key ? '#fff' : 'transparent'
+                      }}
+                    >
+                      {s.label}
+                    </Button>
+                  ))}
+                </Stack>
               </Paper>
             </Grid>
 
-            <Grid item xs={12} md={4}>
-              <Paper elevation={0} sx={{ p: 3, textAlign: 'left', minHeight: 140 }}>
-                <Typography sx={{ fontSize: '1rem', fontWeight: 700, mb: 1 }}>Quality Materials</Typography>
-                <Typography sx={{ color: 'text.secondary' }}>We source the finest materials to ensure your thesis looks professional and lasts for years.</Typography>
-              </Paper>
+            <Grid item xs={12} md={5}>
+              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box component="img" src={banner2} alt="service" sx={{ width: { xs: '88%', md: '100%' }, boxShadow: 3 }} />
+              </Box>
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <Paper elevation={0} sx={{ p: 3, textAlign: 'left', minHeight: 140 }}>
-                <Typography sx={{ fontSize: '1rem', fontWeight: 700, mb: 1 }}>Dedicated Support</Typography>
-                <Typography sx={{ color: 'text.secondary' }}>Friendly customer service and clear order tracking help you through every step of the process.</Typography>
-              </Paper>
+              <Box sx={{ pl: { xs: 0, md: 3 } }}>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, mb: 2 }}>Hard Thesis Binding</Typography>
+                <Typography sx={{ color: 'text.secondary', mb: 3 }}>
+                  At Dhar Brothers, we understand the significance of presenting your thesis or dissertation in a manner that reflects the dedication
+                  and rigor you've invested. Our hard thesis binding offers a durable, elegant finish that preserves your work for years to come.
+                </Typography>
+
+                <Button component={RouterLink} to="/services" sx={{ bgcolor: '#f5e8a8', color: '#1f2937', px: 4, py: 1.2, borderRadius: 0, boxShadow: 'none', textTransform: 'none', fontWeight: 600 }}>
+                  Know More
+                </Button>
+              </Box>
             </Grid>
           </Grid>
         </Container>
       </Box>
 
-      {/* Testimonials */}
-      <Box component="section" sx={{ py: { xs: 6, md: 10 } }}>
-        <Container maxWidth="lg">
-          <Typography sx={{ textAlign: 'center', fontSize: '1.6rem', fontWeight: 700, mb: 3 }}>Customer Saying</Typography>
+      {/* `Why Dhar Brothers` section removed per request */}
 
-          <Grid container spacing={3}>
-            {testimonials.map((t, idx) => (
-              <Grid item xs={12} md={4} key={t.name + idx}>
-                <Paper sx={{ p: 3, minHeight: 180, border: '1px solid #f1f1f1' }} elevation={0}>
-                  <Typography sx={{ mb: 1, color: 'text.secondary' }}>★★★★★</Typography>
-                  <Typography sx={{ fontWeight: 600, mb: 1 }}>{t.name}</Typography>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.95rem' }}>{t.text}</Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
-      </Box>
-
-      {/* Get In Touch */}
+      {/* Sliding Customer Saying (demo static, same style as About.jsx) */}
       <Box component="section" sx={{ py: { xs: 6, md: 10 }, bgcolor: '#fff' }}>
         <Container maxWidth="lg">
-          <Box sx={{ position: 'relative' }}>
-            <Box sx={{ bgcolor: '#14a0a5', height: 220, width: '100%', position: 'absolute', left: 0, top: 30, zIndex: 0 }} />
+          <Box sx={{ maxWidth: 1100, mx: 'auto', textAlign: 'center' }}>
+            <Typography sx={{ fontFamily: 'Georgia, serif', fontSize: { xs: '2.2rem', md: '3.2rem' }, fontWeight: 400, color: '#111' }}>
+              Customer Saying
+            </Typography>
+            <Box sx={{ width: 64, height: 3, bgcolor: '#14a0a5', mx: 'auto', mt: 1, mb: 4 }} />
+          </Box>
 
-            <Grid container spacing={3} sx={{ position: 'relative', zIndex: 2 }}>
-              <Grid item xs={12} md={6}>
-                <Box component="img" src={banner3} alt="contact" sx={{ width: '100%', boxShadow: 3 }} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Paper sx={{ p: 4, maxWidth: 480, mx: { xs: 0, md: 'auto' } }}>
-                  <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, mb: 2 }}>Get In Touch</Typography>
-                  <Stack spacing={2}>
-                    <TextField size="small" placeholder="Name" />
-                    <TextField size="small" placeholder="Phone" />
-                    <TextField size="small" placeholder="Email" />
-                    <TextField size="small" placeholder="Message" multiline rows={4} />
-                    <Button sx={{ bgcolor: '#f5e8a8', color: '#1f2937', borderRadius: 0 }}>Submit</Button>
-                  </Stack>
-                </Paper>
-              </Grid>
-            </Grid>
+          <Box sx={{ width: '100%', overflow: 'hidden', position: 'relative' }}>
+            <TestimonialsSlider />
+          </Box>
+        </Container>
+      </Box>
+
+      {/* `Customer Saying` section removed per request */}
+
+      {/* Get In Touch (new card design matching reference) */}
+      <Box component="section" sx={{ py: { xs: 6, md: 8 }, position: 'relative', bgcolor: '#fff' }}>
+        <Container maxWidth="lg">
+          <Box sx={{ position: 'relative', maxWidth: 1100, mx: 'auto' }}>
+            <Box sx={{ position: 'absolute', left: { xs: -24, md: -260 }, top: { xs: -24, md: -80 }, width: { xs: 160, md: 820 }, height: { xs: 120, md: 260 }, bgcolor: '#14a0a5', zIndex: 1, borderRadius: 0 }} />
+
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Paper elevation={6} sx={{ display: 'block', width: '100%', maxWidth: 1100, overflow: 'hidden', boxShadow: '0 26px 60px rgba(0,0,0,0.14)', borderRadius: 1, position: 'relative', zIndex: 2 }}>
+                <Grid container sx={{ minHeight: { md: 300 } }} alignItems="stretch">
+                  <Grid item xs={12} md={6} sx={{ display: 'block' }}>
+                    <Box component="img" src={banner4} alt="contact" sx={{ width: '100%', height: '100%', minHeight: { xs: 150, md: 300 }, objectFit: 'cover', display: 'block' }} />
+                  </Grid>
+
+                  <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center', borderLeft: { md: '1px solid rgba(0,0,0,0.04)' } }}>
+                    <Box sx={{ p: { xs: 3, md: 6 }, height: '100%', width: '100%' }}>
+                      <Box sx={{ textAlign: 'center', mb: 2 }}>
+                        <Typography sx={{ fontFamily: 'Georgia, serif', fontSize: { xs: '1.6rem', md: '2rem' }, fontWeight: 400 }}>Get In Touch</Typography>
+                        <Box sx={{ width: 64, height: 3, bgcolor: '#14a0a5', mx: 'auto', mt: 1, mb: 2 }} />
+                      </Box>
+
+                      <Stack spacing={3} sx={{ maxWidth: 560, mx: 'auto', width: '100%' }}>
+                        <TextField placeholder="Name" fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-input': { padding: '14px 16px' }, '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
+                        <TextField placeholder="Phone" fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-input': { padding: '14px 16px' }, '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
+                        <TextField placeholder="Email" fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-input': { padding: '14px 16px' }, '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
+                        <TextField placeholder="Message" multiline rows={4} fullWidth variant="outlined" sx={{ '& .MuiOutlinedInput-input': { padding: '12px 16px' }, '& .MuiOutlinedInput-root': { borderRadius: 1 } }} />
+                        <Box sx={{ display: 'flex', justifyContent: { xs: 'center', md: 'flex-start' }, mt: 1.5 }}>
+                          <Button sx={{ bgcolor: '#f5e8a8', color: '#1f2937', borderRadius: 0, px: 6, py: 1.6, fontWeight: 700, boxShadow: 'none' }}>Submit</Button>
+                        </Box>
+                      </Stack>
+                    </Box>
+                  </Grid>
+                </Grid>
+              </Paper>
+            </Box>
           </Box>
         </Container>
       </Box>
