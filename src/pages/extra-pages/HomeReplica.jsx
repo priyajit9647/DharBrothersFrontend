@@ -15,7 +15,7 @@ import { FileText, Globe, Users, Package } from 'lucide-react';
 // Note: avoid importing @mui icons here to prevent missing-package resolution errors
 
 // reuse the public header pieces from PlaceOrder (visual header only)
-import { TopInfoBar, HeaderNav } from './PlaceOrder';
+import { TopInfoBar, HeaderNav, FooterSection } from './PlaceOrder';
 
 export default function HomeReplica() {
   const slides = [
@@ -635,23 +635,7 @@ export default function HomeReplica() {
         </Container>
       </Box>
 
-      {/* Footer (simplified) */}
-      <Box component="footer" sx={{ bgcolor: '#0ea5a4', color: '#fff', py: 6 }}>
-        <Container maxWidth="lg">
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={4}>
-              <Box component="img" src={headerLogo} alt="logo" sx={{ maxWidth: 160 }} />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography>Home | What We Do | About Us | Testimonials</Typography>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Typography>Call: + ( 91 ) 983 006 6537</Typography>
-              <Typography>Email: contactus@dharbrothers.com</Typography>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
+      <FooterSection />
     </Box>
   );
 }
