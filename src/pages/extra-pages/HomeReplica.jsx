@@ -6,6 +6,9 @@ import banner1 from 'assets/banner/banner1.jpg';
 import banner2 from 'assets/banner/banner2.jpg';
 import banner3 from 'assets/banner/banner3.jpg';
 import banner4 from 'assets/banner/banner4.jpg';
+import banner5 from 'assets/banner/banner5.jpg';
+import banner6 from 'assets/banner/banner6.jpg';
+import banner7 from 'assets/banner/banner7.jpg';
 import headerLogo from 'assets/logo/hader-logo.png';
 import { FileText, Globe, Users, Package } from 'lucide-react';
 // icons removed from this page
@@ -97,6 +100,37 @@ export default function HomeReplica() {
   ];
 
   const [activeService, setActiveService] = useState('hard');
+
+  const servicesData = {
+    hard: {
+      title: 'Hard Thesis Binding',
+      shortDescription:
+        "At Dhar Brothers, we understand the significance of presenting your thesis or dissertation in a manner that reflects the dedication and rigor you've invested in your work.",
+      image: banner4,
+      path: '/what-we-do/hard-thesis-binding'
+    },
+    soft: {
+      title: 'Soft Thesis Binding',
+      shortDescription:
+        'Soft binding is an art form that requires precision, care, and attention to detail. We offer reliable soft binding services for a professional finish.',
+      image: banner5,
+      path: '/what-we-do/soft-thesis-binding'
+    },
+    synopsis: {
+      title: 'Synopsis',
+      shortDescription:
+        'Our Synopsis Service condenses the essence of your research into a clear and concise document suitable for submissions and reviews.',
+      image: banner6,
+      path: '/what-we-do/synopsis'
+    },
+    thesis: {
+      title: 'Thesis Binding',
+      shortDescription:
+        'Dhar Brothers is proud to present Thesis on Demand, a convenient and streamlined service designed to simplify the process of thesis submission.',
+      image: banner7,
+      path: '/what-we-do/thesis-binding'
+    }
+  };
 
   const testimonials = [
     {
@@ -514,19 +548,27 @@ export default function HomeReplica() {
 
             <Grid item xs={12} md={5}>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <Box component="img" src={banner2} alt="service" sx={{ width: { xs: '88%', md: '100%' }, boxShadow: 3 }} />
+                <Box
+                  component="img"
+                  src={servicesData[activeService].image}
+                  alt={servicesData[activeService].title}
+                  sx={{
+                    width: { xs: '88%', md: '100%' },
+                    height: { xs: 160, md: 320 },
+                    objectFit: 'cover',
+                    boxShadow: 3,
+                    display: 'block'
+                  }}
+                />
               </Box>
             </Grid>
 
             <Grid item xs={12} md={4}>
               <Box sx={{ pl: { xs: 0, md: 3 } }}>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, mb: 2 }}>Hard Thesis Binding</Typography>
-                <Typography sx={{ color: 'text.secondary', mb: 3 }}>
-                  At Dhar Brothers, we understand the significance of presenting your thesis or dissertation in a manner that reflects the dedication
-                  and rigor you've invested. Our hard thesis binding offers a durable, elegant finish that preserves your work for years to come.
-                </Typography>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 700, mb: 2 }}>{servicesData[activeService].title}</Typography>
+                <Typography sx={{ color: 'text.secondary', mb: 3 }}>{servicesData[activeService].shortDescription}</Typography>
 
-                <Button component={RouterLink} to="/services" sx={{ bgcolor: '#f5e8a8', color: '#1f2937', px: 4, py: 1.2, borderRadius: 0, boxShadow: 'none', textTransform: 'none', fontWeight: 600 }}>
+                <Button component={RouterLink} to={servicesData[activeService].path} sx={{ bgcolor: '#f5e8a8', color: '#1f2937', px: 4, py: 1.2, borderRadius: 0, boxShadow: 'none', textTransform: 'none', fontWeight: 600 }}>
                   Know More
                 </Button>
               </Box>
