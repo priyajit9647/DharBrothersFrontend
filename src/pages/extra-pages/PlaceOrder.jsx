@@ -1771,6 +1771,62 @@ function ProgressHeader({ activeIndex, stepLabels }) {
   );
 }
 
+function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChange }) {
+  return (
+    <Box>
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 0,
+          border: '1px solid',
+          borderColor: 'divider',
+          overflow: 'hidden'
+        }}
+      >
+        <Grid container>
+          <Grid item xs={12} md={6}>
+            <UploadCard
+              title="UPLOAD THESIS DOCUMENT"
+              fieldName="thesisDocument"
+              file={thesisDocument}
+              onFileChange={onFileChange}
+              errorMessage={uploadError}
+            />
+          </Grid>
+          <Grid item xs={12} md={6} sx={{ borderLeft: { md: '1px solid' }, borderColor: 'divider' }}>
+            <UploadCard
+              title="UPLOAD SYNOPSIS DOCUMENT (Optional)"
+              fieldName="synopsisDocument"
+              file={synopsisDocument}
+              onFileChange={onFileChange}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      <Box
+        sx={{
+          mt: 0,
+          px: { xs: 2, md: 2.5 },
+          py: 2.5,
+          bgcolor: '#f7f7f5',
+          borderLeft: (theme) => `3px solid ${theme.palette.info.main}`
+        }}
+      >
+        <Typography sx={{ fontSize: '1rem', fontWeight: 500, mb: 1.25 }}>Additional Information</Typography>
+        <Box component="ol" sx={{ m: 0, pl: 2.25, color: 'text.primary' }}>
+          <Typography component="li" sx={{ fontSize: '0.82rem', mb: 0.75 }}>
+            Upload only one thesis per order
+          </Typography>
+          <Typography component="li" sx={{ fontSize: '0.82rem' }}>
+            We prefer pdf.
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
 function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '' }) {
   const theme = useTheme();
 
