@@ -9,6 +9,7 @@ import banner4 from 'assets/banner/banner4.jpg';
 import banner5 from 'assets/banner/banner5.jpg';
 import banner6 from 'assets/banner/banner6.jpg';
 import banner7 from 'assets/banner/banner7.jpg';
+import banner8 from 'assets/banner/banner8.jpg';
 import headerLogo from 'assets/logo/hader-logo.png';
 import { FileText, Globe, Users, Package } from 'lucide-react';
 // icons removed from this page
@@ -607,7 +608,7 @@ export default function HomeReplica() {
               <Paper elevation={6} sx={{ display: 'block', width: '100%', maxWidth: 1100, overflow: 'hidden', boxShadow: '0 26px 60px rgba(0,0,0,0.14)', borderRadius: 1, position: 'relative', zIndex: 2 }}>
                 <Grid container sx={{ minHeight: { md: 300 } }} alignItems="stretch">
                   <Grid item xs={12} md={6} sx={{ display: 'block' }}>
-                    <Box component="img" src={banner4} alt="contact" sx={{ width: '100%', height: '100%', minHeight: { xs: 150, md: 300 }, objectFit: 'cover', display: 'block' }} />
+                    <Box component="img" src={banner8} alt="contact" sx={{ width: '100%', height: '100%', minHeight: { xs: 150, md: 300 }, objectFit: 'cover', display: 'block' }} />
                   </Grid>
 
                   <Grid item xs={12} md={6} sx={{ display: 'flex', alignItems: 'center', borderLeft: { md: '1px solid rgba(0,0,0,0.04)' } }}>
