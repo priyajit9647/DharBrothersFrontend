@@ -11,6 +11,10 @@ const PricePage = Loadable(lazy(() => import('pages/extra-pages/Price')));
 const AboutPage = Loadable(lazy(() => import('pages/extra-pages/About')));
 const WhatWeDoPage = Loadable(lazy(() => import('pages/extra-pages/WhatWeDo')));
 const HowWeWorkPage = Loadable(lazy(() => import('pages/extra-pages/HowWeWork')));
+const HardThesisBindingPage = Loadable(lazy(() => import('pages/extra-pages/HardThesisBinding')));
+const SoftThesisBindingPage = Loadable(lazy(() => import('pages/extra-pages/SoftThesisBinding')));
+const SynopsisPage = Loadable(lazy(() => import('pages/extra-pages/Synopsis')));
+const ThesisBindingPage = Loadable(lazy(() => import('pages/extra-pages/ThesisBinding')));
 const HomeReplicaPage = Loadable(lazy(() => import('pages/extra-pages/HomeReplica')));
 const TestimonialPage = Loadable(lazy(() => import('pages/extra-pages/Testimonial')));
 const OrderPaymentCallbackPage = Loadable(lazy(() => import('pages/extra-pages/OrderPaymentCallback')));
@@ -47,6 +51,22 @@ const LoginRoutes = {
     {
       path: 'what-we-do',
       element: <WhatWeDoPage />
+    },
+    {
+      path: 'what-we-do/hard-thesis-binding',
+      element: <HardThesisBindingPage />
+    },
+    {
+      path: 'what-we-do/soft-thesis-binding',
+      element: <SoftThesisBindingPage />
+    },
+    {
+      path: 'what-we-do/synopsis',
+      element: <SynopsisPage />
+    },
+    {
+      path: 'what-we-do/thesis-binding',
+      element: <ThesisBindingPage />
     },
     {
       path: 'about',

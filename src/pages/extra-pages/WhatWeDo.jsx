@@ -2,10 +2,12 @@ import React from 'react';
 import { Box, Container, Grid, Typography, Stack, Dialog, DialogTitle, DialogContent, DialogActions, Button } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 
-import banner1 from 'assets/banner/banner1.jpg';
-import banner2 from 'assets/banner/banner2.jpg';
-import banner3 from 'assets/banner/banner3.jpg';
+import banner4 from 'assets/banner/banner4.jpg';
+import banner5 from 'assets/banner/banner5.jpg';
+import banner6 from 'assets/banner/banner6.jpg';
+import banner7 from 'assets/banner/banner7.jpg';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // reuse header/footer pieces
 import { HeaderNav, TopInfoBar, FooterSection } from './PlaceOrder';
@@ -16,50 +18,64 @@ const DEFAULT_SERVICES = [
     title: 'Hard Thesis Binding',
     shortDescription:
       "At Dhar Brothers, we understand the significance of presenting your thesis or dissertation in a manner that reflects the dedication and rigor you've invested in your work.",
-    image: banner1
+    image: banner4,
+    path: '/what-we-do/hard-thesis-binding'
   },
   {
     id: 2,
     title: 'Soft Thesis Binding',
     shortDescription:
       'Soft binding is an art form that requires precision, care, and attention to detail. We offer reliable soft binding services for a professional finish.',
-    image: banner2
+    image: banner5,
+    path: '/what-we-do/soft-thesis-binding'
   },
   {
     id: 3,
     title: 'Synopsis',
     shortDescription:
       'Our Synopsis Service condenses the essence of your research into a clear and concise document suitable for submissions and reviews.',
-    image: banner3
+    image: banner6,
+    path: '/what-we-do/synopsis'
   },
   {
     id: 4,
     title: 'Thesis Binding',
     shortDescription:
       'Dhar Brothers is proud to present Thesis on Demand, a convenient and streamlined service designed to simplify the process of thesis submission.',
-    image: banner1
+    image: banner7,
+    path: '/what-we-do/thesis-binding'
   }
 ];
 
 export default function WhatWeDo() {
   const theme = useTheme();
   const [services] = useState(DEFAULT_SERVICES);
-  const [selectedService, setSelectedService] = useState(null);
-
-  const handleOpen = (service) => setSelectedService(service);
-  const handleClose = () => setSelectedService(null);
+  const navigate = useNavigate();
 
   return (
     <Box className="what-we-do" sx={{ minHeight: '100vh', bgcolor: 'common.white' }}>
       <TopInfoBar />
       <HeaderNav pageTitle="What We Do" hideOrderButton={false} />
 
-      {/* Hero / Breadcrumb */}
-      <Box component="section" sx={{ position: 'relative', height: { xs: 260, md: 320 }, overflow: 'hidden' }}>
-        <Box component="img" src={banner3} alt="what-we-do-hero" sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-        <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.35)' }} />
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2, height: '100%' }}>
-          <Stack sx={{ height: '100%' }} justifyContent="center" alignItems="center">
+      {/* Hero / Breadcrumb - align with other pages */}
+      <Box
+        component="section"
+        sx={{
+          position: 'relative',
+          minHeight: { xs: 200, md: 260 },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          color: 'common.white',
+          backgroundImage: `linear-gradient(0deg, rgba(27, 24, 20, 0.38), rgba(27, 24, 20, 0.38)), url(${banner7})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          overflow: 'hidden'
+        }}
+      >
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
+          <Stack justifyContent="center" alignItems="center" sx={{ py: 3 }}>
             <Typography sx={{ color: '#fff', fontSize: { xs: '1.6rem', md: '2.25rem' }, fontWeight: 600 }}>What We Do</Typography>
             <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem', mt: 1 }}>Home / What We Do</Typography>
           </Stack>
@@ -75,12 +91,28 @@ export default function WhatWeDo() {
           bgcolor: '#f7f7f7'
         }}
       >
-        <Grid container spacing={4}>
+        <Grid container spacing={4} alignItems="stretch">
           {services.map((card) => (
-            <Grid item xs={12} sm={6} md={3} key={card.id}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Grid item xs={12} sm={6} md={6} lg={4} xl={3} key={card.id} sx={{ display: 'flex' }}>
+              <Box
+                onClick={() => navigate(card.path)}
+                role="button"
+                tabIndex={0}
+                sx={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer', outline: 'none' }}
+              >
                 <Box sx={{ mb: 2 }}>
-                  <Box component="img" src={card.image} alt={card.title} sx={{ width: '100%', height: { xs: 180, md: 200 }, objectFit: 'cover', display: 'block' }} />
+                  <Box
+                    component="img"
+                    src={card.image}
+                    alt={card.title}
+                    sx={{
+                      width: '100%',
+                      aspectRatio: '4 / 3',
+                      minHeight: { xs: 100, md: 120 },
+                      objectFit: 'cover',
+                      display: 'block'
+                    }}
+                  />
                 </Box>
 
                 <Box sx={{ px: { xs: 0, md: 0 }, flex: 1 }}>
@@ -93,7 +125,11 @@ export default function WhatWeDo() {
                     <Box sx={{ position: 'absolute', left: '50%', top: -18, transform: 'translateX(-50%)' }}>
                       <Box
                         component="button"
-                        onClick={() => handleOpen(card)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(card.path);
+                        }}
+                        aria-label={`Open ${card.title}`}
                         sx={{
                           width: 36,
                           height: 36,
@@ -120,21 +156,7 @@ export default function WhatWeDo() {
           ))}
         </Grid>
 
-        {/* Service detail dialog */}
-        <Dialog open={Boolean(selectedService)} onClose={handleClose} maxWidth="sm" fullWidth>
-          <DialogTitle>{selectedService?.title}</DialogTitle>
-          <DialogContent dividers>
-            {selectedService && (
-              <Box>
-                <Box component="img" src={selectedService.image} alt={selectedService.title} sx={{ width: '100%', height: 260, objectFit: 'cover', mb: 2 }} />
-                <Typography sx={{ color: 'text.secondary', whiteSpace: 'pre-line' }}>{selectedService.shortDescription}</Typography>
-              </Box>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleClose}>Close</Button>
-          </DialogActions>
-        </Dialog>
+        {/* navigation handled via react-router; cards link to individual pages */}
       </Container>
 
       {/* Footer / subscribe */}
