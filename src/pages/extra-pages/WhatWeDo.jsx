@@ -93,24 +93,25 @@ export default function WhatWeDo() {
       >
         <Grid container spacing={4} alignItems="stretch">
           {services.map((card) => (
-            <Grid item xs={12} sm={6} md={6} lg={4} xl={3} key={card.id} sx={{ display: 'flex' }}>
+            <Grid item xs={12} sm={6} md={3} lg={3} xl={3} key={card.id} sx={{ display: 'flex', justifyContent: 'center' }}>
               <Box
                 onClick={() => navigate(card.path)}
                 role="button"
                 tabIndex={0}
-                sx={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer', outline: 'none' }}
+                sx={{ display: 'flex', flexDirection: 'column', height: '100%', cursor: 'pointer', outline: 'none', alignItems: 'center', textAlign: 'center', px: 2 }}
               >
-                <Box sx={{ mb: 2 }}>
+                <Box sx={{ mb: 2, width: '100%', display: 'flex', justifyContent: 'center' }}>
                   <Box
                     component="img"
                     src={card.image}
                     alt={card.title}
                     sx={{
-                      width: '100%',
+                      width: { xs: '100%', sm: 260, md: 260 },
                       aspectRatio: '4 / 3',
-                      minHeight: { xs: 100, md: 120 },
+                      minHeight: { xs: 100, md: 160 },
                       objectFit: 'cover',
-                      display: 'block'
+                      display: 'block',
+                      mx: 'auto'
                     }}
                   />
                 </Box>
