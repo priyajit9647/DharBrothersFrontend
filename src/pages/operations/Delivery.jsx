@@ -21,10 +21,14 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
+import { QrCode, MessageSquare, CheckCircle } from 'lucide-react';
 
 import MainCard from 'components/MainCard';
 
-import { getOrdersByStatus } from 'api/orders';
+import { getOrdersByStatus, verifyOrderReceivedOtp } from 'api/orders';
+import TextField from '@mui/material/TextField';
+import Snackbar from '@mui/material/Snackbar';
+import Alert from '@mui/material/Alert';
 import ShippingQrModal from 'components/ShippingQrModal';
 
 // ==============================|| OPERATIONS - DELIVERY (Order Board) ||============================== //
@@ -49,6 +53,10 @@ function StageCard({ title, rows = [] }) {
   const [activeRow, setActiveRow] = useState(null);
   const [qrOrder, setQrOrder] = useState(null);
   const [qrType, setQrType] = useState('shipping');
+  const [otpDialogOpen, setOtpDialogOpen] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
 
   const handleMenuOpen = (event, row) => {
     setAnchorEl(event.currentTarget);
@@ -117,7 +125,7 @@ function StageCard({ title, rows = [] }) {
           <Table size="small" aria-label={`${title} table`} sx={{ '& td, & th': { whiteSpace: 'normal' } }}>
             <TableHead sx={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: 'background.paper' }}>
               <TableRow sx={{ backgroundColor: 'grey.50' }}>
-                <TableCell sx={{ width: 56 }} />
+                <TableCell sx={{ width: 56, fontWeight: 700 }}>ACTIONS</TableCell>
                 <TableCell sx={{ width: 300, fontWeight: 700 }}>ORDER #</TableCell>
                 <TableCell sx={{ fontWeight: 700 }}>CUSTOMER</TableCell>
                 <TableCell sx={{ width: 180, fontWeight: 700 }}>STAGE</TableCell>
@@ -142,23 +150,56 @@ function StageCard({ title, rows = [] }) {
                 rows.map((r, _idx) => (
                   <TableRow key={r.orderId || `${title}-${_idx}`} hover>
                     <TableCell>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => handleMenuOpen(e, r)}
-                        aria-controls={`row-menu-${_idx}`}
-                        aria-haspopup="true"
-                      >
-                        <EllipsisOutlined style={{ fontSize: '0.9rem' }} />
-                      </IconButton>
+                      {/* hide action menu for Ready-To-Dispatch rows (we show QR buttons instead) */}
+                      {!isReadyToDispatchStage(r.stage) && (
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleMenuOpen(e, r)}
+                          aria-controls={`row-menu-${_idx}`}
+                          aria-haspopup="true"
+                        >
+                          <EllipsisOutlined style={{ fontSize: '0.9rem' }} />
+                        </IconButton>
+                      )}
                       {/* show QR buttons for ready-to-dispatch rows */}
                       {isReadyToDispatchStage(r.stage) && (
-                        <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: 0.5, ml: 0.5 }}>
-                          {console.log('[Delivery.StageCard] QR buttons showing for order:', r.orderId, 'stage:', r.stage)}
-                          <Button type="button" size="small" variant="outlined" onClick={() => handleShowQr(r, 'shipping')}>
+                        <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: 1, ml: 0.5 }}>
+                          <Button
+                            type="button"
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<QrCode size={16} />}
+                            onClick={() => handleShowQr(r, 'shipping')}
+                            sx={{ textTransform: 'none' }}
+                          >
                             Shipping QR
                           </Button>
-                          <Button type="button" size="small" variant="outlined" onClick={() => handleShowQr(r, 'feedback')}>
+                          <Button
+                            type="button"
+                            size="small"
+                            variant="outlined"
+                            color="secondary"
+                            startIcon={<MessageSquare size={16} />}
+                            onClick={() => handleShowQr(r, 'feedback')}
+                            sx={{ textTransform: 'none' }}
+                          >
                             Feedback QR
+                          </Button>
+                          <Button
+                            type="button"
+                            size="small"
+                            variant="contained"
+                            color="success"
+                            startIcon={<CheckCircle size={16} />}
+                            onClick={() => {
+                              setActiveRow(r);
+                              setOtpValue('');
+                              setOtpDialogOpen(true);
+                            }}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Order Received
                           </Button>
                         </Box>
                       )}
@@ -205,6 +246,58 @@ function StageCard({ title, rows = [] }) {
         {qrOrder && (
           <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} initialType={qrType} />
         )}
+        <Dialog open={otpDialogOpen} onClose={() => setOtpDialogOpen(false)} maxWidth="xs" fullWidth>
+          <DialogTitle>Verify OTP to receive order</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Enter the OTP provided by the customer to confirm order receipt for <strong>{activeRow?.orderId}</strong>.
+            </Typography>
+            <TextField
+              autoFocus
+              fullWidth
+              label="OTP"
+              value={otpValue}
+              onChange={(e) => setOtpValue(e.target.value)}
+              disabled={otpLoading}
+            />
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={() => setOtpDialogOpen(false)} disabled={otpLoading}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                try {
+                  setOtpLoading(true);
+                  const payload = { orderId: activeRow?.orderId || activeRow?.id || activeRow?.orderNo, otp: otpValue };
+                  await verifyOrderReceivedOtp(payload);
+                  setSnack({ open: true, message: 'Order marked received', severity: 'success' });
+                  setOtpDialogOpen(false);
+                } catch (err) {
+                  console.error('verifyOrderReceivedOtp error', err);
+                  setSnack({ open: true, message: err?.message || 'Failed to verify OTP', severity: 'error' });
+                } finally {
+                  setOtpLoading(false);
+                }
+              }}
+              disabled={otpLoading || !otpValue}
+            >
+              {otpLoading ? <CircularProgress size={18} color="inherit" /> : 'Verify'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={snack.open}
+          autoHideDuration={4000}
+          onClose={() => setSnack((s) => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity={snack.severity} onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
+            {snack.message}
+          </Alert>
+        </Snackbar>
       </MainCard>
     </Box>
   );

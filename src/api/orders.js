@@ -214,6 +214,19 @@ export async function adminConfirmOrderReceived(orderId, payload) {
 }
 
 /**
+ * Verify OTP / mark order received (Order Received)
+ * Endpoint: POST /api/v1/payment/verify-otp
+ * Body: payload object (e.g. { orderId, otp, paymentId, ... })
+ */
+export async function verifyOrderReceivedOtp(payload) {
+  if (!payload || typeof payload !== 'object') throw new Error('payload is required');
+  return authorizedFetch('/api/v1/payment/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/**
  * Send payment link to customer for a given order
  * Endpoint: /api/v1/dashboard/send-payment-link/{orderId}
  * @param {string} orderId

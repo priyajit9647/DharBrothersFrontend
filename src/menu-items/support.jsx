@@ -1,5 +1,5 @@
 // assets
-import { BarChartOutlined, ApartmentOutlined, DatabaseOutlined, BellOutlined, SettingOutlined } from '@ant-design/icons';
+import { BarChartOutlined, ApartmentOutlined, DatabaseOutlined, BellOutlined, SettingOutlined, LockOutlined } from '@ant-design/icons';
 
 // icons
 const icons = {
@@ -7,7 +7,8 @@ const icons = {
   ApartmentOutlined,
   DatabaseOutlined,
   BellOutlined,
-  SettingOutlined
+  SettingOutlined,
+  LockOutlined
 };
 
 // ==============================|| MENU ITEMS - ADMIN & INSIGHTS (BMS) ||============================== //
@@ -202,6 +203,15 @@ const support = {
       type: 'item',
       icon: icons.DatabaseOutlined,
       url: '/admin/template'
+    }
+    ,
+    {
+      id: 'update-access-rights',
+      title: 'Update Access Rights',
+      type: 'item',
+      hidden: true,
+      icon: icons.LockOutlined,
+      url: '/admin/update-access-rights'
     }
   ]
 };

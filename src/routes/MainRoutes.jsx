@@ -53,6 +53,7 @@ const PaymentConfigurationMaster = Loadable(lazy(() => import('pages/admin/Payme
 const EmailTemplate = Loadable(lazy(() => import('pages/admin/templates/EmailTemplate')));
 const WhatsappTemplate = Loadable(lazy(() => import('pages/admin/templates/WhatsappTemplate')));
 const InAppTemplate = Loadable(lazy(() => import('pages/admin/templates/InAppTemplate')));
+const UpdateAccessRights = Loadable(lazy(() => import('pages/admin/UpdateAccessRights')));
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -192,6 +193,10 @@ const MainRoutes = {
         {
           path: 'users',
           element: <AdminUsers />
+        },
+        {
+          path: 'update-access-rights',
+          element: <UpdateAccessRights />
         },
         {
           path: 'notifications',

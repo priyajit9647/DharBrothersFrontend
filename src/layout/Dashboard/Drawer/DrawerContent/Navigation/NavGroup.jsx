@@ -15,7 +15,8 @@ export default function NavGroup({ item }) {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
 
-  const navCollapse = item.children?.map((menuItem) => {
+  const visibleChildren = (item.children || []).filter((m) => !m.hidden);
+  const navCollapse = visibleChildren.map((menuItem) => {
     switch (menuItem.type) {
       case 'collapse':
         return <NavCollapse key={menuItem.id} item={menuItem} level={1} />;
