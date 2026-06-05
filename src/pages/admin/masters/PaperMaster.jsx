@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createPaper, editPaper, getPapers, togglePaperActive } from 'api/paper';
 
 // ==============================|| MASTER - PAPER ||============================== //
@@ -52,6 +53,11 @@ export default function PaperMaster() {
   useEffect(() => {
     loadPapers();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PAPERS_CREATE') || hasAccess('PAPERS_MGMT');
+  const canEdit = hasAccess('PAPERS_EDIT') || hasAccess('PAPERS_MGMT');
+  const canToggle = hasAccess('PAPERS_TOGGLE_ACTIVE') || hasAccess('PAPERS_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -167,6 +173,10 @@ export default function PaperMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
+            activeRight="PAPERS_TOGGLE_ACTIVE"
             loading={loading}
           />
         </Grid>

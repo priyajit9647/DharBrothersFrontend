@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createBindingCoverMaterial, editBindingCoverMaterial, getBindingCoverMaterials, toggleBindingCoverMaterialActive } from 'api/bindingCoverMaterial';
 
 // ==============================|| MASTER - BINDING COVER MATERIAL ||============================== //
@@ -62,6 +63,11 @@ export default function BindingCoverMaterialMaster() {
   useEffect(() => {
     loadBindingCoverMaterials();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('BINDING_COVER_CREATE') || hasAccess('BINDING_COVER_MATERIALS_MGMT');
+  const canEdit = hasAccess('BINDING_COVER_EDIT') || hasAccess('BINDING_COVER_MATERIALS_MGMT');
+  const canToggle = hasAccess('BINDING_COVER_TOGGLE_ACTIVE') || hasAccess('BINDING_COVER_MATERIALS_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -240,6 +246,9 @@ export default function BindingCoverMaterialMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

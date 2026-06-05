@@ -8,14 +8,37 @@ import Box from '@mui/material/Box';
 import NavItem from './NavItem';
 import NavCollapse from './NavCollapse';
 import { useGetMenuMaster } from 'api/menu';
+import useAccess from 'hooks/useAccess';
 
 // ==============================|| NAVIGATION - LIST GROUP ||============================== //
 
 export default function NavGroup({ item }) {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const { hasAccess } = useAccess();
 
-  const visibleChildren = (item.children || []).filter((m) => !m.hidden);
+  // Hide entire Masters group if user lacks MASTERS_MGMT
+  if (item.id === 'masters' && !hasAccess('MASTERS_MGMT')) {
+    return null;
+  }
+
+  const visibleChildren = (item.children || []).filter((m) => {
+    if (m.hidden) return false;
+    // for items under masters, require specific <RESOURCE>_MGMT right
+    if (item.id === 'masters' && m.url) {
+      try {
+        const parts = m.url.split('/').filter(Boolean);
+        const last = parts[parts.length - 1] || '';
+        const base = last.replace(/-/g, '_').toUpperCase();
+        const right = `${base}_MGMT`;
+        return hasAccess(right);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    return true;
+  });
   const navCollapse = visibleChildren.map((menuItem) => {
     switch (menuItem.type) {
       case 'collapse':

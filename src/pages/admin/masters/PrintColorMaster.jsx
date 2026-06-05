@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createPrintColor, editPrintColor, getPrintColors, togglePrintColorActive } from 'api/printColor';
 
 // ==============================|| MASTER - PRINT COLOR ||============================== //
@@ -51,6 +52,11 @@ export default function PrintColorMaster() {
   useEffect(() => {
     loadPrintColors();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PRINT_COLORS_CREATE') || hasAccess('PRINTING_COLORS_CREATE') || hasAccess('PRINT_COLORS_MGMT');
+  const canEdit = hasAccess('PRINT_COLORS_EDIT') || hasAccess('PRINT_COLORS_MGMT');
+  const canToggle = hasAccess('PRINT_COLORS_TOGGLE_ACTIVE') || hasAccess('PRINT_COLORS_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -158,6 +164,9 @@ export default function PrintColorMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

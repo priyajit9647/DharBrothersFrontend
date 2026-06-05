@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createOtherCharge, editOtherCharge, getOtherCharges, toggleOtherChargeActive } from 'api/otherCharge';
 
 // ==============================|| MASTER - OTHER CHARGE ||============================== //
@@ -52,6 +53,11 @@ export default function OtherChargeMaster() {
   useEffect(() => {
     loadOtherCharges();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('OTHER_CHARGES_CREATE') || hasAccess('OTHER_CHARGES_MGMT');
+  const canEdit = hasAccess('OTHER_CHARGES_EDIT') || hasAccess('OTHER_CHARGES_MGMT');
+  const canToggle = hasAccess('OTHER_CHARGES_TOGGLE_ACTIVE') || hasAccess('OTHER_CHARGES_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -182,6 +188,9 @@ export default function OtherChargeMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

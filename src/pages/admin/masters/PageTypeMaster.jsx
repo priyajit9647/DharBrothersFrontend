@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createPageType, editPageType, getPageTypes, togglePageTypeActive } from 'api/pageType';
 
 // ==============================|| MASTER - PAGE TYPE ||============================== //
@@ -51,6 +52,11 @@ export default function PageTypeMaster() {
   useEffect(() => {
     loadPageTypes();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PAGE_TYPES_CREATE') || hasAccess('PAGE_TYPES_MGMT');
+  const canEdit = hasAccess('PAGE_TYPES_EDIT') || hasAccess('PAGE_TYPES_MGMT');
+  const canToggle = hasAccess('PAGE_TYPES_TOGGLE_ACTIVE') || hasAccess('PAGE_TYPES_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -157,6 +163,9 @@ export default function PageTypeMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

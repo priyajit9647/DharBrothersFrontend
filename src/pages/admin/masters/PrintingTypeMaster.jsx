@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createPrintingType, editPrintingType, getPrintingTypes, togglePrintingTypeActive } from 'api/printingType';
 
 // ==============================|| MASTER - PRINTING TYPE ||============================== //
@@ -51,6 +52,11 @@ export default function PrintingTypeMaster() {
   useEffect(() => {
     loadPrintingTypes();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PRINTING_TYPES_CREATE');
+  const canEdit = hasAccess('PRINTING_TYPES_EDIT');
+  const canToggle = hasAccess('PRINTING_TYPES_TOGGLE_ACTIVE');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -158,6 +164,9 @@ export default function PrintingTypeMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

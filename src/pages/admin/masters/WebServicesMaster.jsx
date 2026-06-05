@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography';
 import MenuItem from '@mui/material/MenuItem';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import IconButton from '@mui/material/IconButton';
 import {
   createWebService,
@@ -69,6 +70,12 @@ export default function WebServicesMaster() {
   useEffect(() => {
     loadServices();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('WEB_SERVICES_CREATE') || hasAccess('WEB_SERVICES_MGMT');
+  const canEdit = hasAccess('WEB_SERVICES_EDIT') || hasAccess('WEB_SERVICES_MGMT');
+  const canToggle = hasAccess('WEB_SERVICES_TOGGLE_ACTIVE') || hasAccess('WEB_SERVICES_MGMT');
+  const canDelete = hasAccess('WEB_SERVICES_DELETE') || hasAccess('WEB_SERVICES_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -248,18 +255,26 @@ export default function WebServicesMaster() {
                   const idx = rows.findIndex((r) => r.id === row.id);
                   return (
                     <Stack direction="row" spacing={0.5} justifyContent="center">
-                      <IconButton size="small" color="primary" onClick={() => openEditDialog(row)} aria-label="Edit">
-                        <EditTwoTone style={{ fontSize: 18 }} />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => handleReorderMove(row, -1)} disabled={idx <= 0} aria-label="Move up">
-                        <ArrowUpOutlined style={{ fontSize: 18 }} />
-                      </IconButton>
-                      <IconButton size="small" onClick={() => handleReorderMove(row, 1)} disabled={idx === -1 || idx >= rows.length - 1} aria-label="Move down">
-                        <ArrowDownOutlined style={{ fontSize: 18 }} />
-                      </IconButton>
-                      <IconButton size="small" color="error" onClick={() => { setEditingRow(row); setDialogOpen(true); }} aria-label="Delete">
-                        <DeleteOutlined style={{ fontSize: 18 }} />
-                      </IconButton>
+                      {canEdit && (
+                        <IconButton size="small" color="primary" onClick={() => openEditDialog(row)} aria-label="Edit">
+                          <EditTwoTone style={{ fontSize: 18 }} />
+                        </IconButton>
+                      )}
+                      {canEdit && (
+                        <IconButton size="small" onClick={() => handleReorderMove(row, -1)} disabled={idx <= 0} aria-label="Move up">
+                          <ArrowUpOutlined style={{ fontSize: 18 }} />
+                        </IconButton>
+                      )}
+                      {canEdit && (
+                        <IconButton size="small" onClick={() => handleReorderMove(row, 1)} disabled={idx === -1 || idx >= rows.length - 1} aria-label="Move down">
+                          <ArrowDownOutlined style={{ fontSize: 18 }} />
+                        </IconButton>
+                      )}
+                      {canDelete && (
+                        <IconButton size="small" color="error" onClick={() => { setEditingRow(row); setDialogOpen(true); }} aria-label="Delete">
+                          <DeleteOutlined style={{ fontSize: 18 }} />
+                        </IconButton>
+                      )}
                     </Stack>
                   );
                 }
@@ -276,6 +291,8 @@ export default function WebServicesMaster() {
             }}
             onCreate={openCreateDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

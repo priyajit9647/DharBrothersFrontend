@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createPaperSize, editPaperSize, getPaperSizes, togglePaperSizeActive } from 'api/paperSize';
 
 // ==============================|| MASTER - PAPER SIZE ||============================== //
@@ -43,6 +44,11 @@ export default function PaperSizeMaster() {
   useEffect(() => {
     loadPaperSizes();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PAPER_SIZES_CREATE') || hasAccess('PAPER_SIZES_MGMT');
+  const canEdit = hasAccess('PAPER_SIZES_EDIT') || hasAccess('PAPER_SIZES_MGMT');
+  const canToggle = hasAccess('PAPER_SIZES_TOGGLE_ACTIVE') || hasAccess('PAPER_SIZES_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -145,6 +151,9 @@ export default function PaperSizeMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

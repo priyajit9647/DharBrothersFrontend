@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import MenuItem from '@mui/material/MenuItem';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createBindingRate, editBindingRate, getBindingRates, toggleBindingRateActive } from 'api/bindingRate';
 
 // ==============================|| MASTER - BINDING RATE ||============================== //
@@ -60,6 +61,11 @@ export default function BindingRateMaster() {
   useEffect(() => {
     loadBindingRates();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('BINDING_RATES_CREATE');
+  const canEdit = hasAccess('BINDING_RATES_EDIT');
+  const canToggle = hasAccess('BINDING_RATES_TOGGLE_ACTIVE');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -219,6 +225,9 @@ export default function BindingRateMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

@@ -17,6 +17,7 @@ import Typography from '@mui/material/Typography';
 import { EditTwoTone } from '@ant-design/icons';
 
 import MainCard from 'components/MainCard';
+import useAccess from 'hooks/useAccess';
 
 function MasterList({
   title,
@@ -35,6 +36,8 @@ function MasterList({
   showCreateButton,
   showActiveColumn,
   showActionsColumn
+  ,
+  activeRight
 }) {
   const handleChangePage = (event, newPage) => {
     if (onPageChange) {
@@ -52,7 +55,8 @@ function MasterList({
   const displayRows = rows || [];
   const count = typeof totalCount === 'number' ? totalCount : displayRows.length;
 
-  const hasActiveColumn = showActiveColumn !== false;
+  const { hasAccess } = useAccess();
+  const hasActiveColumn = showActiveColumn !== false && (!activeRight || hasAccess(activeRight));
   const hasActionsColumn = showActionsColumn !== false;
   const extraColumns = (hasActiveColumn ? 1 : 0) + (hasActionsColumn ? 1 : 0);
 
@@ -199,6 +203,7 @@ MasterList.propTypes = {
   loading: PropTypes.bool,
   showCreateButton: PropTypes.bool,
   showActiveColumn: PropTypes.bool,
+  activeRight: PropTypes.string,
   showActionsColumn: PropTypes.bool
 };
 
@@ -216,6 +221,7 @@ MasterList.defaultProps = {
   loading: false,
   showCreateButton: true,
   showActiveColumn: true,
+  activeRight: undefined,
   showActionsColumn: true
 };
 

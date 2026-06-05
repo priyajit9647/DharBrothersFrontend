@@ -11,6 +11,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { createProcessStage, editProcessStage, getProcessStages, toggleProcessStageActive } from 'api/processStage';
 
 // ==============================|| MASTER - PROCESS STAGE ||============================== //
@@ -60,6 +61,11 @@ export default function ProcessStageMaster() {
   useEffect(() => {
     loadProcessStages();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PROCESS_STAGES_CREATE');
+  const canEdit = hasAccess('PROCESS_STAGES_EDIT');
+  const canToggle = hasAccess('PROCESS_STAGES_TOGGLE_ACTIVE');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -171,6 +177,9 @@ export default function ProcessStageMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>

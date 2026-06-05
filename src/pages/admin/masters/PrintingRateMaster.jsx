@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import MenuItem from '@mui/material/MenuItem';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { getPapers } from 'api/paper';
 import { getPrintColors } from 'api/printColor';
 import { createPrintingRate, editPrintingRate, getPrintingRates, togglePrintingRateActive } from 'api/printingRate';
@@ -95,6 +96,11 @@ export default function PrintingRateMaster() {
     loadLookups();
     loadPrintingRates();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PRINTING_RATES_CREATE');
+  const canEdit = hasAccess('PRINTING_RATES_EDIT');
+  const canToggle = hasAccess('PRINTING_RATES_TOGGLE_ACTIVE');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -301,6 +307,9 @@ export default function PrintingRateMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             loading={loading}
           />
         </Grid>
