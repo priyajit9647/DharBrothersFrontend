@@ -337,7 +337,7 @@ export default function HomeReplica() {
                     '&:hover': { bgcolor: '#f2df7f' }
                   }}
                 >
-                  Dhar Brothers Online
+                  Order Thesis Online
                 </Button>
 
                 <Stack spacing={0.5} sx={{ mt: 0.25 }}>
