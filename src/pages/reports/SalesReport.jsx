@@ -6,6 +6,7 @@ import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 
 import MainCard from 'components/MainCard';
+import useAccess from 'hooks/useAccess';
 import { Search, Download, FileSpreadsheet } from 'lucide-react';
 import Loader from 'components/Loader';
 import { getSalesReport, exportSalesReport } from 'api/Reports&Insights';
@@ -203,6 +204,10 @@ export default function SalesReport() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const { hasAccess } = useAccess();
+  const canExportCsv = hasAccess('REPORT_EXPORT_CSV');
+  const canExportXlsx = hasAccess('REPORT_EXPORT_EXCEL');
+
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       {(loading || exporting) && <Loader />}
@@ -284,12 +289,16 @@ export default function SalesReport() {
               <Typography variant="h6" sx={{ m: 0 }}>Sales Report</Typography>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => exportFile('csv')} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#2f6df6', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                <Download size={15} /> Export CSV
-              </button>
-              <button onClick={() => exportFile('xlsx')} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                <FileSpreadsheet size={15} /> Export Excel
-              </button>
+              {canExportCsv && (
+                <button onClick={() => exportFile('csv')} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#2f6df6', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                  <Download size={15} /> Export CSV
+                </button>
+              )}
+              {canExportXlsx && (
+                <button onClick={() => exportFile('xlsx')} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                  <FileSpreadsheet size={15} /> Export Excel
+                </button>
+              )}
             </div>
           </div>
 

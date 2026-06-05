@@ -26,6 +26,7 @@ import { getJobList, completeMyJob } from 'api/myJobs';
 import { getDocumentVersionList, uploadDocumentVersionFormData } from 'api/document';
 import { authorizedFetchRaw } from 'api/auth';
 import { useAuth } from 'hooks/useAuth';
+import useAccess from 'hooks/useAccess';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 import DownloadDocumentButton from 'components/DownloadDocumentButton';
 
@@ -33,6 +34,10 @@ import DownloadDocumentButton from 'components/DownloadDocumentButton';
 
 export default function MyJobs() {
   const { user, accessToken } = useAuth();
+  const { hasAccess } = useAccess();
+  const canComplete = hasAccess('MY_JOBS_MGMT') || hasAccess('MYJOBS_VIEW_ORDER');
+  const canViewOrder = hasAccess('MYJOBS_VIEW_ORDER') || hasAccess('MY_JOBS_MGMT');
+  const canApproveDocument = hasAccess('MY_JOBS_MGMT');
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -350,13 +355,15 @@ export default function MyJobs() {
                 sx: { width: '80px' },
                 render: (row) => (
                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <IconButton
-                      size="small"
-                      onClick={(event) => handleActionsOpen(event, row)}
-                      aria-label="Job actions"
-                    >
-                      <EllipsisOutlined style={{ fontSize: 18 }} />
-                    </IconButton>
+                    {(canViewOrder || canApproveDocument) && (
+                      <IconButton
+                        size="small"
+                        onClick={(event) => handleActionsOpen(event, row)}
+                        aria-label="Job actions"
+                      >
+                        <EllipsisOutlined style={{ fontSize: 18 }} />
+                      </IconButton>
+                    )}
                   </Box>
                 )
               },
@@ -394,15 +401,17 @@ export default function MyJobs() {
                 label: 'Actions',
                 align: 'center',
                 render: (row) => (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    size="small"
-                    onClick={() => openCompleteDialog(row.id)}
-                    disabled={loading || completingId === row.id}
-                  >
-                    {completingId === row.id ? 'Completing...' : 'Complete'}
-                  </Button>
+                  canComplete ? (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      onClick={() => openCompleteDialog(row.id)}
+                      disabled={loading || completingId === row.id}
+                    >
+                      {completingId === row.id ? 'Completing...' : 'Complete'}
+                    </Button>
+                  ) : null
                 )
               }
             ]}
@@ -427,8 +436,8 @@ export default function MyJobs() {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem onClick={handleViewOrder}>View Order</MenuItem>
-            <MenuItem onClick={handleDocumentApproval}>Document Version Approval</MenuItem>
+            {canViewOrder && <MenuItem onClick={handleViewOrder}>View Order</MenuItem>}
+            {canApproveDocument && <MenuItem onClick={handleDocumentApproval}>Document Version Approval</MenuItem>}
           </Menu>
         </Grid>
       </Grid>

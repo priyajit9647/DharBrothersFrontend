@@ -21,6 +21,7 @@ import { SearchOutlined, SendOutlined, MoreOutlined, PaperClipOutlined } from '@
 import MainCard from 'components/MainCard';
 import { useAuth } from 'hooks/useAuth';
 import { fetchWhatsappAttachmentBlob, fetchWhatsappConversations, fetchWhatsappConversationById, sendWhatsappMessage } from 'api/whatsapp';
+import useAccess from 'hooks/useAccess';
 
 // ==============================|| BMS - WHATSAPP (WEB-STYLE VIEW) ||============================== //
 
@@ -117,6 +118,8 @@ const getMessageAttachments = (message) => {
 
 export default function Whatsapp() {
   const { user } = useAuth();
+  const { hasAccess } = useAccess();
+  const canSend = hasAccess('WHATSAPP_MGMT');
   const [conversations, setConversations] = useState([]);
   const [conversationsLoading, setConversationsLoading] = useState(false);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
@@ -600,14 +603,16 @@ export default function Whatsapp() {
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        color="primary"
-                        onClick={handleSendMessage}
-                        disabled={!selectedConversation || !messageText.trim()}
-                      >
-                        <SendOutlined style={{ fontSize: 18 }} />
-                      </IconButton>
+                      {canSend && (
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={handleSendMessage}
+                          disabled={!selectedConversation || !messageText.trim()}
+                        >
+                          <SendOutlined style={{ fontSize: 18 }} />
+                        </IconButton>
+                      )}
                     </InputAdornment>
                   )
                 }}

@@ -3,6 +3,7 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
+import useAccess from 'hooks/useAccess';
 import { getTodayDueTasks } from 'api/Reports&Insights';
 import { Search, Download, FileSpreadsheet } from 'lucide-react';
 
@@ -148,6 +149,10 @@ export default function TaskReports() {
     return <span style={{ color: '#2f6df6', marginLeft: 6 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>;
   };
 
+  const { hasAccess } = useAccess();
+  const canExportCsv = hasAccess('REPORT_EXPORT_CSV');
+  const canExportXlsx = hasAccess('REPORT_EXPORT_EXCEL');
+
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       <Grid item xs={12}>
@@ -172,12 +177,16 @@ export default function TaskReports() {
               />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={exportCSV} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#2f6df6', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                <Download size={15} /> Export CSV
-              </button>
-              <button style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-                <FileSpreadsheet size={15} /> Export Excel
-              </button>
+              {canExportCsv && (
+                <button onClick={exportCSV} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#2f6df6', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                  <Download size={15} /> Export CSV
+                </button>
+              )}
+              {canExportXlsx && (
+                <button style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                  <FileSpreadsheet size={15} /> Export Excel
+                </button>
+              )}
             </div>
           </div>
 

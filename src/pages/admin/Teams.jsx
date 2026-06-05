@@ -23,6 +23,7 @@ import MasterList from 'sections/admin/masters/MasterList';
 import { getBranches } from 'api/branch';
 import { createUserWithRoleId, getUsersByBranch, toggleUserActive, editUser } from 'api/user';
 import { getRoles } from 'api/role';
+import useAccess from 'hooks/useAccess';
 
 // ==============================|| BMS - TEAMS (ADMIN) ||============================== //
 
@@ -161,6 +162,11 @@ export default function Teams() {
     loadAllUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branches]);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('TEAMS_CREATE') || hasAccess('TEAMS_MGMT');
+  const canEdit = hasAccess('TEAMS_EDIT') || hasAccess('TEAMS_MGMT');
+  const canToggle = hasAccess('TEAMS_TOGGLE_ACTIVE') || hasAccess('TEAMS_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -337,6 +343,10 @@ export default function Teams() {
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
             loading={loading}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
+            activeRight="TEAMS_TOGGLE_ACTIVE"
           />
         </Grid>
       </Grid>

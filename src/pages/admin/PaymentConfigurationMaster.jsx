@@ -17,6 +17,7 @@ import MenuItem from '@mui/material/MenuItem';
 import MasterList from 'sections/admin/masters/MasterList';
 import { getBranches } from 'api/branch';
 import { createPaymentConfiguration, editPaymentConfiguration, getPaymentConfigurations } from 'api/paymentConfiguration';
+import useAccess from 'hooks/useAccess';
 
 // ==============================|| MASTER - PAYMENT CONFIGURATION ||============================== //
 
@@ -231,6 +232,11 @@ export default function PaymentConfigurationMaster() {
     }
   };
 
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('PAYMENT_CONFIGURATION_CREATE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
+  const canEdit = hasAccess('PAYMENT_CONFIGURATION_EDIT') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
+  const canToggle = hasAccess('PAYMENT_CONFIGURATION_TOGGLE_ACTIVE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
+
   return (
     <>
       <Grid container sx={{ width: '100%', flexGrow: 1 }}>
@@ -293,6 +299,9 @@ export default function PaymentConfigurationMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             loading={loadingBranches || loadingConfigurations}
+            showActiveColumn={false}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
             showActiveColumn={false}
           />
         </Grid>

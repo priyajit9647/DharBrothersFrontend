@@ -12,6 +12,7 @@ import DialogActions from '@mui/material/DialogActions';
 import MenuItem from '@mui/material/MenuItem';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import {
   fetchWhatsappNotificationTemplates,
   createWhatsappNotificationTemplate,
@@ -84,6 +85,11 @@ export default function NotificationWhatsapp() {
     loadTemplates();
     loadNotificationHistory();
   }, [loadTemplates, loadNotificationHistory]);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('WHATSAPP_MGMT');
+  const canEdit = hasAccess('WHATSAPP_MGMT');
+  const canToggle = hasAccess('WHATSAPP_MGMT');
 
   const handleTemplateFieldChange = (field) => (event) => {
     const value = event.target.value;
@@ -215,6 +221,10 @@ export default function NotificationWhatsapp() {
             onEdit={handleEditTemplate}
             onToggleActive={handleToggleTemplate}
             loading={templatesLoading}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
+            activeRight="WHATSAPP_MGMT"
           />
         </Grid>
       </Grid>

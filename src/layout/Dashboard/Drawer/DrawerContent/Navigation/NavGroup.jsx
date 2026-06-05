@@ -17,10 +17,26 @@ export default function NavGroup({ item }) {
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const { hasAccess } = useAccess();
 
-  // Hide entire Masters group if user lacks MASTERS_MGMT
-  if (item.id === 'masters' && !hasAccess('MASTERS_MGMT')) {
-    return null;
+  // Show Masters group only if user has MASTERS_MGMT or at least one child-specific <RESOURCE>_MGMT right
+  if (item.id === 'masters') {
+    if (!hasAccess('MASTERS_MGMT')) {
+      const children = item.children || [];
+      const anyChildMgmt = children.some((m) => {
+        if (m.hidden || !m.url) return false;
+        try {
+          const parts = m.url.split('/').filter(Boolean);
+          const last = parts[parts.length - 1] || '';
+          const base = last.replace(/-/g, '_').toUpperCase();
+          const right = `${base}_MGMT`;
+          return hasAccess(right);
+        } catch (e) {
+          return false;
+        }
+      });
+      if (!anyChildMgmt) return null;
+    }
   }
+
 
   const visibleChildren = (item.children || []).filter((m) => {
     if (m.hidden) return false;
@@ -32,6 +48,25 @@ export default function NavGroup({ item }) {
         const base = last.replace(/-/g, '_').toUpperCase();
         const right = `${base}_MGMT`;
         return hasAccess(right);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // Hide the Reports collapse entirely if user lacks REPORTS_INSIGHTS_MGMT
+    if (m.id === 'reports') {
+      if (!hasAccess('REPORTS_INSIGHTS_MGMT')) return false;
+      return true;
+    }
+
+    // for items that are report pages (url contains '/reports/'), require REPORTS_MGMT or a specific report right
+    if (m.url && m.url.includes('/reports/')) {
+      try {
+        const parts = m.url.split('/').filter(Boolean);
+        const last = parts[parts.length - 1] || '';
+        const base = last.replace(/-/g, '_').toUpperCase();
+        const rightCandidates = [`${base}_REPORTS`, `${base}_REPORT`, `${base}_MGMT`];
+        return hasAccess('REPORTS_INSIGHTS_MGMT') || rightCandidates.some((r) => hasAccess(r));
       } catch (e) {
         return false;
       }

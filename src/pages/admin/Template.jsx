@@ -19,6 +19,7 @@ import MasterList from 'sections/admin/masters/MasterList';
 import { createTemplateNotification, getTemplateNotificationList, getTemplateNotificationById, editTemplateNotification } from 'api/admin/template/notification';
 import { getProcessStages } from 'api/processStage';
 import { getRoles } from 'api/role';
+import useAccess from 'hooks/useAccess';
 
 // ==============================|| ADMIN - TEMPLATE PAGE ||============================== //
 
@@ -45,6 +46,10 @@ export default function Template() {
     dynamicData: ''
   });
   const [editingId, setEditingId] = useState(null);
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('NOTIFICATION_TEMPLATE_CREATE') || hasAccess('TEMPLATE_MGMT');
+  const canEdit = hasAccess('NOTIFICATION_TEMPLATE_EDIT') || hasAccess('TEMPLATE_MGMT');
+  const canToggle = hasAccess('NOTIFICATION_TEMPLATE_TOGGLE_ACTIVE') || hasAccess('TEMPLATE_MGMT');
 
   // Removed automatic calls to master branch/process-stage list APIs to avoid backend hits from this page.
   // If you want pre-filled branch or stage options, provide them here or via a different admin page.
@@ -282,6 +287,9 @@ export default function Template() {
             page={page}
             rowsPerPage={rowsPerPage}
             totalCount={rows.length}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
             onPageChange={setPage}
             onRowsPerPageChange={(value) => {
               setRowsPerPage(value);

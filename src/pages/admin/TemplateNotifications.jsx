@@ -16,6 +16,7 @@ import MenuItem from '@mui/material/MenuItem';
 
 import MainCard from 'components/MainCard';
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import { getTemplateNotificationList, getTemplateNotificationById, editTemplateNotification, createTemplateNotification } from 'api/admin/template/notification';
 import { getProcessStages } from 'api/processStage';
 
@@ -96,6 +97,9 @@ export default function TemplateNotifications() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState('');
   const [processStages, setProcessStages] = useState([]);
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('NOTIFICATION_TEMPLATE_CREATE') || hasAccess('TEMPLATE_MGMT');
+  const canEdit = hasAccess('NOTIFICATION_TEMPLATE_EDIT') || hasAccess('TEMPLATE_MGMT');
 
   const openEdit = async (row) => {
     setEditError('');
@@ -218,11 +222,11 @@ export default function TemplateNotifications() {
                 { id: 'isActive', label: 'Active', render: (r) => (r.isActive ? 'Yes' : 'No') },
                 { id: 'default', label: 'Default', render: (r) => (r.default ? 'Yes' : 'No') },
                 { id: 'actions', label: 'Actions', render: (r) => (
-                  <Stack direction="row" spacing={1}>
-                    <Button size="small" onClick={() => openDetail(r)}>View</Button>
-                    <Button size="small" onClick={() => openEdit(r)}>Edit</Button>
-                  </Stack>
-                ) }
+                      <Stack direction="row" spacing={1}>
+                        <Button size="small" onClick={() => openDetail(r)}>View</Button>
+                        {canEdit && <Button size="small" onClick={() => openEdit(r)}>Edit</Button>}
+                      </Stack>
+                    ) }
               ]}
               rows={pagedRows}
               page={page}
@@ -233,13 +237,13 @@ export default function TemplateNotifications() {
                 setRowsPerPage(v);
                 setPage(0);
               }}
-              showCreateButton={false}
-              showActionsColumn={false}
+              showCreateButton={canCreate}
+              showActionsColumn={canEdit}
               loading={loading}
             />
             <Stack direction="row" spacing={1} sx={{ p: 2 }}>
               <Button variant="contained" onClick={() => { if (rows.length) openDetail(rows[0]); }}>View first</Button>
-              <Button variant="outlined" onClick={openCreate}>Create New</Button>
+              {canCreate && <Button variant="outlined" onClick={openCreate}>Create New</Button>}
             </Stack>
           </MainCard>
         </Grid>

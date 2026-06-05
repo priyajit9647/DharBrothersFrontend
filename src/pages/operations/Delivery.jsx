@@ -24,6 +24,7 @@ import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 import { QrCode, MessageSquare, CheckCircle } from 'lucide-react';
 
 import MainCard from 'components/MainCard';
+import useAccess from 'hooks/useAccess';
 
 import { getOrdersByStatus, verifyOrderReceivedOtp } from 'api/orders';
 import TextField from '@mui/material/TextField';
@@ -49,6 +50,8 @@ function isReadyToDispatchStage(stage) {
 }
 
 function StageCard({ title, rows = [] }) {
+  const { hasAccess } = useAccess();
+  const canDispatch = hasAccess('DELIVERY_DISPATCH_MGMT');
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeRow, setActiveRow] = useState(null);
   const [qrOrder, setQrOrder] = useState(null);
@@ -162,7 +165,7 @@ function StageCard({ title, rows = [] }) {
                         </IconButton>
                       )}
                       {/* show QR buttons for ready-to-dispatch rows */}
-                      {isReadyToDispatchStage(r.stage) && (
+                      {isReadyToDispatchStage(r.stage) && canDispatch && (
                         <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: 1, ml: 0.5 }}>
                           <Button
                             type="button"
@@ -231,7 +234,7 @@ function StageCard({ title, rows = [] }) {
           </Table>
         </TableContainer>
 
-        <Menu
+                        <Menu
           id="row-actions-menu"
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
@@ -240,8 +243,8 @@ function StageCard({ title, rows = [] }) {
           transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         >
           <MenuItem onClick={handleView}>View Order</MenuItem>
-          <MenuItem onClick={handleAssign}>Assign</MenuItem>
-          <MenuItem onClick={handleEdit}>Edit</MenuItem>
+          {canDispatch && <MenuItem onClick={handleAssign}>Assign</MenuItem>}
+          {canDispatch && <MenuItem onClick={handleEdit}>Edit</MenuItem>}
         </Menu>
         {qrOrder && (
           <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} initialType={qrType} />

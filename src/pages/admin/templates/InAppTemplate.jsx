@@ -15,6 +15,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 
 import MasterList from 'sections/admin/masters/MasterList';
+import useAccess from 'hooks/useAccess';
 import {
   getInAppTemplates,
   createInAppTemplate,
@@ -73,6 +74,11 @@ export default function InAppTemplate() {
   useEffect(() => {
     loadTemplates();
   }, [loadTemplates]);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('NOTIFICATION_TEMPLATE_CREATE') || hasAccess('TEMPLATE_MGMT');
+  const canEdit = hasAccess('NOTIFICATION_TEMPLATE_EDIT') || hasAccess('TEMPLATE_MGMT');
+  const canToggle = hasAccess('NOTIFICATION_TEMPLATE_TOGGLE_ACTIVE') || hasAccess('TEMPLATE_MGMT');
 
   useEffect(() => {
     let mounted = true;
@@ -231,6 +237,10 @@ export default function InAppTemplate() {
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
             onDelete={handleDelete}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
+            activeRight="NOTIFICATION_TEMPLATE_TOGGLE_ACTIVE"
             loading={loading}
           />
         </Grid>

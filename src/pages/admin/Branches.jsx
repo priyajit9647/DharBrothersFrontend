@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography';
 
 import MasterList from 'sections/admin/masters/MasterList';
 import { createBranch, editBranch, getBranches, toggleBranchActive } from 'api/branch';
+import useAccess from 'hooks/useAccess';
 
 const BRANCH_TYPE_OPTIONS = [
   { value: 'MANUFACTURING_UNIT', label: 'Manufacturing Unit' },
@@ -70,6 +71,11 @@ export default function Branches() {
   useEffect(() => {
     loadBranches();
   }, []);
+
+  const { hasAccess } = useAccess();
+  const canCreate = hasAccess('BRANCHES_CREATE') || hasAccess('BRANCHES_MGMT');
+  const canEdit = hasAccess('BRANCHES_EDIT') || hasAccess('BRANCHES_MGMT');
+  const canToggle = hasAccess('BRANCHES_TOGGLE_ACTIVE') || hasAccess('BRANCHES_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
@@ -216,6 +222,10 @@ export default function Branches() {
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
             loading={loading}
+            showCreateButton={canCreate}
+            showActionsColumn={canEdit}
+            showActiveColumn={canToggle}
+            activeRight="BRANCHES_TOGGLE_ACTIVE"
           />
         </Grid>
       </Grid>
