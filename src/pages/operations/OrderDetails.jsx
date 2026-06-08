@@ -57,7 +57,7 @@ function normalizeFeedbackErrorMessage(err) {
   if (typeof err === 'string') {
     try {
       const parsed = JSON.parse(err);
-      if (parsed && (parsed.code === 'BMS-404' || /feedback not found/i.test(parsed.message || '') || /feedback not found/i.test(parsed.reason || '')) ) {
+      if (parsed && (parsed.code === 'BMS-404' || /feedback not found/i.test(parsed.message || '') || /feedback not found/i.test(parsed.reason || '') ) ) {
         return 'No Feedback Present Yet';
       }
     } catch (e) {
@@ -70,8 +70,6 @@ function normalizeFeedbackErrorMessage(err) {
 
   return String(err);
 }
-
-// renderDocumentRow removed — rendering is handled inside the component so it can call downloadDocument
 
 export default function OrderDetails() {
   const { orderId } = useParams();
@@ -323,28 +321,6 @@ export default function OrderDetails() {
             >
               Feedback
             </Button>
-
-            <Button
-              startIcon={<DownloadCloud size={16} />}
-              variant="outlined"
-              onClick={() => {
-                const firstKey = Object.keys(documentData || {})[0];
-                if (firstKey) downloadDocument(firstKey, documentData[firstKey]?.fileName || firstKey, documentData[firstKey]?.path);
-                else window.alert('No documents available for download');
-              }}
-              sx={{
-                textTransform: 'none',
-                borderRadius: '999px',
-                borderColor: '#e6eefc',
-                color: '#0f172a',
-                background: '#fff',
-                px: 2,
-                py: 0.6
-              }}
-            >
-              Download
-            </Button>
-
             <Button
               startIcon={<ArrowLeft size={16} />}
               variant="contained"
