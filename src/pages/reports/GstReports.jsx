@@ -137,8 +137,24 @@ export default function GstReports() {
         sort: `${sortField},${sortOrder}`
       };
       const resp = await getGstReport(params);
-      setData(Array.isArray(resp.items) ? resp.items : resp.items ?? resp);
-      setTotal(Number(resp.total ?? (Array.isArray(resp.items) ? resp.items.length : resp.length || 0)));
+
+      // Normalize response items: convert snake_case keys to camelCase and provide fallbacks
+      const rawItems = Array.isArray(resp) ? resp : (Array.isArray(resp?.items) ? resp.items : (resp?.items ?? resp?.data ?? []));
+      const items = (Array.isArray(rawItems) ? rawItems : []).map((it) => {
+        const normalized = { ...it };
+        Object.keys(it).forEach((k) => {
+          if (k.includes('_')) {
+            const camel = k.replace(/_([a-z])/g, (_, ch) => ch.toUpperCase());
+            if (!(camel in normalized)) normalized[camel] = it[k];
+          }
+        });
+        // customerName fallbacks: prefer explicit fields if present
+        normalized.customerName = normalized.customerName ?? normalized.customer_name ?? normalized.customerPurchase ?? normalized.customer ?? normalized.accountName ?? normalized.account ?? '';
+        return normalized;
+      });
+
+      setData(items);
+      setTotal(Number(resp.total ?? resp.totalItems ?? items.length));
     } catch (err) {
       console.error('Failed to fetch GST report', err);
       setError(String(err?.message ?? err));
@@ -269,31 +285,18 @@ export default function GstReports() {
                 <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb' }} />
               </div>
 
-              <div>
-                <label style={{ fontSize: 12, color: '#6b7280', display: 'block' }}>To</label>
-                <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb' }} />
-              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: '#6b7280', display: 'block' }}>To</label>
+                  <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                </div>
 
-              <select value={branch} onChange={(e) => setBranch(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb' }}>
-                <option value="">All Branches</option>
-                {branches.map((b) => <option key={b.id} value={b.name}>{b.name}</option>)}
-              </select>
-
-              <select value={gstType} onChange={(e) => setGstType(e.target.value)} style={{ padding: 8, borderRadius: 8, border: '1px solid #e5e7eb' }}>
-                <option value="All">All</option>
-                <option value="CGST">CGST</option>
-                <option value="SGST">SGST</option>
-                <option value="IGST">IGST</option>
-              </select>
-
-              <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => { setPage(0); handleSearch(); }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#2f6df6', color: '#fff' }}>Search</button>
-                <button onClick={handleReset} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff' }}>Reset</button>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              {canExportCsv && <button onClick={exportCSV} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#2f6df6', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}><Download size={15} /> Export CSV</button>}
+              {canExportCsv && <button onClick={exportCSV} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#2f6df6', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}><Download size={15} /> Export Excel</button>}
               {canExportXlsx && <button onClick={exportExcel} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}><FileSpreadsheet size={15} /> Export Excel</button>}
             </div>
           </div>
