@@ -23,10 +23,10 @@
     "@emotion/styled": "11.14.1",
     "@fontsource/public-sans": "5.2.7",
     "@mui/base": "5.0.0-beta.70",
+    "@mui/icons-material": "5.11.16",
     "@mui/lab": "7.0.1-beta.20",
     "@mui/material": "7.3.6",
     "@mui/system": "7.3.6",
-    "@mui/icons-material": "5.11.16",
     "@mui/x-charts": "8.22.1",
     "@vitejs/plugin-react": "5.1.2",
     "firebase": "^12.13.0",
@@ -45,6 +45,7 @@
     "vite": "7.3.0",
     "vite-jsconfig-paths": "2.0.1",
     "web-vitals": "5.1.0",
+    "xlsx": "^0.18.5",
     "yup": "1.7.1"
   },
   "eslintConfig": {

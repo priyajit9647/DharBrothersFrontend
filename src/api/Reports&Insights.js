@@ -182,3 +182,30 @@ export async function exportSalesReport(params = {}) {
   const response = await authorizedFetchRaw(url, { method: 'GET' });
   return response;
 }
+
+/**
+ * Fetch GST reports from CA data endpoint.
+ * Endpoint: GET /api/ca-data/report
+ * Supports filters: startDate, endDate, branch, gstType, search, page, size, sort
+ */
+export async function getGstReport(params = {}) {
+  const { startDate, endDate, branch, gstType, search, page = 0, size = 10, sort } = params;
+
+  const qs = buildQueryString({ startDate, endDate, branch, gstType, search, page, size, sort });
+  const url = `/api/ca-data/report${qs}`;
+
+  const response = await authorizedFetch(url, { method: 'GET' });
+
+  const items = Array.isArray(response)
+    ? response
+    : response?.items ?? response?.data ?? response?.content ?? response?.list ?? [];
+
+  const total = Number(
+    response?.totalElements ?? response?.total ?? response?.totalItems ?? response?.totalCount ?? items.length
+  );
+
+  const currentPage = Number(response?.page ?? response?.pageNumber ?? page ?? 0);
+  const pageSize = Number(response?.size ?? size);
+
+  return { items, total, page: currentPage, size: pageSize, raw: response };
+}

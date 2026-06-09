@@ -62,6 +62,13 @@ const support = {
           type: 'item',
           url: '/reports/task-reports'
         }
+        ,
+        {
+          id: 'gst-reports',
+          title: 'GST Reports',
+          type: 'item',
+          url: '/reports/gst-reports'
+        }
       ]
     },
     {
