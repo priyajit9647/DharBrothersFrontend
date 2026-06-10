@@ -34,7 +34,7 @@ const LoginRoutes = {
   children: [
     {
       index: true,
-      element: <Navigate to="/login" replace />
+      element: <Navigate to="/home" replace />
     },
     {
       path: 'login',
