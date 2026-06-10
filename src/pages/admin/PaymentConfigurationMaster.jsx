@@ -13,6 +13,9 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
+import { Plus, Edit } from 'lucide-react';
 
 import MasterList from 'sections/admin/masters/MasterList';
 import { getBranches } from 'api/branch';
@@ -42,7 +45,11 @@ export default function PaymentConfigurationMaster() {
     accountNumber: '',
     accountHolderName: '',
     ifscCode: '',
-    bankName: ''
+    bankName: '',
+    baseUrl: '',
+    sealImageName: '',
+    sealUploaded: false,
+    sealImageFile: null
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -124,7 +131,7 @@ export default function PaymentConfigurationMaster() {
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true', accountNumber: '', accountHolderName: '', ifscCode: '', bankName: '' });
+    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true', accountNumber: '', accountHolderName: '', ifscCode: '', bankName: '', baseUrl: '', sealImageName: '', sealUploaded: false, sealImageFile: null });
     setError('');
     setDialogOpen(true);
   };
@@ -140,7 +147,11 @@ export default function PaymentConfigurationMaster() {
       accountNumber: row.accountNumber || '',
       accountHolderName: row.accountHolderName || '',
       ifscCode: row.ifscCode || '',
-      bankName: row.bankName || ''
+      bankName: row.bankName || '',
+      baseUrl: row.baseUrl || '',
+      sealImageName: row.sealImageName || '',
+      sealUploaded: Boolean(row.sealUploaded),
+      sealImageFile: null
     });
     setError('');
     setDialogOpen(true);
@@ -167,6 +178,10 @@ export default function PaymentConfigurationMaster() {
     const accountHolderName = formValues.accountHolderName?.trim();
     const ifscCode = formValues.ifscCode?.trim();
     const bankName = formValues.bankName?.trim();
+    const baseUrl = formValues.baseUrl?.trim();
+    const sealImageName = formValues.sealImageName?.trim();
+    const sealUploaded = Boolean(formValues.sealUploaded);
+    const sealImageFile = formValues.sealImageFile || null;
     const percentage = Number(formValues.percentage);
     const active = String(formValues.active) === 'true';
 
@@ -199,6 +214,10 @@ export default function PaymentConfigurationMaster() {
           accountHolderName,
           ifscCode,
           bankName,
+          baseUrl,
+          sealImageName,
+          sealUploaded,
+          sealImageFile,
           percentage,
           active
         });
@@ -215,6 +234,10 @@ export default function PaymentConfigurationMaster() {
           accountHolderName,
           ifscCode,
           bankName,
+          baseUrl,
+          sealImageName,
+          sealUploaded,
+          sealImageFile,
           percentage,
           active
         });
@@ -233,39 +256,46 @@ export default function PaymentConfigurationMaster() {
   };
 
   const { hasAccess } = useAccess();
-  const canCreate = hasAccess('PAYMENT_CONFIGURATION_CREATE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
-  const canEdit = hasAccess('PAYMENT_CONFIGURATION_EDIT') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
-  const canToggle = hasAccess('PAYMENT_CONFIGURATION_TOGGLE_ACTIVE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
+  // Optional env override to enable actions during development or testing.
+  // Set VITE_ALLOW_PAYMENT_ACTIONS=true in your .env to force-enable the buttons.
+  const forceEnableActions = import.meta.env.VITE_ALLOW_PAYMENT_ACTIONS === 'true';
+  const canCreate = forceEnableActions || hasAccess('PAYMENT_CONFIGURATION_CREATE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
+  const canEdit = forceEnableActions || hasAccess('PAYMENT_CONFIGURATION_EDIT') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
+  const canToggle = forceEnableActions || hasAccess('PAYMENT_CONFIGURATION_TOGGLE_ACTIVE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
 
   return (
     <>
       <Grid container sx={{ width: '100%', flexGrow: 1 }}>
         <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
-          <Stack spacing={1} sx={{ mb: 1 }}>
-            <FormControl size="small" sx={{ minWidth: 220 }} disabled={loadingBranches}>
-              <InputLabel id="payment-config-branch-select-label">Branch</InputLabel>
-              <Select
-                labelId="payment-config-branch-select-label"
-                label="Branch"
-                value={selectedBranchId}
-                onChange={(event) => {
-                  setSelectedBranchId(event.target.value);
-                  setPage(0);
-                }}
-              >
-                {branches.map((branch) => (
-                  <MenuItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <FormControl size="small" sx={{ minWidth: 320 }} disabled={loadingBranches}>
+                <InputLabel id="payment-config-branch-select-label">Branch</InputLabel>
+                <Select
+                  labelId="payment-config-branch-select-label"
+                  label="Branch"
+                  value={selectedBranchId}
+                  onChange={(event) => {
+                    setSelectedBranchId(event.target.value);
+                    setPage(0);
+                  }}
+                >
+                  {branches.map((branch) => (
+                    <MenuItem key={branch.id} value={String(branch.id)}>
+                      {branch.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-            {error && !dialogOpen && (
-              <Typography variant="body2" color="error">
-                {error}
-              </Typography>
-            )}
+              {error && !dialogOpen && (
+                <Typography variant="body2" color="error">
+                  {error}
+                </Typography>
+              )}
+            </Stack>
+
+            {/* Create button moved inside the card header */}
           </Stack>
 
           <MasterList
@@ -285,6 +315,16 @@ export default function PaymentConfigurationMaster() {
                 id: 'secretKey',
                 label: 'Secret Key',
                 render: (row) => (row.secretKey ? '********' : '-')
+              },
+              {
+                id: 'actions',
+                label: '',
+                align: 'right',
+                render: (row) => (
+                  <Button size="small" variant="outlined" onClick={() => openEditDialog(row)} startIcon={<Edit size={14} />} disabled={!canEdit}>
+                    Edit
+                  </Button>
+                )
               }
             ]}
             rows={pagedRows}
@@ -301,7 +341,8 @@ export default function PaymentConfigurationMaster() {
             loading={loadingBranches || loadingConfigurations}
             showActiveColumn={false}
             showCreateButton={canCreate}
-            showActionsColumn={canEdit}
+            createLabel="Create Payment Configuration"
+            showActionsColumn={false}
             showActiveColumn={false}
           />
         </Grid>
@@ -319,6 +360,19 @@ export default function PaymentConfigurationMaster() {
             <TextField label="Account Holder Name" value={formValues.accountHolderName} onChange={handleFormChange('accountHolderName')} fullWidth />
             <TextField label="IFSC Code" value={formValues.ifscCode} onChange={handleFormChange('ifscCode')} fullWidth />
             <TextField label="Bank Name" value={formValues.bankName} onChange={handleFormChange('bankName')} fullWidth />
+            <TextField label="Base URL" value={formValues.baseUrl} onChange={handleFormChange('baseUrl')} fullWidth />
+            <TextField label="Seal Image Name" value={formValues.sealImageName} onChange={handleFormChange('sealImageName')} fullWidth />
+            <FormControlLabel
+              control={<Checkbox checked={Boolean(formValues.sealUploaded)} onChange={(e) => setFormValues((p) => ({ ...p, sealUploaded: e.target.checked }))} />}
+              label="Seal Uploaded"
+            />
+            <input
+              accept="image/*"
+              style={{ display: 'block', marginTop: 8 }}
+              id="seal-image-file"
+              type="file"
+              onChange={(e) => setFormValues((p) => ({ ...p, sealImageFile: e.target.files && e.target.files[0] ? e.target.files[0] : null }))}
+            />
             <FormControl fullWidth>
               <InputLabel id="payment-config-percentage-label">Percentage</InputLabel>
               <Select

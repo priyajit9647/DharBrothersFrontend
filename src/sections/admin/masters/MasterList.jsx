@@ -15,6 +15,7 @@ import TableRow from '@mui/material/TableRow';
 import Typography from '@mui/material/Typography';
 
 import { EditTwoTone } from '@ant-design/icons';
+import { Plus } from 'lucide-react';
 
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
@@ -34,9 +35,9 @@ function MasterList({
   onToggleActive,
   loading,
   showCreateButton,
+  createLabel,
   showActiveColumn,
-  showActionsColumn
-  ,
+  showActionsColumn,
   activeRight
 }) {
   const handleChangePage = (event, newPage) => {
@@ -57,7 +58,9 @@ function MasterList({
 
   const { hasAccess } = useAccess();
   const hasActiveColumn = showActiveColumn !== false && (!activeRight || hasAccess(activeRight));
-  const hasActionsColumn = showActionsColumn !== false;
+  // If the consumer already provided a custom column with id 'actions',
+  // avoid rendering the built-in actions icon column to prevent duplicates.
+  const hasActionsColumn = showActionsColumn !== false && !columns.some((c) => String(c.id).toLowerCase() === 'actions');
   const extraColumns = (hasActiveColumn ? 1 : 0) + (hasActionsColumn ? 1 : 0);
 
   return (
@@ -65,8 +68,8 @@ function MasterList({
       title={title}
       secondary={
         showCreateButton !== false && onCreate ? (
-          <Button variant="contained" size="small" onClick={onCreate} disabled={loading}>
-            Create
+          <Button variant="contained" size="small" onClick={onCreate} disabled={loading} startIcon={<Plus size={14} />}>
+            {createLabel || 'Create'}
           </Button>
         ) : null
       }
@@ -202,6 +205,7 @@ MasterList.propTypes = {
   onToggleActive: PropTypes.func,
   loading: PropTypes.bool,
   showCreateButton: PropTypes.bool,
+  createLabel: PropTypes.string,
   showActiveColumn: PropTypes.bool,
   activeRight: PropTypes.string,
   showActionsColumn: PropTypes.bool
@@ -220,6 +224,7 @@ MasterList.defaultProps = {
   onToggleActive: undefined,
   loading: false,
   showCreateButton: true,
+  createLabel: 'Create',
   showActiveColumn: true,
   activeRight: undefined,
   showActionsColumn: true
