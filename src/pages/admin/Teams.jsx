@@ -164,9 +164,9 @@ export default function Teams() {
   }, [branches]);
 
   const { hasAccess } = useAccess();
-  const canCreate = hasAccess('TEAMS_CREATE') || hasAccess('TEAMS_MGMT');
-  const canEdit = hasAccess('TEAMS_EDIT') || hasAccess('TEAMS_MGMT');
-  const canToggle = hasAccess('TEAMS_TOGGLE_ACTIVE') || hasAccess('TEAMS_MGMT');
+  const canCreate = hasAccess('TEAM_CREATE') || hasAccess('BRANCHES_TEAMS_MGMT');
+  const canEdit = hasAccess('TEAM_EDIT') || hasAccess('BRANCHES_TEAMS_MGMT');
+  const canToggle = hasAccess('TEAM_TOGGLE_ACTIVE') || hasAccess('BRANCHES_TEAMS_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
