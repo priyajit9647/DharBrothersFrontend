@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Stack from '@mui/material/Stack';
@@ -6,15 +7,46 @@ import Typography from '@mui/material/Typography';
 import banner2 from 'assets/banner/banner2.jpg';
 
 import { HeaderNav, TopInfoBar, FooterSection, PriceSection } from './PlaceOrder';
+import { getPrintingRates } from 'api/printingRate';
+import { getBindingRates } from 'api/bindingRate';
+import { getOtherCharges } from 'api/otherCharge';
 
 export default function Price() {
+  const [printingRates, setPrintingRates] = useState([]);
+  const [bindingRates, setBindingRates] = useState([]);
+  const [otherCharges, setOtherCharges] = useState([]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    const load = async () => {
+      try {
+        const [printing, binding, others] = await Promise.all([getPrintingRates(), getBindingRates(), getOtherCharges()]);
+
+        if (!ignore) {
+          setPrintingRates(Array.isArray(printing) ? printing : []);
+          setBindingRates(Array.isArray(binding) ? binding : []);
+          setOtherCharges(Array.isArray(others) ? others : []);
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load price data', err);
+      }
+    };
+
+    load();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f8f7f2' }}>
       <TopInfoBar />
       <HeaderNav />
       <PriceHero />
 
-      <PriceSection />
+      <PriceSection bindingRates={bindingRates} printingRates={printingRates} otherCharges={otherCharges} />
 
       <FooterSection />
     </Box>
