@@ -73,9 +73,9 @@ export default function Branches() {
   }, []);
 
   const { hasAccess } = useAccess();
-  const canCreate = hasAccess('BRANCHES_CREATE') || hasAccess('BRANCHES_MGMT');
-  const canEdit = hasAccess('BRANCHES_EDIT') || hasAccess('BRANCHES_MGMT');
-  const canToggle = hasAccess('BRANCHES_TOGGLE_ACTIVE') || hasAccess('BRANCHES_MGMT');
+  const canCreate = hasAccess('BRANCH_CREATE') || hasAccess('BRANCH_MGMT');
+  const canEdit = hasAccess('BRANCH_EDIT') || hasAccess('BRANCH_MGMT');
+  const canToggle = hasAccess('BRANCH_TOGGLE_ACTIVE') || hasAccess('BRANCH_MGMT');
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;

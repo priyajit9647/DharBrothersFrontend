@@ -259,9 +259,9 @@ export default function PaymentConfigurationMaster() {
   // Optional env override to enable actions during development or testing.
   // Set VITE_ALLOW_PAYMENT_ACTIONS=true in your .env to force-enable the buttons.
   const forceEnableActions = import.meta.env.VITE_ALLOW_PAYMENT_ACTIONS === 'true';
-  const canCreate = forceEnableActions || hasAccess('PAYMENT_CONFIGURATION_CREATE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
-  const canEdit = forceEnableActions || hasAccess('PAYMENT_CONFIGURATION_EDIT') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
-  const canToggle = forceEnableActions || hasAccess('PAYMENT_CONFIGURATION_TOGGLE_ACTIVE') || hasAccess('PAYMENT_CONFIGURATION_MGMT');
+  const canCreate = forceEnableActions || hasAccess('PAYMENT_CONFIG_CREATE') || hasAccess('PAYMENT_CONFIG_MGMT');
+  const canEdit = forceEnableActions || hasAccess('PAYMENT_CONFIG_EDIT') || hasAccess('PAYMENT_CONFIG_MGMT');
+  const canToggle = forceEnableActions || hasAccess('PAYMENT_CONFIG_TOGGLE_ACTIVE') || hasAccess('PAYMENT_CONFIG_MGMT');
 
   return (
     <>

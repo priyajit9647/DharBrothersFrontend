@@ -116,16 +116,39 @@ export default function OrderDetailsAdmin() {
 
         if (Array.isArray(resp.bindings)) {
           resp.bindings.forEach((b) => {
-            (b.bindingItems || []).forEach((item) => {
+            const items = b.bindingItems || [];
+            if (items.length) {
+              items.forEach((item) => {
+                printingDetails.push({
+                  desc: `${b.bindingType} Binding`,
+                  size: item.paperSize,
+                  paper: item.paper,
+                  color: item.printColour || item.printColor,
+                  printingType: item.printingType,
+                  a4Pockets: item.a4Pockets,
+                  cdPockets: item.cdPockets,
+                  additionalInformation: item.additionalInformation || '',
+                  bindingType: b.bindingType,
+                  spinePrintingRequired: b.spinePrintingRequired,
+                  topContentArea: b.topContentArea,
+                  middleContentArea: b.middleContentArea,
+                  bottomContentArea: b.bottomContentArea,
+                  coverPageDesign: b.coverPageDesign,
+                  coverMaterial: b.coverMaterial,
+                  coverPageDesignFileName: b.coverPageDesignFileName
+                });
+              });
+            } else {
+              // Bindings without bindingItems: push a summary row so spine fields are preserved
               printingDetails.push({
                 desc: `${b.bindingType} Binding`,
-                size: item.paperSize,
-                paper: item.paper,
-                color: item.printColour || item.printColor,
-                printingType: item.printingType,
-                a4Pockets: item.a4Pockets,
-                cdPockets: item.cdPockets,
-                additionalInformation: item.additionalInformation || '',
+                size: null,
+                paper: null,
+                color: null,
+                printingType: null,
+                a4Pockets: null,
+                cdPockets: null,
+                additionalInformation: '',
                 bindingType: b.bindingType,
                 spinePrintingRequired: b.spinePrintingRequired,
                 topContentArea: b.topContentArea,
@@ -135,7 +158,7 @@ export default function OrderDetailsAdmin() {
                 coverMaterial: b.coverMaterial,
                 coverPageDesignFileName: b.coverPageDesignFileName
               });
-            });
+            }
           });
         }
 
@@ -183,7 +206,7 @@ export default function OrderDetailsAdmin() {
 
   if (!order) return null;
 
-  const hardBinding = order.printingDetails?.find((p) => (p.bindingType || '').toUpperCase() === 'HARD') || {};
+  const hardBinding = order.printingDetails?.find((p) => (p.bindingType || '').toLowerCase().includes('hard')) || order.printingDetails?.find((p) => p.topContentArea || p.middleContentArea || p.bottomContentArea) || {};
 
   const hasShipping = Boolean(
     order.shippingAddress && (
@@ -398,19 +421,31 @@ export default function OrderDetailsAdmin() {
                             <TableRow>
                               <TableCell>Spine Top Content</TableCell>
 
-                              <TableCell>{hardBinding.topContentArea || '-'}</TableCell>
+                              <TableCell>
+                                <Typography sx={{ whiteSpace: 'pre-line', color: '#6b7280', fontSize: 14 }}>
+                                  {hardBinding.topContentArea || '—'}
+                                </Typography>
+                              </TableCell>
                             </TableRow>
 
                             <TableRow>
                               <TableCell>Spine Middle Content</TableCell>
 
-                              <TableCell>{hardBinding.middleContentArea || '-'}</TableCell>
+                              <TableCell>
+                                <Typography sx={{ whiteSpace: 'pre-line', color: '#6b7280', fontSize: 14 }}>
+                                  {hardBinding.middleContentArea || '—'}
+                                </Typography>
+                              </TableCell>
                             </TableRow>
 
                             <TableRow>
                               <TableCell>Spine Bottom Content</TableCell>
 
-                              <TableCell>{hardBinding.bottomContentArea || '-'}</TableCell>
+                              <TableCell>
+                                <Typography sx={{ whiteSpace: 'pre-line', color: '#6b7280', fontSize: 14 }}>
+                                  {hardBinding.bottomContentArea || '—'}
+                                </Typography>
+                              </TableCell>
                             </TableRow>
                           </TableBody>
                         </Table>
