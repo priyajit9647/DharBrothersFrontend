@@ -92,6 +92,42 @@ export async function getReadyToDispatchReport(params = {}) {
 }
 
 /**
+ * Export delayed jobs report as a file (csv|xlsx supported via `format` param).
+ * Endpoint: GET /api/v1/admin/reports/delayed-jobs/export
+ */
+export async function exportDelayedJobs(params = {}) {
+  const qs = buildQueryString(params);
+  const url = `/api/v1/admin/reports/delayed-jobs/export${qs}`;
+
+  const response = await authorizedFetchRaw(url, { method: 'GET' });
+  return response;
+}
+
+/**
+ * Export ready-to-dispatch report as a file (csv|xlsx supported via `format` param).
+ * Endpoint: GET /api/v1/admin/reports/ready-for-dispatch/export
+ */
+export async function exportReadyToDispatch(params = {}) {
+  const qs = buildQueryString(params);
+  const url = `/api/v1/admin/reports/ready-for-dispatch/export${qs}`;
+
+  const response = await authorizedFetchRaw(url, { method: 'GET' });
+  return response;
+}
+
+/**
+ * Export open jobs report as a file (csv|xlsx supported via `format` param).
+ * Endpoint: GET /api/v1/admin/reports/open-jobs/export
+ */
+export async function exportOpenJobs(params = {}) {
+  const qs = buildQueryString(params);
+  const url = `/api/v1/admin/reports/open-jobs/export${qs}`;
+
+  const response = await authorizedFetchRaw(url, { method: 'GET' });
+  return response;
+}
+
+/**
  * Fetch today's due tasks.
  * Endpoint: GET /api/v1/admin/task-list/today-due-tasks
  * @param {{branchId?: number|string, processStageId?: number|string, page?: number, size?: number, sort?: string|Array<string>}} params

@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
 import { Download, FileSpreadsheet, Search } from 'lucide-react';
-import { getDelayedJobs } from 'api/Reports&Insights';
+import { getDelayedJobs, exportDelayedJobs } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
   { jobId: 'JOB-1001', client: 'Tata Steel', branch: 'Kolkata', department: 'Printing', stage: 'Production', expectedDate: '2026-05-10', delayedDays: 5, priority: 'High', status: 'Delayed' },
@@ -60,6 +60,59 @@ const statusStyle = (status) => {
   return { padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: s.bg, color: s.color, display: 'inline-block' };
 };
 
+// Normalize API item to expected table shape
+function normalizeDelayItem(item) {
+  if (!item || typeof item !== 'object') return null;
+
+  const getNested = (obj, path) => {
+    try {
+      return path.split('.').reduce((o, p) => (o && Object.prototype.hasOwnProperty.call(o, p) ? o[p] : o && o[p]), obj);
+    } catch (e) {
+      return undefined;
+    }
+  };
+
+  const toDisplay = (v) => {
+    if (v == null) return undefined;
+    if (typeof v === 'object') return v.name ?? v.label ?? v.title ?? (v.id != null ? String(v.id) : JSON.stringify(v));
+    return v;
+  };
+
+  const jobId = toDisplay(item.jobId ?? item.orderId ?? item.jobNo ?? item.orderNo ?? item.id ?? item.code ?? getNested(item, 'order.orderId') ?? getNested(item, 'job.jobId')) || '';
+  const client = toDisplay(item.client ?? item.clientName ?? item.customerName ?? getNested(item, 'customer.name') ?? getNested(item, 'customer.companyName')) || '';
+  const branch = toDisplay(item.branch ?? item.branchName ?? getNested(item, 'branch.name')) || '';
+  const department = toDisplay(item.department ?? item.departmentName ?? item.dept ?? getNested(item, 'process.department')) || '';
+  const stage = toDisplay(item.stage ?? item.currentStage ?? getNested(item, 'processStage.name') ?? getNested(item, 'stage.name')) || '';
+
+  const expectedDateRaw = item.expectedDate ?? item.expected_date ?? item.expected_at ?? item.expectedDeliveryDate ?? item.expectedDeliveryAt ?? item.expectedCompletionDate ?? item.dueDate ?? getNested(item, 'expected.date') ?? null;
+  let expectedDate = expectedDateRaw ? String(expectedDateRaw) : '';
+
+  let delayedDays = item.delayedDays ?? item.daysDelayed ?? item.delayDays ?? item.delay ?? item.delay_in_days ?? item.days_overdue ?? null;
+  if ((delayedDays == null || delayedDays === '') && expectedDate) {
+    const d = new Date(expectedDate);
+    if (!Number.isNaN(d.getTime())) {
+      const diff = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+      delayedDays = diff > 0 ? diff : 0;
+    }
+  }
+
+  const priority = toDisplay(item.priority ?? item.priorityLevel ?? item.urgency ?? getNested(item, 'priority.label')) || '';
+  const status = toDisplay(item.status ?? item.jobStatus ?? item.state ?? item.currentStatus ?? getNested(item, 'status.label')) || '';
+
+  return {
+    _raw: item,
+    jobId,
+    client,
+    branch,
+    department,
+    stage,
+    expectedDate,
+    delayedDays: delayedDays != null ? Number(delayedDays) : null,
+    priority,
+    status
+  };
+}
+
 export default function DelayReports() {
   const [search, setSearch]       = useState('');
   const [sortField, setSortField] = useState('delayedDays');
@@ -86,15 +139,17 @@ export default function DelayReports() {
       try {
         const resp = await getDelayedJobs({ page, size, sort: `${sortField},${sortOrder}` });
         if (!mounted) return;
-        // ← always set real data; empty array is valid
-        setData(Array.isArray(resp.items) ? resp.items : []);
-        setTotal(Number(resp.total ?? 0));
+        // normalize API items into the expected table shape
+        const rawItems = Array.isArray(resp.items) ? resp.items : [];
+        const mapped = rawItems.map(normalizeDelayItem).filter(Boolean);
+        setData(mapped);
+        setTotal(Number(resp.total ?? mapped.length ?? 0));
       } catch (err) {
         console.error('Failed to fetch delayed jobs', err);
         if (!mounted) return;
         setError(String(err?.message ?? err));
         setHasError(true);          // ← only fall back to mock on actual error
-        setData(MOCK_DATA);
+        setData(MOCK_DATA.map(normalizeDelayItem).filter(Boolean));
         setTotal(MOCK_DATA.length);
       } finally {
         if (mounted) setLoading(false);
@@ -123,14 +178,77 @@ export default function DelayReports() {
   const canExportXlsx = hasAccess('REPORT_EXPORT_EXCEL');
 
   const exportCSV = () => {
-    const source = filteredData.length ? filteredData : (data.length ? data : MOCK_DATA);
-    const headers = Object.keys(source[0] || {}).join(',');
-    const rows = source.map((row) => Object.values(row).join(','));
+    const source = filteredData.length ? filteredData : (data.length ? data : MOCK_DATA.map(normalizeDelayItem).filter(Boolean));
+    if (!source || source.length === 0) return;
+    const headers = COLUMNS.map((c) => c.label).join(',');
+    const rows = source.map((row) =>
+      COLUMNS.map((col) => {
+        const v = row[col.key];
+        if (v == null) return '';
+        if (typeof v === 'object') return JSON.stringify(v);
+        return String(v).replace(/"/g, '""');
+      })
+        .map((cell) => `"${cell}"`)
+        .join(',')
+    );
     const blob = new Blob([[headers, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.setAttribute('download', 'delay_reports.csv');
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+
+  const exportExcel = async () => {
+    try {
+      const resp = await exportDelayedJobs({ page, size, sort: `${sortField},${sortOrder}`, format: 'xlsx' });
+      const blob = await resp.blob();
+      const disposition = resp.headers.get ? resp.headers.get('content-disposition') || '' : '';
+      let filename = 'delay_reports.xlsx';
+      const m = disposition.match(/filename\*=UTF-8''([^;\n]+)/) || disposition.match(/filename=\"?([^\";]+)\"?/);
+      if (m && m[1]) {
+        try { filename = decodeURIComponent(m[1]); } catch (e) { filename = m[1]; }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.setAttribute('download', filename);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    } catch (err) {
+      // Backend export endpoint failed — fallback to client-side XLSX generation
+      console.warn('Backend export failed, falling back to client-side XLSX generation', err);
+      const source = filteredData.length ? filteredData : (data.length ? data : MOCK_DATA.map(normalizeDelayItem).filter(Boolean));
+      if (!source || source.length === 0) {
+        alert('No data available to export');
+        return;
+      }
+      try {
+        const mod = await import('xlsx');
+        const XLSX = mod.default || mod;
+        const rows = source.map((row) => {
+          const obj = {};
+          COLUMNS.forEach((col) => {
+            let v = row[col.key];
+            if (col.key === 'expectedDate' && v) {
+              const d = new Date(v);
+              if (!Number.isNaN(d.getTime())) v = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+            if (v == null) v = '';
+            if (typeof v === 'object') v = JSON.stringify(v);
+            obj[col.label] = v;
+          });
+          return obj;
+        });
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Delay Reports');
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.setAttribute('download', 'delay_reports.xlsx');
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      } catch (impErr) {
+        console.error('Client-side export failed', impErr);
+        alert('Export failed: ' + (impErr?.message || impErr) + '\nIf you are developing locally, install the xlsx package: npm i xlsx');
+      }
+    }
   };
 
   const SortIcon = ({ field }) => {
@@ -169,10 +287,11 @@ export default function DelayReports() {
                 </button>
               )}
               {canExportXlsx && (
-                <button style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                <button onClick={exportExcel} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
                   <FileSpreadsheet size={15} /> Export Excel
                 </button>
               )}
+              {/* Export All button removed per request */}
             </div>
           </div>
 
