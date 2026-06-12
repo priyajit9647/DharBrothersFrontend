@@ -179,6 +179,18 @@ export async function getCompleteJobsReport(params = {}) {
 }
 
 /**
+ * Export completed jobs report as a file (csv|xlsx supported via `format` param).
+ * Endpoint: GET /api/v1/admin/reports/completed-jobs/export
+ */
+export async function exportCompleteJobs(params = {}) {
+  const qs = buildQueryString(params);
+  const url = `/api/v1/admin/reports/completed-jobs/export${qs}`;
+
+  const response = await authorizedFetchRaw(url, { method: 'GET' });
+  return response;
+}
+
+/**
  * Fetch sales report.
  * Endpoint: GET /api/v1/report/sales
  * Supports pagination and common filters (fromDate, toDate, state, customerId, orderNumber, search)

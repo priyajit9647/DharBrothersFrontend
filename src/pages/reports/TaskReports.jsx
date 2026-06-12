@@ -144,6 +144,49 @@ export default function TaskReports() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
+  const exportExcel = async () => {
+    const source = filteredData.length ? filteredData : data;
+    if (!source || source.length === 0) {
+      alert('No data available to export');
+      return;
+    }
+    try {
+      const mod = await import('xlsx');
+      const XLSX = mod.default || mod;
+      const rows = source.map((r) => {
+        const obj = {};
+        COLUMNS.forEach((c) => {
+          let v = r[c.key];
+          if (c.key === 'expectedDeliveryDate' && v) {
+            const d = new Date(v);
+            if (!Number.isNaN(d.getTime())) v = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+          }
+          if (c.key === 'totalPages' && v != null) {
+            v = Number(v);
+          }
+          if (v == null) v = '';
+          if (typeof v === 'object') v = JSON.stringify(v);
+          obj[c.label] = v;
+        });
+        return obj;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Task Reports');
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'task_reports.xlsx';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Export Excel failed', err);
+      alert('Export failed: ' + (err?.message || err));
+    }
+  };
+
   const SortIcon = ({ field }) => {
     if (sortField !== field) return <span style={{ color: '#d1d5db', marginLeft: 6 }}>↕</span>;
     return <span style={{ color: '#2f6df6', marginLeft: 6 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>;
@@ -183,7 +226,7 @@ export default function TaskReports() {
                 </button>
               )}
               {canExportXlsx && (
-                <button style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                <button onClick={exportExcel} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
                   <FileSpreadsheet size={15} /> Export Excel
                 </button>
               )}

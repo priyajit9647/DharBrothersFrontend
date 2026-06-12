@@ -163,9 +163,66 @@ export default function SalesReport() {
         downloadBlob(blob, filename);
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Export failed', err);
-      setError(err?.message || 'Export failed');
+        // eslint-disable-next-line no-console
+        console.error('Export failed', err);
+        // If backend export failed and user requested XLSX, fall back to client-side generation
+        if (format === 'xlsx') {
+          try {
+            const sourceItems = items && items.length ? items : [];
+            if (!sourceItems || sourceItems.length === 0) throw new Error('No data available for client-side export');
+
+            const mod = await import('xlsx');
+            const XLSX = mod.default || mod;
+
+            const mapRow = (row) => {
+              const obj = {};
+              COLUMNS.forEach((col) => {
+                let value = '';
+                switch (col.key) {
+                  case 'customerId': value = row.customerId ?? ''; break;
+                  case 'month': value = row.month ?? ''; break;
+                  case 'year': value = row.year ?? ''; break;
+                  case 'state': value = row.state ?? ''; break;
+                  case 'pincode': value = row.pincode ?? ''; break;
+                  case 'university': value = row.university ?? ''; break;
+                  case 'orderAmount': value = typeof row.orderAmount === 'number' ? row.orderAmount.toFixed(2) : row.orderAmount ?? ''; break;
+                  case 'totalTime': value = row.totalTimeTaken ?? row.totalTime ?? ''; break;
+                  case 'newPhase': value = row.newPhaseTime ?? row.newPhase ?? ''; break;
+                  case 'designPhase': value = row.designPhaseTime ?? row.designPhase ?? ''; break;
+                  case 'printingTime': value = row.printingTime ?? ''; break;
+                  case 'bindingTime': value = row.bindingTime ?? ''; break;
+                  case 'dispatchTime': value = row.dispatchTime ?? ''; break;
+                  case 'customerRating': value = row.customerRating ?? ''; break;
+                  default: value = row[col.key] ?? '';
+                }
+                if (value == null) value = '';
+                if (typeof value === 'object') value = JSON.stringify(value);
+                obj[col.label] = value;
+              });
+              return obj;
+            };
+
+            const rows = sourceItems.map(mapRow);
+            const ws = XLSX.utils.json_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sales Report');
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `sales-report.xlsx`;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => window.URL.revokeObjectURL(url), 5000);
+            setExporting(false);
+            return;
+          } catch (fallbackErr) {
+            // eslint-disable-next-line no-console
+            console.error('Client-side XLSX fallback failed', fallbackErr);
+            setError(fallbackErr?.message || String(fallbackErr));
+            setExporting(false);
+            return;
+          }
+        }
+        setError(err?.message || 'Export failed');
     } finally {
       setExporting(false);
     }

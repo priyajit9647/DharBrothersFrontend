@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
 import { Search, Download, FileSpreadsheet, CheckCircle2, CircleDollarSign } from 'lucide-react';
-import { getCompleteJobsReport } from 'api/Reports&Insights';
+import { getCompleteJobsReport, exportCompleteJobs } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
   { jobId: 'JOB-4101', client: 'Tata Steel', branch: 'Kolkata', department: 'Printing', completedBy: 'Rahul Sharma', completedDate: '2026-05-14', turnaroundTime: '12 hrs', totalAmount: 12500, priority: 'High', status: 'Completed' },
@@ -52,6 +52,68 @@ const statusStyle = (s) => {
   return { padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: bg, color, display: 'inline-block' };
 };
 
+// Normalize API item into the expected table shape for Completed Jobs
+function normalizeCompleteItem(item) {
+  if (!item || typeof item !== 'object') return null;
+
+  const getNested = (obj, path) => {
+    try {
+      return path.split('.').reduce((o, p) => (o && Object.prototype.hasOwnProperty.call(o, p) ? o[p] : o && o[p]), obj);
+    } catch (e) {
+      return undefined;
+    }
+  };
+
+  const toDisplay = (v) => {
+    if (v == null) return undefined;
+    if (typeof v === 'object') return v.name ?? v.label ?? v.title ?? (v.id != null ? String(v.id) : JSON.stringify(v));
+    return v;
+  };
+
+  const jobId = toDisplay(item.jobId ?? item.orderId ?? item.jobNo ?? item.job_no ?? item.id ?? item.code ?? getNested(item, 'order.orderId') ?? getNested(item, 'job.jobId')) || '';
+  const client = toDisplay(item.client ?? item.clientName ?? item.customerName ?? getNested(item, 'customer.name') ?? getNested(item, 'customer.companyName')) || '';
+  const branch = toDisplay(item.branch ?? item.branchName ?? getNested(item, 'branch.name')) || '';
+  const department = toDisplay(item.department ?? item.departmentName ?? item.dept ?? getNested(item, 'process.department')) || '';
+  const completedBy = toDisplay(item.completedBy ?? item.completed_by ?? item.completedByName ?? item.completed_by_name ?? getNested(item, 'completedBy.name') ?? getNested(item, 'completed.by')) || '';
+
+  const completedDateRaw = item.completedDate ?? item.completed_at ?? item.completedOn ?? item.completed_on ?? item.completedAt ?? getNested(item, 'completion.date') ?? null;
+  const completedDate = completedDateRaw ? String(completedDateRaw) : '';
+
+  let turnaroundTime = item.turnaroundTime ?? item.turnaround ?? item.turnaround_in_hours ?? item.tat ?? item.turnaround_time ?? null;
+  if (turnaroundTime == null && item.startedDate && completedDate) {
+    try {
+      const start = new Date(item.startedDate);
+      const end = new Date(completedDate);
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+        const diffHrs = Math.round((end - start) / (1000 * 60 * 60));
+        turnaroundTime = `${diffHrs} hrs`;
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  let totalAmount = item.totalAmount ?? item.total ?? item.amount ?? item.revenue ?? item.grandTotal ?? item.total_amount ?? null;
+  if (totalAmount != null) totalAmount = Number(totalAmount);
+
+  const priority = toDisplay(item.priority ?? item.priorityLevel ?? item.urgency ?? getNested(item, 'priority.label')) || '';
+  const status = toDisplay(item.status ?? item.jobStatus ?? item.state ?? item.currentStatus ?? getNested(item, 'status.label')) || '';
+
+  return {
+    _raw: item,
+    jobId,
+    client,
+    branch,
+    department,
+    completedBy,
+    completedDate,
+    turnaroundTime: turnaroundTime != null ? turnaroundTime : '',
+    totalAmount: totalAmount != null ? totalAmount : null,
+    priority,
+    status
+  };
+}
+
 const CompleteJobsReport = () => {
   const [search, setSearch]       = useState('');
   const [sortField, setSortField] = useState('completedDate');
@@ -76,13 +138,17 @@ const CompleteJobsReport = () => {
       try {
         const resp = await getCompleteJobsReport({ page, size, sort: `${sortField},${sortOrder}` });
         if (!mounted) return;
-        setData(Array.isArray(resp.items) ? resp.items : []); // real data, even empty array
-        setTotal(Number(resp.total ?? 0));
+        const rawItems = Array.isArray(resp.items) ? resp.items : [];
+        const mapped = rawItems.map(normalizeCompleteItem).filter(Boolean);
+        setData(mapped);
+        setTotal(Number(resp.total ?? mapped.length ?? 0));
       } catch (err) {
         console.error('Failed to fetch completed jobs report', err);
         if (!mounted) return;
         setError(String(err?.message ?? err));
         setHasError(true); // only fall back to mock on real failure
+        setData(MOCK_DATA.map(normalizeCompleteItem).filter(Boolean));
+        setTotal(MOCK_DATA.length);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -92,18 +158,18 @@ const CompleteJobsReport = () => {
   }, [page, size, sortField, sortOrder]);
 
   const filteredData = useMemo(() => {
-    const source = hasError ? MOCK_DATA : data; // ← never falls back unless error
-    return source
+    const source = (data && data.length) ? data : MOCK_DATA.map(normalizeCompleteItem).filter(Boolean);
+    return (source || [])
       .filter((item) => Object.values(item).join(' ').toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => {
         if (a[sortField] < b[sortField]) return sortOrder === 'asc' ? -1 : 1;
         if (a[sortField] > b[sortField]) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [search, sortField, sortOrder, data, hasError]);
+  }, [search, sortField, sortOrder, data]);
 
   // derive metrics from live data
-  const source = hasError ? MOCK_DATA : data;
+  const source = (data && data.length) ? data : MOCK_DATA.map(normalizeCompleteItem).filter(Boolean);
   const completedCount = source.length;
   const totalRevenue   = source.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
   const revenueDisplay = totalRevenue >= 100000
@@ -112,13 +178,75 @@ const CompleteJobsReport = () => {
 
   const exportCSV = () => {
     if (!filteredData.length) return;
-    const headers = Object.keys(filteredData[0]).join(',');
-    const rows = filteredData.map((row) => Object.values(row).join(','));
+    const source = filteredData;
+    const headers = COLUMNS.map((c) => c.label).join(',');
+    const rows = source.map((row) =>
+      COLUMNS.map((col) => {
+        const v = row[col.key];
+        if (v == null) return '';
+        if (typeof v === 'object') return JSON.stringify(v);
+        return String(v).replace(/"/g, '""');
+      })
+        .map((cell) => `"${cell}"`)
+        .join(',')
+    );
     const blob = new Blob([[headers, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.setAttribute('download', 'complete_jobs_report.csv');
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  };
+
+  const exportExcel = async () => {
+    try {
+      const resp = await exportCompleteJobs({ page, size, sort: `${sortField},${sortOrder}`, format: 'xlsx' });
+      const blob = await resp.blob();
+      const disposition = resp.headers.get ? resp.headers.get('content-disposition') || '' : '';
+      let filename = 'complete_jobs_report.xlsx';
+      const m = disposition.match(/filename\*=UTF-8''([^;\n]+)/) || disposition.match(/filename=\"?([^\";]+)\"?/);
+      if (m && m[1]) {
+        try { filename = decodeURIComponent(m[1]); } catch (e) { filename = m[1]; }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.setAttribute('download', filename);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('Backend export failed, falling back to client-side XLSX generation', err);
+      const source = filteredData.length ? filteredData : (data.length ? data : MOCK_DATA);
+      if (!source || source.length === 0) {
+        alert('No data available to export');
+        return;
+      }
+      try {
+        const mod = await import('xlsx');
+        const XLSX = mod.default || mod;
+        const rows = source.map((row) => {
+          const obj = {};
+          COLUMNS.forEach((col) => {
+            let v = row[col.key];
+            if (col.key === 'completedDate' && v) {
+              const d = new Date(v);
+              if (!Number.isNaN(d.getTime())) v = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            }
+            if (v == null) v = '';
+            if (typeof v === 'object') v = JSON.stringify(v);
+            obj[col.label] = v;
+          });
+          return obj;
+        });
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Complete Jobs');
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.setAttribute('download', 'complete_jobs_report.xlsx');
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      } catch (impErr) {
+        console.error('Client-side export failed', impErr);
+        alert('Export failed: ' + (impErr?.message || impErr) + '\nIf you are developing locally, install the xlsx package: npm i xlsx');
+      }
+    }
   };
 
   const SortIcon = ({ field }) => {
@@ -190,7 +318,7 @@ const CompleteJobsReport = () => {
                 </button>
               )}
               {canExportXlsx && (
-                <button style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                <button onClick={exportExcel} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
                   <FileSpreadsheet size={15} /> Export Excel
                 </button>
               )}

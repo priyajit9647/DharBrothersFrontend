@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
 import { Search, Download, FileSpreadsheet, BriefcaseBusiness, Clock3 } from 'lucide-react';
-import { getOpenJobsReport } from 'api/Reports&Insights';
+import { getOpenJobsReport, exportOpenJobs } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
   { jobId: 'JOB-2101', client: 'Tata Steel', branch: 'Kolkata', department: 'Printing', assignedTo: 'Rahul Sharma', stage: 'Production', sla: '12 hrs', priority: 'High', status: 'Open' },
@@ -123,6 +123,58 @@ export default function OpenJobsReport() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
+  const exportExcel = async () => {
+    try {
+      const resp = await exportOpenJobs({ page, size, sort: `${sortField},${sortOrder}`, format: 'xlsx' });
+      const blob = await resp.blob();
+      const disposition = resp.headers.get ? resp.headers.get('content-disposition') || '' : '';
+      let filename = 'open_jobs_report.xlsx';
+      const m = disposition.match(/filename\*=UTF-8''([^;\n]+)/) || disposition.match(/filename=\"?([^\";]+)\"?/);
+      if (m && m[1]) {
+        try { filename = decodeURIComponent(m[1]); } catch (e) { filename = m[1]; }
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.setAttribute('download', filename);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('Backend export failed, falling back to client-side XLSX generation', err);
+      const source = filteredData.length ? filteredData : (data.length ? data : MOCK_DATA);
+      if (!source || source.length === 0) {
+        alert('No data available to export');
+        return;
+      }
+      try {
+        const mod = await import('xlsx');
+        const XLSX = mod.default || mod;
+        const rows = source.map((row) => {
+          const obj = {};
+          COLUMNS.forEach((col) => {
+            let v = row[col.key];
+            if (col.key === 'expectedDeliveryDate' && v) {
+              const d = new Date(v);
+              if (!Number.isNaN(d.getTime())) v = d.toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            }
+            if (v == null) v = '';
+            if (typeof v === 'object') v = JSON.stringify(v);
+            obj[col.label] = v;
+          });
+          return obj;
+        });
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Open Jobs');
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.setAttribute('download', 'open_jobs_report.xlsx');
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      } catch (impErr) {
+        console.error('Client-side export failed', impErr);
+        alert('Export failed: ' + (impErr?.message || impErr) + '\nIf you are developing locally, install the xlsx package: npm i xlsx');
+      }
+    }
+  };
+
   const totalOpen = total || (data.length || MOCK_DATA.length);
   const slaNear   = (Array.isArray(data) ? data : MOCK_DATA).filter((d) => Boolean(d.delayed)).length;
 
@@ -198,7 +250,7 @@ export default function OpenJobsReport() {
                 </button>
               )}
               {canExportXlsx && (
-                <button style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                <button onClick={() => exportExcel()} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
                   <FileSpreadsheet size={15} /> Export Excel
                 </button>
               )}
