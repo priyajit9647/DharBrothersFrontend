@@ -1223,10 +1223,49 @@ export function TopInfoBar() {
   );
 }
 
-export function PriceSection({ bindingRates, printingRates }) {
+export function PriceSection({ bindingRates, printingRates, otherCharges }) {
   const theme = useTheme();
 
   const border = `1px solid ${alpha(theme.palette.secondary.main, 0.25)}`;
+
+  // Group printing rates by paper and categorize into Normal / Royal and BW / Color
+  const printingGroupedByPaper = (() => {
+    if (!printingRates || !printingRates.length) return [];
+
+    const map = new Map();
+
+    printingRates.forEach((row) => {
+      const paperName = String(row.paperName || row.paper || '-');
+
+      const key = paperName;
+
+      if (!map.has(key)) {
+        map.set(key, {
+          paper: paperName,
+          normal_bw: null,
+          normal_color: null,
+          royal_bw: null,
+          royal_color: null
+        });
+      }
+
+      const entry = map.get(key);
+
+      const label = String(row.printColorName || row.printingColour || '').toLowerCase();
+      const isRoyal = label.includes('royal');
+      const isColor = label.includes('color') || label.includes('colour') || String(row.printingColour || '').toLowerCase() === 'colour' || String(row.printingColour || '').toLowerCase() === 'coLOUR';
+
+      const target = isRoyal ? (isColor ? 'royal_color' : 'royal_bw') : isColor ? 'normal_color' : 'normal_bw';
+
+      entry[target] = {
+        firstCopyRate: row.firstCopyRate ?? row.firstCopyRate ?? '-',
+        additionalCopyRate: row.additionalCopyRate ?? row.additionalCopyRate ?? '-',
+        label: String(row.printColorName || row.printingColour || '')
+      };
+    });
+
+    return Array.from(map.values());
+  })();
 
   return (
     <Box sx={{ bgcolor: 'common.white', py: { xs: 5, md: 7 } }}>
@@ -1273,7 +1312,10 @@ export function PriceSection({ bindingRates, printingRates }) {
                   BINDING TYPE
                 </Box>
                 <Box component="th" sx={{ fontWeight: 600 }}>
-                  QUANTITY
+                  MIN COPIES
+                </Box>
+                <Box component="th" sx={{ fontWeight: 600 }}>
+                  MAX COPIES
                 </Box>
                 <Box component="th" sx={{ fontWeight: 600 }}>
                   RATE
@@ -1286,20 +1328,22 @@ export function PriceSection({ bindingRates, printingRates }) {
                 ? bindingRates.map((item, index) => ({
                     sl: index + 1,
                     type: (item.bindingType || '').toUpperCase() || '- ',
-                    qty: 'Per copy',
+                    minCopies: item.minCopies ?? '-',
+                    maxCopies: item.maxCopies ?? (item.minCopies ? 'Any' : '-'),
                     rate: item.ratePerCopy ?? '-'
                   }))
                 : [
-                    { sl: 1, type: 'HARD BIND [BELOW 3 COPY]', qty: 'Per copy', rate: '300' },
-                    { sl: 2, type: 'HARD BIND [3 COPY AND ABOVE]', qty: 'Per copy', rate: '270' },
-                    { sl: 3, type: 'SOFT BIND', qty: 'Per copy', rate: '270' },
-                    { sl: 4, type: 'SYNOPSIS', qty: 'Per copy', rate: '30' }
+                    { sl: 1, type: 'HARD BIND', minCopies: 1, maxCopies: 3, rate: '300' },
+                    { sl: 2, type: 'HARD BIND', minCopies: 4, maxCopies: 'Any', rate: '270' },
+                    { sl: 3, type: 'SOFT BIND', minCopies: 1, maxCopies: 'Any', rate: '270' },
+                    { sl: 4, type: 'SYNOPSIS', minCopies: 1, maxCopies: 'Any', rate: '30' }
                   ]
               ).map((row) => (
                 <Box key={row.sl} component="tr" sx={{ bgcolor: 'common.white' }}>
                   <Box component="td">{`${row.sl}.`}</Box>
                   <Box component="td">{row.type}</Box>
-                  <Box component="td">{row.qty}</Box>
+                  <Box component="td">{row.minCopies}</Box>
+                  <Box component="td">{row.maxCopies}</Box>
                   <Box component="td">{row.rate}</Box>
                 </Box>
               ))}
@@ -1328,7 +1372,7 @@ export function PriceSection({ bindingRates, printingRates }) {
               component="table"
               sx={{
                 width: '100%',
-                minWidth: 720,
+                minWidth: 1000,
                 borderCollapse: 'collapse',
                 '& th, & td': {
                   borderRight: border,
@@ -1341,23 +1385,56 @@ export function PriceSection({ bindingRates, printingRates }) {
             >
               <Box component="thead">
                 <Box component="tr">
-                  <Box component="th" sx={{ fontWeight: 600 }}>SL.NO</Box>
-                  <Box component="th" sx={{ fontWeight: 600 }}>PAPER</Box>
-                  <Box component="th" sx={{ fontWeight: 600 }}>PRINTING COLOR</Box>
-                  <Box component="th" sx={{ fontWeight: 600 }}>1ST COPY RATE</Box>
-                  <Box component="th" sx={{ fontWeight: 600 }}>NEXT COPY RATE</Box>
-                  <Box component="th" sx={{ fontWeight: 600 }}>ACTIVE</Box>
+                  <Box component="th" sx={{ fontWeight: 600 }} rowSpan={3}>SL.NO</Box>
+                  <Box component="th" sx={{ fontWeight: 600 }} rowSpan={3}>PAPER TYPE &amp; QUALITY</Box>
+                  <Box component="th" sx={{ fontWeight: 600 }} colSpan={4}>NORMAL PRINT (BLACK/WHITE &amp; COLOR)</Box>
+                  <Box component="th" sx={{ fontWeight: 600, bgcolor: '#fbe463' }} colSpan={4}>ROYAL PRINT (ALL COLOR)</Box>
+                </Box>
+
+                <Box component="tr">
+                  <Box component="th" sx={{ fontWeight: 600 }} colSpan={2}>BLACK &amp; WHITE</Box>
+                  <Box component="th" sx={{ fontWeight: 600 }} colSpan={2}>COLOR</Box>
+                  <Box component="th" sx={{ fontWeight: 600, bgcolor: '#fbe463' }} colSpan={2}>BLACK &amp; WHITE</Box>
+                  <Box component="th" sx={{ fontWeight: 600, bgcolor: '#fbe463' }} colSpan={2}>COLOR</Box>
+                </Box>
+
+                <Box component="tr">
+                  {['1ST COPY PER PAGE', 'NEXT COPY PER PAGE'].map((label, i) => (
+                    <Box key={`normal-bw-${label}`} component="th" sx={{ fontWeight: 600 }}>
+                      {label}
+                    </Box>
+                  ))}
+                  {['1ST COPY PER PAGE', 'NEXT COPY PER PAGE'].map((label, i) => (
+                    <Box key={`normal-color-${label}`} component="th" sx={{ fontWeight: 600 }}>
+                      {label}
+                    </Box>
+                  ))}
+                  {['1ST COPY PER PAGE', 'NEXT COPY PER PAGE'].map((label, i) => (
+                    <Box key={`royal-bw-${label}`} component="th" sx={{ fontWeight: 600, bgcolor: '#fbe463' }}>
+                      {label}
+                    </Box>
+                  ))}
+                  {['1ST COPY PER PAGE', 'NEXT COPY PER PAGE'].map((label, i) => (
+                    <Box key={`royal-color-${label}`} component="th" sx={{ fontWeight: 600, bgcolor: '#fbe463' }}>
+                      {label}
+                    </Box>
+                  ))}
                 </Box>
               </Box>
+
               <Box component="tbody">
-                {printingRates.map((row, idx) => (
-                  <Box key={row.id ?? idx} component="tr" sx={{ bgcolor: 'common.white' }}>
+                {printingGroupedByPaper.map((row, idx) => (
+                  <Box key={row.paper} component="tr" sx={{ bgcolor: 'common.white' }}>
                     <Box component="td">{`${idx + 1}.`}</Box>
-                    <Box component="td">{row.paperName ?? row.paper ?? '-'}</Box>
-                    <Box component="td">{row.printColorName ?? row.printingColour ?? '-'}</Box>
-                    <Box component="td">{row.firstCopyRate ?? '-'}</Box>
-                    <Box component="td">{row.additionalCopyRate ?? '-'}</Box>
-                    <Box component="td">{row.active ? 'Yes' : 'No'}</Box>
+                    <Box component="td" sx={{ textAlign: 'left' }}>{row.paper}</Box>
+                    <Box component="td">{row.normal_bw ? row.normal_bw.firstCopyRate : '-'}</Box>
+                    <Box component="td">{row.normal_bw ? row.normal_bw.additionalCopyRate : '-'}</Box>
+                    <Box component="td">{row.normal_color ? row.normal_color.firstCopyRate : '-'}</Box>
+                    <Box component="td">{row.normal_color ? row.normal_color.additionalCopyRate : '-'}</Box>
+                    <Box component="td" sx={{ bgcolor: '#fbe463' }}>{row.royal_bw ? row.royal_bw.firstCopyRate : '-'}</Box>
+                    <Box component="td" sx={{ bgcolor: '#fbe463' }}>{row.royal_bw ? row.royal_bw.additionalCopyRate : '-'}</Box>
+                    <Box component="td" sx={{ bgcolor: '#fbe463' }}>{row.royal_color ? row.royal_color.firstCopyRate : '-'}</Box>
+                    <Box component="td" sx={{ bgcolor: '#fbe463' }}>{row.royal_color ? row.royal_color.additionalCopyRate : '-'}</Box>
                   </Box>
                 ))}
               </Box>
@@ -1390,7 +1467,7 @@ export function PriceSection({ bindingRates, printingRates }) {
                   <Box component="th" sx={{ fontWeight: 600 }} colSpan={4}>
                     NORMAL PRINT (BLACK/WHITE & COLOR)
                   </Box>
-                  <Box component="th" sx={{ fontWeight: 600, bgcolor: '#fff7c7' }} colSpan={4}>
+                  <Box component="th" sx={{ fontWeight: 600, bgcolor: '#fbe463' }} colSpan={4}>
                     ROYAL PRINT (ALL COLOR)
                   </Box>
                 </Box>
@@ -1542,10 +1619,17 @@ export function PriceSection({ bindingRates, printingRates }) {
             </Box>
 
             <Box component="tbody">
-              {[
-                { sl: 1, desc: 'FORMATTING CHARGE (only for WORD file)', qty: 'Per hour', rate: '250' },
-                { sl: 2, desc: 'CD', qty: 'Per copy', rate: '30' }
-              ].map((row) => (
+              {(Array.isArray(otherCharges) && otherCharges.length
+                ? otherCharges.map((item, idx) => ({
+                    sl: idx + 1,
+                    desc: item.code || item.description || '-',
+                    qty: item.quantityUnit || 'Per copy',
+                    rate: item.rate ?? '-'
+                  }))
+                : [
+                    { sl: 1, desc: 'FORMATTING CHARGE (only for WORD file)', qty: 'Per hour', rate: '250' },
+                    { sl: 2, desc: 'CD', qty: 'Per copy', rate: '30' }
+                  ]).map((row) => (
                 <Box key={row.sl} component="tr" sx={{ bgcolor: 'common.white' }}>
                   <Box component="td">{`${row.sl}.`}</Box>
                   <Box component="td">{row.desc}</Box>
