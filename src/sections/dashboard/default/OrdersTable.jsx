@@ -205,10 +205,11 @@ export default function OrderTable() {
       <TableContainer
         sx={{
           width: '100%',
-          overflowX: 'auto',
           position: 'relative',
           display: 'block',
           maxWidth: '100%',
+          overflow: 'auto',
+          maxHeight: { xs: '50vh', md: '60vh' },
           '& td, & th': { whiteSpace: 'nowrap' }
         }}
       >

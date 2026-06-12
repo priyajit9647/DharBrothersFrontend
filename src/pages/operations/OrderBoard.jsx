@@ -401,14 +401,7 @@ export default function OrderBoard() {
     <Grid container rowSpacing={3} columnSpacing={2.75} alignItems="stretch">
       <Grid item xs={12}>
         <Grid container alignItems="center" spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Typography variant="h5">Order Board</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Central view of orders — grouped by process stage.
-            </Typography>
-          </Grid>
-
-          {/* header summary cards removed as requested */}
+              {/* header summary cards removed as requested */}
         </Grid>
       </Grid>
 

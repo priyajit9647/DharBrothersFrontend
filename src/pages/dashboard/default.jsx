@@ -241,24 +241,7 @@ export default function DashboardDefault() {
       {/* row 2 */}
       <Grid size={{ xs: 12, md: 7, lg: 8 }}>
         <UniqueVisitorCard />
-      </Grid>
-      <Grid size={{ xs: 12, md: 5, lg: 4 }}>
-        <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-          <Grid>
-            <Typography variant="h5">Throughput Overview</Typography>
-          </Grid>
-          <Grid />
-        </Grid>
-        <MainCard sx={{ mt: 2 }} content={false}>
-          <MonthlyBarChart />
-        </MainCard>
-        <div style={{ marginTop: 16 }}>
-          <PlacementTypeAnalytics />
-        </div>
-      </Grid>
-      {/* row 3 */}
-      <Grid size={{ xs: 12, md: 12, lg: 12 }}>
-        <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+        <Grid container sx={{ mt: 2, alignItems: 'center', justifyContent: 'space-between' }}>
           <Grid>
             <Typography variant="h5">Recent Orders</Typography>
           </Grid>
@@ -285,9 +268,23 @@ export default function DashboardDefault() {
           <OrdersTable />
         </MainCard>
       </Grid>
-      {/* Analytics Report removed */}
-      {/* Job in Hand analytics card removed */}
-      {/* row 4 (Help & Support Chat removed) */}
-    </Grid>
-  );
-}
+      <Grid size={{ xs: 12, md: 5, lg: 4 }}>
+        <Grid container sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Grid>
+            <Typography variant="h5">Throughput Overview</Typography>
+          </Grid>
+          <Grid />
+        </Grid>
+        <MainCard sx={{ mt: 2 }} content={false}>
+          <MonthlyBarChart />
+        </MainCard>
+        <div style={{ marginTop: 16 }}>
+          <PlacementTypeAnalytics />
+        </div>
+      </Grid>
+        {/* Analytics Report removed */}
+        {/* Job in Hand analytics card removed */}
+        {/* row 4 (Help & Support Chat removed) */}
+      </Grid>
+    );
+  }
