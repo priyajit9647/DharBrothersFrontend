@@ -28,7 +28,6 @@ import Divider from '@mui/material/Divider';
 
 // project imports
 import ProfileTab from './ProfileTab';
-import SettingTab from './SettingTab';
 import Avatar from 'components/@extended/Avatar';
 import MainCard from 'components/MainCard';
 import Transitions from 'components/@extended/Transitions';
@@ -37,7 +36,7 @@ import { useAuth } from 'hooks/useAuth';
 
 // assets
 import LogoutOutlined from '@ant-design/icons/LogoutOutlined';
-import SettingOutlined from '@ant-design/icons/SettingOutlined';
+// Setting tab removed per design
 import UserOutlined from '@ant-design/icons/UserOutlined';
 import avatar1 from 'assets/images/users/avatar-1.png';
 
@@ -175,30 +174,13 @@ export default function Profile() {
                         label="Profile"
                         {...a11yProps(0)}
                       />
-                      <Tab
-                        sx={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          textTransform: 'capitalize',
-                          gap: 1.25,
-                          '& .MuiTab-icon': {
-                            marginBottom: 0
-                          }
-                        }}
-                        icon={<SettingOutlined />}
-                        label="Setting"
-                        {...a11yProps(1)}
-                      />
+                      
                     </Tabs>
                   </Box>
                   <TabPanel value={value} index={0} dir={theme.direction}>
                     <ProfileTab handleLogout={handleLogout} onViewProfile={handleOpenProfile} />
                   </TabPanel>
-                  <TabPanel value={value} index={1} dir={theme.direction}>
-                    <SettingTab />
-                  </TabPanel>
+                  
                 </MainCard>
               </ClickAwayListener>
             </Paper>

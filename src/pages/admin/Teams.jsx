@@ -356,18 +356,39 @@ export default function Teams() {
         <DialogContent dividers>
           <Grid container spacing={2}>
                 <Grid item xs={12} sm={8}>
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                      <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
-                        {getInitials(formValues.firstName, formValues.lastName, formValues.name)}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="h6">{editingRow ? 'Edit Team Member' : 'New Team Member'}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formValues.email || 'Enter details to create a team member'}
-                        </Typography>
-                      </Box>
+                  <Paper variant="outlined" sx={{ p: 2, position: 'relative' }}>
+                    <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Avatar sx={{ bgcolor: 'primary.main', width: 56, height: 56 }}>
+                          {getInitials(formValues.firstName, formValues.lastName, formValues.name)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="h6">{editingRow ? 'Edit Team Member' : 'New Team Member'}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {formValues.email || 'Enter details to create a team member'}
+                          </Typography>
+                        </Box>
+                      </Stack>
                     </Stack>
+
+                    {/* Branch select placed at top-right of the card */}
+                    <Box sx={{ position: 'absolute', top: 16, right: 16, width: { xs: '45%', sm: 260, md: 260 } }}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel id="team-branch-select-label-top">Branch</InputLabel>
+                        <Select
+                          labelId="team-branch-select-label-top"
+                          label="Branch"
+                          value={formValues.branchId}
+                          onChange={handleFormChange('branchId')}
+                        >
+                          {branches.map((branch) => (
+                            <MenuItem key={branch.id} value={String(branch.id)}>
+                              {branch.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
 
                     <Grid container spacing={2}>
                       <Grid item xs={12} md={6}>
@@ -428,23 +449,7 @@ export default function Teams() {
                         />
                       </Grid>
 
-                      <Grid item xs={12} md={6}>
-                        <FormControl size="small" fullWidth>
-                          <InputLabel id="team-branch-select-label">Branch</InputLabel>
-                          <Select
-                            labelId="team-branch-select-label"
-                            label="Branch"
-                            value={formValues.branchId}
-                            onChange={handleFormChange('branchId')}
-                          >
-                            {branches.map((branch) => (
-                              <MenuItem key={branch.id} value={String(branch.id)}>
-                                {branch.name}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Grid>
+                      {/* Branch select moved to the top-right of the card */}
 
                       <Grid item xs={12} md={6}>
                         <FormControl size="small" fullWidth>
