@@ -200,6 +200,7 @@ export default function Email() {
   return (
     <Grid container sx={{ width: '100%', flexGrow: 1 }}>
       <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
+        <Typography variant="h5">Email</Typography>
         <Box sx={{ mb: 1, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <IconButton
             size="small"

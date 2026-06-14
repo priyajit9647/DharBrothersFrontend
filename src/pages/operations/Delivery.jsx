@@ -471,9 +471,9 @@ export default function DeliveryDispatch() {
         mr: { xs: -2, sm: -3 }
       }}
     >
-      <Grid item xs={12} sx={{ px: 2, pt: 1, pb: 0 }}>
+      {/* <Grid item xs={12} sx={{ px: 2, pt: 1, pb: 0 }}>
         <Typography variant="h5">Delivery & Dispatch</Typography>
-      </Grid>
+      </Grid> */}
 
       {loading && (
         <Grid item xs={12}>

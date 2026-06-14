@@ -24,6 +24,7 @@ import ReportAreaChart from 'sections/dashboard/default/ReportAreaChart';
 import UniqueVisitorCard from 'sections/dashboard/default/UniqueVisitorCard';
 import OrdersTable from 'sections/dashboard/default/OrdersTable';
 import { getDashboardKpis } from 'api/dashboard';
+import { getUserProfile } from 'api/auth';
 import PlacementTypeAnalytics from 'components/cards/PlacementTypeAnalytics';
 import { useAuth } from 'hooks/useAuth';
 import { formatLabel } from 'utils/formatLabel';
@@ -48,7 +49,7 @@ export default function DashboardDefault() {
   const [kpiCards, setKpiCards] = useState([]);
   const [kpiLoading, setKpiLoading] = useState(true);
   const [kpiError, setKpiError] = useState('');
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const navigate = useNavigate();
 
   const branchId = useMemo(() => user?.branchId ?? user?.branch?.id ?? user?.branch?.branchId ?? user?.profile?.branchId ?? null, [user]);
@@ -137,6 +138,30 @@ export default function DashboardDefault() {
       active = false;
     };
   }, [branchId]);
+
+  // Load authenticated user profile when the dashboard default route mounts.
+  useEffect(() => {
+    let active = true;
+
+    const loadUserProfile = async () => {
+      try {
+        const profileData = await getUserProfile();
+        if (!active || !profileData) return;
+
+        updateUser(profileData);
+      } catch (profileError) {
+        // If profile fetch fails, do not block dashboard rendering.
+        // eslint-disable-next-line no-console
+        console.error('Failed to load user profile on dashboard mount:', profileError);
+      }
+    };
+
+    loadUserProfile();
+
+    return () => {
+      active = false;
+    };
+  }, [updateUser]);
 
   // Prompt for push notifications on dashboard load (admin users).
   useEffect(() => {
