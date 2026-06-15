@@ -11,12 +11,14 @@ import Rating from '@mui/material/Rating';
 import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
 import InputAdornment from '@mui/material/InputAdornment';
 import MainCard from 'components/MainCard';
 
 import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
 import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline } from 'api/customerPortal';
+import { getDocumentVersionList, approveDocument } from 'api/document';
 import { getCustomerPortalSession } from 'utils/authTokens';
 import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft } from 'lucide-react';
 
@@ -91,6 +93,47 @@ export default function OrderDetails() {
   const [thesisCopied, setThesisCopied] = useState(false);
   const [synopsisCopied, setSynopsisCopied] = useState(false);
   const [expandedBindings, setExpandedBindings] = useState({});
+  const [approvalDocumentKey, setApprovalDocumentKey] = useState('hardcoverdesign');
+  const [approvalVersion, setApprovalVersion] = useState('');
+  const [approvalDecision, setApprovalDecision] = useState('Approve');
+  const [approvalRemarks, setApprovalRemarks] = useState('');
+  const [approvalSubmitting, setApprovalSubmitting] = useState(false);
+  const [versionOptions, setVersionOptions] = useState([]);
+  const [versionLoading, setVersionLoading] = useState(false);
+
+  // Map document key to backend document stage id — adjust as required
+  const DOC_STAGE_ID_BY_KEY = {
+    hardcoverdesign: 1,
+    softcoverdesign: 2,
+    thesis: 3,
+    synopsis: 4
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const loadVersions = async () => {
+      const stageId = DOC_STAGE_ID_BY_KEY[approvalDocumentKey] ?? 1;
+      setVersionLoading(true);
+      setVersionOptions([]);
+      try {
+        const resp = await getDocumentVersionList(stageId);
+        if (!mounted) return;
+        if (Array.isArray(resp)) setVersionOptions(resp);
+        else if (resp && Array.isArray(resp.data)) setVersionOptions(resp.data);
+        else setVersionOptions([]);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load document versions', e);
+        if (mounted) setVersionOptions([]);
+      } finally {
+        if (mounted) setVersionLoading(false);
+      }
+    };
+
+    loadVersions();
+
+    return () => { mounted = false; };
+  }, [approvalDocumentKey]);
 
   useEffect(() => {
     let mounted = true;
@@ -554,6 +597,118 @@ export default function OrderDetails() {
 
             
             
+            {/* Customer approval card */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #fff5eb', boxShadow: '0 6px 18px rgba(250,240,230,0.6)' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: 1 }}>
+                    <Box sx={{ width: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box sx={{ width: 40, height: 40, borderRadius: 2, background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText color="#f97316" size={18} />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Customer Approves or Rejects a Document Version</Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Review the document version and approve or reject with your feedback.</Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Grid container spacing={1} sx={{ alignItems: 'center' }}>
+                      <Grid item xs={12} sm={2}>
+                        <TextField select size="small" label="Document" value={approvalDocumentKey} onChange={(e) => setApprovalDocumentKey(e.target.value)} fullWidth>
+                          <MenuItem value="thesis">Thesis Document</MenuItem>
+                          <MenuItem value="synopsis">Synopsis Document</MenuItem>
+                          <MenuItem value="hardcoverdesign">Hard Cover Design</MenuItem>
+                          <MenuItem value="softcoverdesign">Soft Cover Design</MenuItem>
+                        </TextField>
+                      </Grid>
+
+                      <Grid item xs={12} sm={7}>
+                        <TextField
+                          select
+                          size="small"
+                          label="Version No."
+                          value={approvalVersion}
+                          onChange={(e) => setApprovalVersion(e.target.value)}
+                          fullWidth
+                        >
+                          {versionLoading ? (
+                            <MenuItem disabled>Loading...</MenuItem>
+                          ) : (versionOptions && versionOptions.length > 0) ? (
+                            versionOptions.map((v) => (
+                              <MenuItem key={v.versionNo ?? v.id} value={String((v.versionNo ?? v.version) || v.id)}>
+                                {v.versionNo ?? v.version ?? v.id}{v.remarks ? ` — ${v.remarks}` : ''}
+                              </MenuItem>
+                            ))
+                          ) : (
+                            <MenuItem disabled>No versions</MenuItem>
+                          )}
+                        </TextField>
+                      </Grid>
+
+                      <Grid item xs={12} sm={3}>
+                        <TextField select size="small" label="Decision" value={approvalDecision} onChange={(e) => setApprovalDecision(e.target.value)} fullWidth>
+                          <MenuItem value="Approve">Approve</MenuItem>
+                          <MenuItem value="Reject">Reject</MenuItem>
+                        </TextField>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <TextField size="small" label="Remarks (Optional)" value={approvalRemarks} onChange={(e) => setApprovalRemarks(e.target.value.slice(0, 500))} fullWidth multiline minRows={3} />
+                </Box>
+
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{approvalRemarks.length}/500</Typography>
+                  <Button variant="contained" disabled={approvalSubmitting} onClick={async () => {
+                    setApprovalSubmitting(true);
+                    try {
+                      if (!approvalVersion) {
+                        // eslint-disable-next-line no-alert
+                        alert('Please select a version');
+                        return;
+                      }
+
+                      const selected = (versionOptions || []).find((v) => String(v.versionNo ?? v.version ?? v.id) === String(approvalVersion));
+                      const documentId = selected?.documentId ?? selected?.id ?? selected?.documentId ?? null;
+
+                      const session = getCustomerPortalSession();
+                      const customerId = session?.customerId || session?.userId || session?.id || order?.customer?.customerId || order?.customer?.id || null;
+
+                      if (!documentId) {
+                        // eslint-disable-next-line no-alert
+                        alert('Document identifier for selected version not available');
+                        return;
+                      }
+
+                      if (!customerId) {
+                        // eslint-disable-next-line no-alert
+                        alert('Customer identity not available');
+                        return;
+                      }
+
+                      await approveDocument({ documentId: Number(documentId), versionNo: Number(approvalVersion), customerId: String(customerId), approved: approvalDecision === 'Approve', remarks: approvalRemarks });
+
+                      // eslint-disable-next-line no-alert
+                      alert('Decision submitted');
+                    } catch (e) {
+                      // eslint-disable-next-line no-console
+                      console.error('approval submit error', e);
+                      // eslint-disable-next-line no-alert
+                      alert(e?.message || 'Failed to submit decision');
+                    } finally {
+                      setApprovalSubmitting(false);
+                    }
+                  }} sx={{ textTransform: 'none', background: 'linear-gradient(90deg,#34d399 0%, #10b981 100%)', color: '#fff', borderRadius: '999px', px: 3 }}>
+                    Submit Decision
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
             <Typography variant="h6" sx={{ mb: 2 }}>Bindings</Typography>
             {Array.isArray(order.bindings) && order.bindings.length > 0 ? (
               <Box sx={{ mb: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
