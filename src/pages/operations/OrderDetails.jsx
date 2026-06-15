@@ -18,6 +18,7 @@ import MainCard from 'components/MainCard';
 import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
 import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline } from 'api/customerPortal';
+import { getDocumentVersionList, approveDocument } from 'api/document';
 import { getCustomerPortalSession } from 'utils/authTokens';
 import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft } from 'lucide-react';
 
@@ -97,6 +98,42 @@ export default function OrderDetails() {
   const [approvalDecision, setApprovalDecision] = useState('Approve');
   const [approvalRemarks, setApprovalRemarks] = useState('');
   const [approvalSubmitting, setApprovalSubmitting] = useState(false);
+  const [versionOptions, setVersionOptions] = useState([]);
+  const [versionLoading, setVersionLoading] = useState(false);
+
+  // Map document key to backend document stage id — adjust as required
+  const DOC_STAGE_ID_BY_KEY = {
+    hardcoverdesign: 1,
+    softcoverdesign: 2,
+    thesis: 3,
+    synopsis: 4
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const loadVersions = async () => {
+      const stageId = DOC_STAGE_ID_BY_KEY[approvalDocumentKey] ?? 1;
+      setVersionLoading(true);
+      setVersionOptions([]);
+      try {
+        const resp = await getDocumentVersionList(stageId);
+        if (!mounted) return;
+        if (Array.isArray(resp)) setVersionOptions(resp);
+        else if (resp && Array.isArray(resp.data)) setVersionOptions(resp.data);
+        else setVersionOptions([]);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load document versions', e);
+        if (mounted) setVersionOptions([]);
+      } finally {
+        if (mounted) setVersionLoading(false);
+      }
+    };
+
+    loadVersions();
+
+    return () => { mounted = false; };
+  }, [approvalDocumentKey]);
 
   useEffect(() => {
     let mounted = true;
@@ -579,7 +616,7 @@ export default function OrderDetails() {
 
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     <Grid container spacing={1} sx={{ alignItems: 'center' }}>
-                      <Grid item xs={12} sm={4}>
+                      <Grid item xs={12} sm={2}>
                         <TextField select size="small" label="Document" value={approvalDocumentKey} onChange={(e) => setApprovalDocumentKey(e.target.value)} fullWidth>
                           <MenuItem value="thesis">Thesis Document</MenuItem>
                           <MenuItem value="synopsis">Synopsis Document</MenuItem>
@@ -588,8 +625,27 @@ export default function OrderDetails() {
                         </TextField>
                       </Grid>
 
-                      <Grid item xs={12} sm={3}>
-                        <TextField size="small" label="Version No." value={approvalVersion} onChange={(e) => setApprovalVersion(e.target.value)} fullWidth />
+                      <Grid item xs={12} sm={7}>
+                        <TextField
+                          select
+                          size="small"
+                          label="Version No."
+                          value={approvalVersion}
+                          onChange={(e) => setApprovalVersion(e.target.value)}
+                          fullWidth
+                        >
+                          {versionLoading ? (
+                            <MenuItem disabled>Loading...</MenuItem>
+                          ) : (versionOptions && versionOptions.length > 0) ? (
+                            versionOptions.map((v) => (
+                              <MenuItem key={v.versionNo ?? v.id} value={String((v.versionNo ?? v.version) || v.id)}>
+                                {v.versionNo ?? v.version ?? v.id}{v.remarks ? ` — ${v.remarks}` : ''}
+                              </MenuItem>
+                            ))
+                          ) : (
+                            <MenuItem disabled>No versions</MenuItem>
+                          )}
+                        </TextField>
                       </Grid>
 
                       <Grid item xs={12} sm={3}>
@@ -611,14 +667,39 @@ export default function OrderDetails() {
                   <Button variant="contained" disabled={approvalSubmitting} onClick={async () => {
                     setApprovalSubmitting(true);
                     try {
-                      // TODO: wire to backend API. For now just log and show a quick alert.
-                      // eslint-disable-next-line no-console
-                      console.log('submitApproval', { approvalDocumentKey, approvalVersion, approvalDecision, approvalRemarks, orderId });
+                      if (!approvalVersion) {
+                        // eslint-disable-next-line no-alert
+                        alert('Please select a version');
+                        return;
+                      }
+
+                      const selected = (versionOptions || []).find((v) => String(v.versionNo ?? v.version ?? v.id) === String(approvalVersion));
+                      const documentId = selected?.documentId ?? selected?.id ?? selected?.documentId ?? null;
+
+                      const session = getCustomerPortalSession();
+                      const customerId = session?.customerId || session?.userId || session?.id || order?.customer?.customerId || order?.customer?.id || null;
+
+                      if (!documentId) {
+                        // eslint-disable-next-line no-alert
+                        alert('Document identifier for selected version not available');
+                        return;
+                      }
+
+                      if (!customerId) {
+                        // eslint-disable-next-line no-alert
+                        alert('Customer identity not available');
+                        return;
+                      }
+
+                      await approveDocument({ documentId: Number(documentId), versionNo: Number(approvalVersion), customerId: String(customerId), approved: approvalDecision === 'Approve', remarks: approvalRemarks });
+
                       // eslint-disable-next-line no-alert
                       alert('Decision submitted');
                     } catch (e) {
                       // eslint-disable-next-line no-console
                       console.error('approval submit error', e);
+                      // eslint-disable-next-line no-alert
+                      alert(e?.message || 'Failed to submit decision');
                     } finally {
                       setApprovalSubmitting(false);
                     }
