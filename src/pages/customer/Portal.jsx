@@ -72,9 +72,6 @@ export default function CustomerPortal() {
     return null;
   })();
 
-  const orderRef = 'ORD-2026-00123';
-  const status = 'Ready for Approval';
-
   useEffect(() => {
     let mounted = true;
     setOrdersLoading(true);
