@@ -320,8 +320,7 @@ export default function Teams() {
               )}
             </Stack>
           <MasterList
-            title="Branches & Teams"
-            description="Configure branches, teams and role-based access for managers and staff."
+            title=" "
             columns={[
               { id: 'name', label: 'User Name' },
               { id: 'fullName', label: 'Full Name' },
