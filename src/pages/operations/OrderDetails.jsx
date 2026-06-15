@@ -11,6 +11,7 @@ import Rating from '@mui/material/Rating';
 import CircularProgress from '@mui/material/CircularProgress';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
 import InputAdornment from '@mui/material/InputAdornment';
 import MainCard from 'components/MainCard';
 
@@ -91,6 +92,11 @@ export default function OrderDetails() {
   const [thesisCopied, setThesisCopied] = useState(false);
   const [synopsisCopied, setSynopsisCopied] = useState(false);
   const [expandedBindings, setExpandedBindings] = useState({});
+  const [approvalDocumentKey, setApprovalDocumentKey] = useState('hardcoverdesign');
+  const [approvalVersion, setApprovalVersion] = useState('');
+  const [approvalDecision, setApprovalDecision] = useState('Approve');
+  const [approvalRemarks, setApprovalRemarks] = useState('');
+  const [approvalSubmitting, setApprovalSubmitting] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -554,6 +560,74 @@ export default function OrderDetails() {
 
             
             
+            {/* Customer approval card */}
+            <Box sx={{ mb: 2 }}>
+              <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #fff5eb', boxShadow: '0 6px 18px rgba(250,240,230,0.6)' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: 1 }}>
+                    <Box sx={{ width: 56, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box sx={{ width: 40, height: 40, borderRadius: 2, background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText color="#f97316" size={18} />
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Customer Approves or Rejects a Document Version</Typography>
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Review the document version and approve or reject with your feedback.</Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Grid container spacing={1} sx={{ alignItems: 'center' }}>
+                      <Grid item xs={12} sm={4}>
+                        <TextField select size="small" label="Document" value={approvalDocumentKey} onChange={(e) => setApprovalDocumentKey(e.target.value)} fullWidth>
+                          <MenuItem value="thesis">Thesis Document</MenuItem>
+                          <MenuItem value="synopsis">Synopsis Document</MenuItem>
+                          <MenuItem value="hardcoverdesign">Hard Cover Design</MenuItem>
+                          <MenuItem value="softcoverdesign">Soft Cover Design</MenuItem>
+                        </TextField>
+                      </Grid>
+
+                      <Grid item xs={12} sm={3}>
+                        <TextField size="small" label="Version No." value={approvalVersion} onChange={(e) => setApprovalVersion(e.target.value)} fullWidth />
+                      </Grid>
+
+                      <Grid item xs={12} sm={3}>
+                        <TextField select size="small" label="Decision" value={approvalDecision} onChange={(e) => setApprovalDecision(e.target.value)} fullWidth>
+                          <MenuItem value="Approve">Approve</MenuItem>
+                          <MenuItem value="Reject">Reject</MenuItem>
+                        </TextField>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <TextField size="small" label="Remarks (Optional)" value={approvalRemarks} onChange={(e) => setApprovalRemarks(e.target.value.slice(0, 500))} fullWidth multiline minRows={3} />
+                </Box>
+
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>{approvalRemarks.length}/500</Typography>
+                  <Button variant="contained" disabled={approvalSubmitting} onClick={async () => {
+                    setApprovalSubmitting(true);
+                    try {
+                      // TODO: wire to backend API. For now just log and show a quick alert.
+                      // eslint-disable-next-line no-console
+                      console.log('submitApproval', { approvalDocumentKey, approvalVersion, approvalDecision, approvalRemarks, orderId });
+                      // eslint-disable-next-line no-alert
+                      alert('Decision submitted');
+                    } catch (e) {
+                      // eslint-disable-next-line no-console
+                      console.error('approval submit error', e);
+                    } finally {
+                      setApprovalSubmitting(false);
+                    }
+                  }} sx={{ textTransform: 'none', background: 'linear-gradient(90deg,#34d399 0%, #10b981 100%)', color: '#fff', borderRadius: '999px', px: 3 }}>
+                    Submit Decision
+                  </Button>
+                </Box>
+              </Box>
+            </Box>
             <Typography variant="h6" sx={{ mb: 2 }}>Bindings</Typography>
             {Array.isArray(order.bindings) && order.bindings.length > 0 ? (
               <Box sx={{ mb: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>

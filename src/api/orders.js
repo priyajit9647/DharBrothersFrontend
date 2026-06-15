@@ -336,3 +336,19 @@ export async function reassignOrderStaff(jobId, toStaffId, comment = '') {
     })
   });
 }
+
+/**
+ * Fetch document version list for a document stage id
+ * Endpoint: /api/v1/document/vrson-list?docStageId={docStageId}
+ * @param {number|string} docStageId
+ * @returns {Promise<Array>} Array of document versions
+ */
+export async function getDocumentVersionList(docStageId) {
+  if (docStageId == null || docStageId === '') {
+    throw new Error('docStageId is required');
+  }
+
+  return authorizedFetch(`/api/v1/document/vrson-list?docStageId=${encodeURIComponent(String(docStageId))}`, {
+    method: 'GET'
+  });
+}
