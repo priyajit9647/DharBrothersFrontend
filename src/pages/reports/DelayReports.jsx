@@ -24,7 +24,6 @@ const COLUMNS = [
   { key: 'stage',        label: 'Stage',          width: 120, sortKey: 'stage' },
   { key: 'expectedDate', label: 'Expected Date',  width: 140, sortKey: 'expectedDate' },
   { key: 'delayedDays',  label: 'Delayed Days',   width: 120, sortKey: 'delayedDays' },
-  { key: 'priority',     label: 'Priority',       width: 110, sortKey: 'priority' },
   { key: 'status',       label: 'Status',         width: 120, sortKey: 'status' },
 ];
 
@@ -39,16 +38,7 @@ const cellStyle = (width) => ({
   boxSizing: 'border-box',
 });
 
-const priorityStyle = (priority) => {
-  const map = {
-    Critical: { bg: '#fee2e2', color: '#b91c1c' },
-    High:     { bg: '#fff7ed', color: '#c2410c' },
-    Medium:   { bg: '#fffbeb', color: '#92400e' },
-    Low:      { bg: '#ecfccb', color: '#166534' },
-  };
-  const s = map[priority] ?? { bg: '#f3f4f6', color: '#6b7280' };
-  return { padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: s.bg, color: s.color, display: 'inline-block' };
-};
+// Priority column removed
 
 const statusStyle = (status) => {
   const map = {
@@ -96,7 +86,7 @@ function normalizeDelayItem(item) {
     }
   }
 
-  const priority = toDisplay(item.priority ?? item.priorityLevel ?? item.urgency ?? getNested(item, 'priority.label')) || '';
+  // priority removed
   const status = toDisplay(item.status ?? item.jobStatus ?? item.state ?? item.currentStatus ?? getNested(item, 'status.label')) || '';
 
   return {
@@ -108,7 +98,6 @@ function normalizeDelayItem(item) {
     stage,
     expectedDate,
     delayedDays: delayedDays != null ? Number(delayedDays) : null,
-    priority,
     status
   };
 }
@@ -258,12 +247,7 @@ export default function DelayReports() {
 
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
-      <Grid item xs={12}>
-        <Typography variant="h5">Delay Reports</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Monitor delayed jobs beyond expected timelines with advanced reporting and exports.
-        </Typography>
-      </Grid>
+      
 
       <Grid item xs={12}>
         <MainCard contentSX={{ p: 0, minHeight: '65vh' }} sx={{ width: '100%' }}>
@@ -338,9 +322,6 @@ export default function DelayReports() {
                         : '-'}
                     </td>
                     <td style={cellStyle(COLUMNS[7].width)}>
-                      {row.priority ? <span style={priorityStyle(row.priority)}>{row.priority}</span> : '-'}
-                    </td>
-                    <td style={cellStyle(COLUMNS[8].width)}>
                       {row.status ? <span style={statusStyle(row.status)}>{row.status}</span> : '-'}
                     </td>
                   </tr>

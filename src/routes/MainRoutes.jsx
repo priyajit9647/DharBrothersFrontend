@@ -24,7 +24,7 @@ const OpenJobsReport = Loadable(lazy(() => import('pages/reports/OpenJobsReport'
 const ReadyToDispatch = Loadable(lazy(() => import('pages/reports/ReadyToDispatch')));
 const CompleteJobsReport = Loadable(lazy(() => import('pages/reports/CompleteJobsReport')));
 const SalesReport = Loadable(lazy(() => import('pages/reports/SalesReport')));
-const TaskReports = Loadable(lazy(() => import('pages/reports/TaskReports')));
+// TaskReports removed
 const GstReports = Loadable(lazy(() => import('pages/reports/GstReports')));
 const Branches = Loadable(lazy(() => import('pages/admin/Branches')));
 const Teams = Loadable(lazy(() => import('pages/admin/Teams')));
@@ -131,10 +131,7 @@ const MainRoutes = {
           path: 'sales',
           element: <SalesReport />
         },
-        {
-          path: 'task-reports',
-          element: <TaskReports />
-        },
+        // Task Reports route removed
         {
           path: 'gst-reports',
           element: <GstReports />
