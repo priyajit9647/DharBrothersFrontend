@@ -13,6 +13,7 @@ import { getSalesReport, exportSalesReport } from 'api/Reports&Insights';
 
 const COLUMNS = [
   { key: 'customerId', label: 'Customer ID', width: 120 },
+  { key: 'orderId', label: 'Order ID', width: 160 },
   { key: 'month', label: 'Month', width: 120 },
   { key: 'year', label: 'Year', width: 90 },
   { key: 'state', label: 'State', width: 160 },
@@ -180,6 +181,7 @@ export default function SalesReport() {
                 let value = '';
                 switch (col.key) {
                   case 'customerId': value = row.customerId ?? ''; break;
+                  case 'orderId': value = row.orderNumber ?? row.orderId ?? row.order_number ?? ''; break;
                   case 'month': value = row.month ?? ''; break;
                   case 'year': value = row.year ?? ''; break;
                   case 'state': value = row.state ?? ''; break;
@@ -268,12 +270,7 @@ export default function SalesReport() {
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       {(loading || exporting) && <Loader />}
-      <Grid item xs={12}>
-        <Typography variant="h5">Sales Report</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Sales reporting with filters and export options.
-        </Typography>
-      </Grid>
+      {/* Page title and subtitle removed per request */}
 
       <Grid item xs={12}>
         <MainCard title="Filter Report" contentSX={{ p: 2 }}>
@@ -382,6 +379,9 @@ export default function SalesReport() {
                           switch (col.key) {
                             case 'customerId':
                               value = row.customerId ?? '';
+                              break;
+                            case 'orderId':
+                              value = row.orderNumber ?? row.orderId ?? row.order_number ?? '';
                               break;
                             case 'month':
                               value = row.month ?? '';

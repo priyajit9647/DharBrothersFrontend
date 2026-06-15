@@ -1,12 +1,11 @@
 // OpenJobsReport.jsx
 
-import React, { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Grid from '@mui/material/Grid';
-import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
-import { Search, Download, FileSpreadsheet, BriefcaseBusiness, Clock3 } from 'lucide-react';
+import { Search, Download, FileSpreadsheet } from 'lucide-react';
 import { getOpenJobsReport, exportOpenJobs } from 'api/Reports&Insights';
 
 const MOCK_DATA = [
@@ -189,42 +188,7 @@ export default function OpenJobsReport() {
 
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
-      {/* Header */}
-      <Grid item xs={12}>
-        <Typography variant="h5">Open Jobs Report</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Track all active and ongoing jobs with SLA monitoring, team assignment and real-time status.
-        </Typography>
-      </Grid>
-
-      {/* Metric cards */}
-      <Grid item xs={12}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e6f0ff', padding: '14px 20px', minWidth: 190 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Total Open Jobs</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#2f6df6' }}>{totalOpen}</div>
-              </div>
-              <div style={{ background: '#eef6ff', padding: 10, borderRadius: 12 }}>
-                <BriefcaseBusiness style={{ color: '#2f6df6', width: 20, height: 20 }} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #ffe4cc', padding: '14px 20px', minWidth: 190 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>SLA Near Deadline</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#f97316' }}>{slaNear}</div>
-              </div>
-              <div style={{ background: '#fff7ed', padding: 10, borderRadius: 12 }}>
-                <Clock3 style={{ color: '#f97316', width: 20, height: 20 }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </Grid>
+      
 
       {/* Table card */}
       <Grid item xs={12}>

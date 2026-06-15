@@ -1,13 +1,11 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Grid from '@mui/material/Grid';
-import Typography from '@mui/material/Typography';
 
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
 import { Search, Download, FileSpreadsheet } from 'lucide-react';
 import { getGstReport } from 'api/Reports&Insights';
 import { getBranches } from 'api/branch';
-import Breadcrumbs from 'components/@extended/Breadcrumbs';
 import * as XLSX from 'xlsx';
 
 const COLUMNS = [
@@ -191,17 +189,7 @@ export default function GstReports() {
     });
     return list;
   }, [data, search, sortField, sortOrder]);
-
-  const totals = useMemo(() => {
-    const src = filteredData;
-    const totalInv = src.length;
-    const taxable = src.reduce((s, r) => s + Number(r.taxableAmt ?? r.amount ?? 0), 0);
-    const cgst = src.reduce((s, r) => s + Number(r.cgstAmt ?? r.cgst ?? 0), 0);
-    const sgst = src.reduce((s, r) => s + Number(r.sgstAmt ?? r.sgst ?? 0), 0);
-    const igst = src.reduce((s, r) => s + Number(r.igstAmt ?? r.igst ?? 0), 0);
-    const totalGst = cgst + sgst + igst;
-    return { totalInv, taxable, totalGst, cgst, sgst, igst };
-  }, [filteredData]);
+  // Totals calculation removed — summary cards are not displayed on this page.
 
   const exportCSV = () => {
     const source = filteredData.length ? filteredData : data;
@@ -255,8 +243,8 @@ export default function GstReports() {
   };
 
   const SortIcon = ({ field }) => {
-    if (sortField !== field) return <span style={{ color: '#d1d5db', marginLeft: 6 }}>↕</span>;
-    return <span style={{ color: '#2f6df6', marginLeft: 6 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>;
+    if (sortField !== field) return <span style={{ color: '#d1d5db', marginLeft: 4 }}>↕</span>;
+    return <span style={{ color: '#2f6df6', marginLeft: 4 }}>{sortOrder === 'asc' ? '↑' : '↓'}</span>;
   };
 
   const resetFilters = () => { setFromDate(''); setToDate(''); setBranch(''); setGstType('All'); setSearch(''); };
@@ -264,11 +252,7 @@ export default function GstReports() {
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       {/* Breadcrumbs removed to keep only the prominent page title */}
-
-      <Grid item xs={12}>
-        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>GST Reports</Typography>
-        <Typography variant="body2" color="text.secondary">View and export GST-related transaction and tax reports</Typography>
-      </Grid>
+      {/* Page title and subtitle removed as requested */}
 
       <Grid item xs={12}>
         <MainCard contentSX={{ p: 0, minHeight: '65vh' }} sx={{ width: '100%' }}>
@@ -300,35 +284,9 @@ export default function GstReports() {
               {canExportXlsx && <button onClick={exportExcel} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}><FileSpreadsheet size={15} /> Export Excel</button>}
             </div>
           </div>
+          {/* Summary cards removed per request */}
 
-          <div style={{ padding: 16, display: 'flex', gap: 12, alignItems: 'stretch', borderBottom: '1px solid #f1f5f9', overflowX: 'auto' }}>
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e6f0ff', padding: '14px 18px', minWidth: 170 }}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Total Invoices</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#2f6df6' }}>{totals.totalInv}</div>
-            </div>
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6', padding: '14px 18px', minWidth: 170 }}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Total Taxable Amount</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{totals.taxable.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
-            </div>
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6', padding: '14px 18px', minWidth: 170 }}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Total GST Amount</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{totals.totalGst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
-            </div>
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6', padding: '14px 18px', minWidth: 170 }}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Total CGST</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{totals.cgst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
-            </div>
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6', padding: '14px 18px', minWidth: 170 }}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Total SGST</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{totals.sgst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
-            </div>
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6', padding: '14px 18px', minWidth: 170 }}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>Total IGST</div>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>{totals.igst.toLocaleString('en-IN', { maximumFractionDigits: 2 })}</div>
-            </div>
-          </div>
-
-          <div style={{ overflow: 'auto', width: '100%', maxHeight: 'calc(65vh - 220px)' }}>
+          <div style={{ overflow: 'auto', width: '100%', maxHeight: 'calc(65vh - 110px)' }}>
             {loading && <div style={{ padding: 20, color: '#6b7280' }}>Loading GST data…</div>}
             {error && <div style={{ padding: '8px 20px', color: '#b91c1c' }}>⚠ Failed to load: {error}</div>}
 
@@ -347,7 +305,7 @@ export default function GstReports() {
               </thead>
               <tbody>
                 {filteredData.slice(page * size, (page + 1) * size).map((row, index) => (
-                  <tr key={index} style={{ borderBottom: '1px solid #f3f4f6', background: index % 2 === 0 ? '#fff' : '#fafbfc' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f0f9ff'} onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? '#fff' : '#fafbfc'}>
+                  <tr key={index} style={{ borderBottom: '1px solid #f3f4f6', background: index % 2 === 0 ? '#fff' : '#fafbfc' }} onMouseEnter={(e) => e.currentTarget.style.background = '#fef2f2'} onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? '#fff' : '#fafbfc'}>
                     {COLUMNS.map((col) => {
                       const raw = row[col.key];
                       let display = '-';

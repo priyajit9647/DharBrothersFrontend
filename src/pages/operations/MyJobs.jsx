@@ -345,8 +345,6 @@ export default function MyJobs() {
             </Typography>
           )}
           <MasterList
-            title="My Jobs"
-            description="View the list of jobs assigned to you."
             columns={[
               {
                 id: 'rowActions',
