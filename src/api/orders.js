@@ -1,4 +1,4 @@
-import { authorizedFetch, authorizedFetchRaw, authorizedCustomerFetch } from './auth';
+import { authorizedFetch, authorizedFetchRaw, authorizedCustomerFetch, getCustomerPortalSession } from './auth';
 
 // ==============================|| ORDERS API CLIENT ||============================== //
 
@@ -159,9 +159,18 @@ export async function getOrderById(orderId) {
     throw new Error('orderId is required');
   }
 
-  return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
-    method: 'GET'
-  });
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
+
+  if(isCustomerPortal) {
+    return authorizedCustomerFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
+      method: 'GET'
+    });
+  } else {
+    return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
+      method: 'GET'
+    });
+  }
 }
 
 /**
