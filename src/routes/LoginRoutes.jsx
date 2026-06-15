@@ -7,6 +7,7 @@ import Loadable from 'components/Loadable';
 // jwt auth
 const LoginPage = Loadable(lazy(() => import('pages/auth/Login')));
 const ForgotPasswordPage = Loadable(lazy(() => import('pages/auth/ForgotPassword')));
+const ResetPasswordPage = Loadable(lazy(() => import('pages/auth/ResetPassword')));
 const PlaceOrderPage = Loadable(lazy(() => import('pages/extra-pages/PlaceOrder')));
 const PricePage = Loadable(lazy(() => import('pages/extra-pages/Price')));
 const AboutPage = Loadable(lazy(() => import('pages/extra-pages/About')));
@@ -44,6 +45,10 @@ const LoginRoutes = {
     {
       path: 'forgot-password',
       element: <ForgotPasswordPage />
+    },
+    {
+      path: 'reset-password',
+      element: <ResetPasswordPage />
     },
     {
       path: 'home',
