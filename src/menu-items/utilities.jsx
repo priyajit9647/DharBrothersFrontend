@@ -42,8 +42,7 @@ const utilities = {
       title: 'Email Inbox',
       type: 'item',
       url: '/email',
-      icon: icons.MailOutlined,
-      breadcrumbs: false
+      icon: icons.MailOutlined
     },
     
     {

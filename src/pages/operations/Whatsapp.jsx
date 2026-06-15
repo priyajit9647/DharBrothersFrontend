@@ -350,7 +350,7 @@ export default function Whatsapp() {
   return (
     <Grid container sx={{ width: '100%', flexGrow: 1 }}>
       <Grid item xs={12} sx={{ width: '100%' }}>
-        <Typography variant="h5">WhatsApp</Typography>
+        {/* <Typography variant="h5">WhatsApp</Typography> */}
         {/* <Typography variant="body2" color="text.secondary">
           Internal WhatsApp-style console to review conversations linked to jobs and orders.
         </Typography> */}
