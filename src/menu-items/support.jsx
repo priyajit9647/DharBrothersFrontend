@@ -54,15 +54,7 @@ const support = {
           title: 'Sales Report',
           type: 'item',
           url: '/reports/sales'
-        }
-        ,
-        {
-          id: 'task-reports',
-          title: 'Task Reports',
-          type: 'item',
-          url: '/reports/task-reports'
-        }
-        ,
+        },
         {
           id: 'gst-reports',
           title: 'GST Reports',

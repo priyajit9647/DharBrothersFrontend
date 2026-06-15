@@ -198,8 +198,7 @@ export default function Branches() {
             </Typography>
           )}
           <MasterList
-            title="Branches & Teams"
-            description="Configure branches, teams and role-based access for managers and staff."
+            title=" "
             columns={[
               { id: 'name', label: 'Branch Name' },
               { id: 'code', label: 'Code' },

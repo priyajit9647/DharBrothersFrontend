@@ -25,7 +25,6 @@ const COLUMNS = [
   { key: 'completedDate',  label: 'Completed Date',  width: 140 },
   { key: 'turnaroundTime', label: 'Turnaround',      width: 120 },
   { key: 'totalAmount',    label: 'Revenue',         width: 110 },
-  { key: 'priority',       label: 'Priority',        width: 110 },
   { key: 'status',         label: 'Status',          width: 120 },
 ];
 
@@ -40,11 +39,7 @@ const cellStyle = (width) => ({
   boxSizing: 'border-box',
 });
 
-const priorityStyle = (p) => {
-  const map = { Critical: ['#fee2e2','#b91c1c'], High: ['#fff7ed','#c2410c'], Medium: ['#fffbeb','#92400e'], Low: ['#ecfccb','#166534'] };
-  const [bg, color] = map[p] ?? ['#f3f4f6','#6b7280'];
-  return { padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: bg, color, display: 'inline-block' };
-};
+// Priority column removed
 
 const statusStyle = (s) => {
   const map = { Completed: ['#ecfdf5','#16a34a'], Delivered: ['#eef2ff','#1e40af'] };
@@ -96,7 +91,6 @@ function normalizeCompleteItem(item) {
   let totalAmount = item.totalAmount ?? item.total ?? item.amount ?? item.revenue ?? item.grandTotal ?? item.total_amount ?? null;
   if (totalAmount != null) totalAmount = Number(totalAmount);
 
-  const priority = toDisplay(item.priority ?? item.priorityLevel ?? item.urgency ?? getNested(item, 'priority.label')) || '';
   const status = toDisplay(item.status ?? item.jobStatus ?? item.state ?? item.currentStatus ?? getNested(item, 'status.label')) || '';
 
   return {
@@ -109,7 +103,6 @@ function normalizeCompleteItem(item) {
     completedDate,
     turnaroundTime: turnaroundTime != null ? turnaroundTime : '',
     totalAmount: totalAmount != null ? totalAmount : null,
-    priority,
     status
   };
 }
@@ -260,41 +253,7 @@ const CompleteJobsReport = () => {
 
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
-      <Grid item xs={12}>
-        <Typography variant="h5">Complete Jobs Report</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Track all completed jobs, delivery metrics, turnaround time and revenue analytics.
-        </Typography>
-      </Grid>
-
-      {/* Metric cards — driven by live data */}
-      <Grid item xs={12}>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #ecfdf5', padding: '14px 20px', minWidth: 190 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Completed Jobs</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#16a34a' }}>{completedCount}</div>
-              </div>
-              <div style={{ background: '#ecfdf5', padding: 10, borderRadius: 12 }}>
-                <CheckCircle2 style={{ color: '#16a34a', width: 20, height: 20 }} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e6f0ff', padding: '14px 20px', minWidth: 190 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>Total Revenue</div>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#2f6df6' }}>{revenueDisplay}</div>
-              </div>
-              <div style={{ background: '#eef6ff', padding: 10, borderRadius: 12 }}>
-                <CircleDollarSign style={{ color: '#2f6df6', width: 20, height: 20 }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </Grid>
+      
 
       <Grid item xs={12}>
         <MainCard contentSX={{ p: 0, minHeight: '65vh' }} sx={{ width: '100%' }}>
@@ -370,9 +329,6 @@ const CompleteJobsReport = () => {
                       {row.totalAmount != null ? `₹${Number(row.totalAmount).toLocaleString('en-IN')}` : '-'}
                     </td>
                     <td style={cellStyle(COLUMNS[8].width)}>
-                      {row.priority ? <span style={priorityStyle(row.priority)}>{row.priority}</span> : '-'}
-                    </td>
-                    <td style={cellStyle(COLUMNS[9].width)}>
                       {row.status ? <span style={statusStyle(row.status)}>{row.status}</span> : '-'}
                     </td>
                   </tr>

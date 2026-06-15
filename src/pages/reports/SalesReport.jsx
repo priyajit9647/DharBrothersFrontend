@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
-import MenuItem from '@mui/material/MenuItem';
 import Button from '@mui/material/Button';
 
 import MainCard from 'components/MainCard';
@@ -13,6 +12,7 @@ import { getSalesReport, exportSalesReport } from 'api/Reports&Insights';
 
 const COLUMNS = [
   { key: 'customerId', label: 'Customer ID', width: 120 },
+  { key: 'orderId', label: 'Order ID', width: 160 },
   { key: 'month', label: 'Month', width: 120 },
   { key: 'year', label: 'Year', width: 90 },
   { key: 'state', label: 'State', width: 160 },
@@ -54,14 +54,17 @@ export default function SalesReport() {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
 
-  // No real data shown per requirements — keep table empty
-  const getFilterParams = () => ({
-    fromDate: fromDate || undefined,
-    toDate: toDate || undefined,
-    state: stateVal || undefined,
-    customerId: customerId || undefined,
-    orderNumber: orderId || undefined
-  });
+  // Normalize and return current filter params
+  const getFilterParams = () => {
+    const trim = (v) => (typeof v === 'string' ? v.trim() : v);
+    return {
+      fromDate: fromDate || undefined,
+      toDate: toDate || undefined,
+      state: stateVal ? trim(stateVal) : undefined,
+      customerId: customerId ? trim(customerId) : undefined,
+      orderNumber: orderId ? trim(orderId) : undefined
+    };
+  };
 
   const exportFile = async (format = 'csv') => {
     if (exporting) return;
@@ -180,6 +183,7 @@ export default function SalesReport() {
                 let value = '';
                 switch (col.key) {
                   case 'customerId': value = row.customerId ?? ''; break;
+                  case 'orderId': value = row.orderNumber ?? row.orderId ?? row.order_number ?? ''; break;
                   case 'month': value = row.month ?? ''; break;
                   case 'year': value = row.year ?? ''; break;
                   case 'state': value = row.state ?? ''; break;
@@ -231,17 +235,11 @@ export default function SalesReport() {
   const fetchData = async (p = page) => {
     setLoading(true);
     setError(null);
+    // Clear previous results immediately to avoid showing stale rows
+    setItems([]);
+    setTotal(0);
     try {
-      const params = {
-        page: p,
-        size,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
-        state: stateVal || undefined,
-        customerId: customerId || undefined,
-        orderNumber: orderId || undefined,
-        
-      };
+      const params = { page: p, size, ...getFilterParams() };
 
       const res = await getSalesReport(params);
       setItems(Array.isArray(res.items) ? res.items : []);
@@ -268,12 +266,7 @@ export default function SalesReport() {
   return (
     <Grid container rowSpacing={3} columnSpacing={2.75}>
       {(loading || exporting) && <Loader />}
-      <Grid item xs={12}>
-        <Typography variant="h5">Sales Report</Typography>
-        <Typography variant="body2" color="text.secondary">
-          Sales reporting with filters and export options.
-        </Typography>
-      </Grid>
+      {/* Page title and subtitle removed per request */}
 
       <Grid item xs={12}>
         <MainCard title="Filter Report" contentSX={{ p: 2 }}>
@@ -303,14 +296,11 @@ export default function SalesReport() {
             <div style={{ minWidth: 180 }}>
               <TextField
                 label="State"
-                select
                 size="small"
                 value={stateVal}
                 onChange={(e) => setStateVal(e.target.value)}
                 fullWidth
-              >
-                <MenuItem value="">Select</MenuItem>
-              </TextField>
+              />
             </div>
             <div style={{ minWidth: 180 }}>
               <TextField
@@ -376,12 +366,15 @@ export default function SalesReport() {
               <tbody>
                 {items && items.length > 0
                   ? items.map((row, rIdx) => (
-                      <tr key={row.orderNumber ?? row.customerId ?? rIdx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <tr key={`${row.orderNumber ?? row.customerId ?? 'r'}-${rIdx}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
                         {COLUMNS.map((col) => {
                           let value = '';
                           switch (col.key) {
                             case 'customerId':
                               value = row.customerId ?? '';
+                              break;
+                            case 'orderId':
+                              value = row.orderNumber ?? row.orderId ?? row.order_number ?? '';
                               break;
                             case 'month':
                               value = row.month ?? '';

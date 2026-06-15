@@ -1,5 +1,5 @@
 import PropTypes from 'prop-types';
-import { createContext, useMemo } from 'react';
+import { createContext, useCallback, useMemo } from 'react';
 
 import { useLocalStorage } from 'hooks/useLocalStorage';
 import { clearAuthCookies } from 'utils/authTokens';
@@ -17,25 +17,25 @@ const defaultAuthState = {
 export function AuthProvider({ children }) {
   const { state, setState, resetState } = useLocalStorage('dharbrothers-auth', defaultAuthState);
 
-  const login = (payload) => {
+  const login = useCallback((payload) => {
     setState({
       accessToken: payload?.accessToken ?? null,
       refreshToken: payload?.refreshToken ?? null,
       user: payload?.user ?? null
     });
-  };
+  }, [setState]);
 
-  const updateUser = (userData) => {
+  const updateUser = useCallback((userData) => {
     setState((prevState) => ({
       ...prevState,
       user: { ...prevState.user, ...userData }
     }));
-  };
+  }, [setState]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     clearAuthCookies();
     resetState();
-  };
+  }, [resetState]);
 
   const isAuthenticated = Boolean(state?.accessToken);
 
@@ -47,7 +47,7 @@ export function AuthProvider({ children }) {
       updateUser,
       logout
     }),
-    [state, isAuthenticated]
+    [state, isAuthenticated, login, updateUser, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
