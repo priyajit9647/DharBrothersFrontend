@@ -231,6 +231,7 @@ export default function ProcessStageAssignment() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             loading={loading}
+            showActiveColumn={false}
           />
         </Grid>
       </Grid>

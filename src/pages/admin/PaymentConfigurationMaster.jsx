@@ -46,6 +46,7 @@ export default function PaymentConfigurationMaster() {
     accountHolderName: '',
     ifscCode: '',
     bankName: '',
+    bankBranch: '',
     baseUrl: '',
     sealImage: '',
     sealImageFile: null
@@ -58,7 +59,7 @@ export default function PaymentConfigurationMaster() {
   const [totalPercentage, setTotalPercentage] = useState(0);
   const getAvailablePercentage = () => {
     return 100 - parseInt(totalPercentage);
-  }
+  };
 
   const loadPaymentConfigurations = async (branchId) => {
     if (!branchId) {
@@ -84,6 +85,7 @@ export default function PaymentConfigurationMaster() {
         accountHolderName: item.accountHolderName || '',
         ifscCode: item.ifscCode || '',
         bankName: item.bankName || '',
+        bankBranch: item.bankBranch || item.branchName || '',
         percentage: Number(item.percentage ?? 0),
         active: item.active
       }));
@@ -139,7 +141,21 @@ export default function PaymentConfigurationMaster() {
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true', accountNumber: '', accountHolderName: '', ifscCode: '', bankName: '', baseUrl: '', sealImage: '', sealImageFile: null });
+    setFormValues({
+      merchantId: '',
+      aggregatorId: '',
+      secretKey: '',
+      percentage: '1',
+      active: 'true',
+      accountNumber: '',
+      accountHolderName: '',
+      ifscCode: '',
+      bankName: '',
+      bankBranch: '',
+      baseUrl: '',
+      sealImage: '',
+      sealImageFile: null
+    });
     setError('');
     setDialogOpen(true);
   };
@@ -156,6 +172,7 @@ export default function PaymentConfigurationMaster() {
       accountHolderName: row.accountHolderName || '',
       ifscCode: row.ifscCode || '',
       bankName: row.bankName || '',
+      bankBranch: row.bankBranch || '',
       baseUrl: row.baseUrl || '',
       sealImage: row.sealImage || '',
       sealImageFile: null
@@ -202,6 +219,7 @@ export default function PaymentConfigurationMaster() {
     const accountHolderName = formValues.accountHolderName?.trim();
     const ifscCode = formValues.ifscCode?.trim();
     const bankName = formValues.bankName?.trim();
+    const bankBranch = formValues.bankBranch?.trim();
     const baseUrl = formValues.baseUrl?.trim();
     const sealImageFile = formValues.sealImageFile || null;
     const percentage = Number(formValues.percentage);
@@ -214,6 +232,11 @@ export default function PaymentConfigurationMaster() {
 
     if (!merchantId || !aggregatorId || !secretKey) {
       setError('Merchant ID, Aggregator ID and Secret Key are required');
+      return;
+    }
+
+    if (!bankBranch) {
+      setError('Bank Branch is required');
       return;
     }
 
@@ -236,6 +259,7 @@ export default function PaymentConfigurationMaster() {
           accountHolderName,
           ifscCode,
           bankName,
+          bankBranch,
           baseUrl,
           sealImageFile,
           percentage,
@@ -254,6 +278,7 @@ export default function PaymentConfigurationMaster() {
           accountHolderName,
           ifscCode,
           bankName,
+          bankBranch,
           baseUrl,
           sealImageFile,
           percentage,
@@ -321,8 +346,11 @@ export default function PaymentConfigurationMaster() {
             description={
               <>
                 Configure payment gateway credentials branch-wise, including payment percentage allocation.
-                { totalPercentage != 100 && (
-                  <Box component="span" color="error.main"> Total Percentage is not 100%! (currently: {totalPercentage}%) </Box>
+                {totalPercentage != 100 && (
+                  <Box component="span" color="error.main">
+                    {' '}
+                    Total Percentage is not 100%! (currently: {totalPercentage}%){' '}
+                  </Box>
                 )}
               </>
             }
@@ -332,15 +360,17 @@ export default function PaymentConfigurationMaster() {
                 id: 'sealImage',
                 label: 'Seal Image',
                 align: 'center',
-                render: (row) => (
-                  row.sealImage
-                    ? <img style={{objectFit: "contain"}} height="64px" width="64px" src={"data:image/png;base64," + row.sealImage} /> 
-                    : '-'
-                )
+                render: (row) =>
+                  row.sealImage ? (
+                    <img style={{ objectFit: 'contain' }} height="64px" width="64px" src={'data:image/png;base64,' + row.sealImage} />
+                  ) : (
+                    '-'
+                  )
               },
               { id: 'merchantId', label: 'Merchant ID' },
-                { id: 'aggregatorId', label: 'Aggregator ID' },
-                { id: 'bankName', label: 'Bank Name' },
+              { id: 'aggregatorId', label: 'Aggregator ID' },
+              { id: 'bankName', label: 'Bank Name' },
+              { id: 'bankBranch', label: 'Bank Branch' },
               {
                 id: 'percentage',
                 label: 'Percentage',
@@ -356,7 +386,13 @@ export default function PaymentConfigurationMaster() {
                 label: '',
                 align: 'right',
                 render: (row) => (
-                  <Button size="small" variant="outlined" onClick={() => openEditDialog(row)} startIcon={<Edit size={14} />} disabled={!canEdit}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => openEditDialog(row)}
+                    startIcon={<Edit size={14} />}
+                    disabled={!canEdit}
+                  >
                     Edit
                   </Button>
                 )
@@ -392,9 +428,15 @@ export default function PaymentConfigurationMaster() {
             <TextField label="Aggregator ID" value={formValues.aggregatorId} onChange={handleFormChange('aggregatorId')} fullWidth />
             <TextField label="Secret Key" value={formValues.secretKey} onChange={handleFormChange('secretKey')} fullWidth />
             <TextField label="Account Number" value={formValues.accountNumber} onChange={handleFormChange('accountNumber')} fullWidth />
-            <TextField label="Account Holder Name" value={formValues.accountHolderName} onChange={handleFormChange('accountHolderName')} fullWidth />
+            <TextField
+              label="Account Holder Name"
+              value={formValues.accountHolderName}
+              onChange={handleFormChange('accountHolderName')}
+              fullWidth
+            />
             <TextField label="IFSC Code" value={formValues.ifscCode} onChange={handleFormChange('ifscCode')} fullWidth />
             <TextField label="Bank Name" value={formValues.bankName} onChange={handleFormChange('bankName')} fullWidth />
+            <TextField label="Bank Branch" value={formValues.bankBranch} onChange={handleFormChange('bankBranch')} fullWidth />
             <TextField label="Base URL" value={formValues.baseUrl} onChange={handleFormChange('baseUrl')} fullWidth />
             <Box>
               <Typography variant="subtitle2" gutterBottom>
