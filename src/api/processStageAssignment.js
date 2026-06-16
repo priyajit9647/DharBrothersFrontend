@@ -30,7 +30,8 @@ export async function getProcessStageAssignments() {
       stageName,
       noOfDays: item.noOfDays,
       branchId: item.branchId,
-      branchName: item.branchName
+      branchName: item.branchName,
+      active: item.active == null ? true : Boolean(item.active)
     };
   });
 }
@@ -58,7 +59,7 @@ export async function createProcessStageAssignment({ stageId, userId, noOfDays, 
   });
 }
 
-export async function editProcessStageAssignment(id, { stageId, userId, noOfDays, branchId }) {
+export async function editProcessStageAssignment(id, { stageId, userId, noOfDays, branchId, active } = {}) {
   if (id == null) {
     throw new Error('id is required to edit a process stage assignment');
   }
@@ -74,13 +75,21 @@ export async function editProcessStageAssignment(id, { stageId, userId, noOfDays
   }
   const normalizedStageIds = stageIds.map((s) => Number(s));
 
+  const body = {
+    stageId: normalizedStageIds,
+    userId,
+    noOfDays: Number(noOfDays),
+    branchId: Number(branchId)
+  };
+
+  if (typeof active === 'boolean') {
+    body.active = active;
+  }
+
   return authorizedFetch(`/api/v1/process-stage-assignment/edit/${id}`, {
     method: 'PUT',
-    body: JSON.stringify({
-      stageId: normalizedStageIds,
-      userId,
-      noOfDays: Number(noOfDays),
-      branchId: Number(branchId)
-    })
+    body: JSON.stringify(body)
   });
 }
+// Note: Toggling `active` for an assignment is done via the edit endpoint
+// by passing the `active` flag in the request body.
