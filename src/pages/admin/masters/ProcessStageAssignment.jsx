@@ -199,6 +199,27 @@ export default function ProcessStageAssignment() {
     }
   };
 
+  const handleToggleActive = async (row, active) => {
+    if (row?.disableToggle) return;
+    // Optimistic UI update
+    setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, active } : item)));
+
+    try {
+      // Use the edit endpoint to toggle active — include existing assignment fields.
+      await editProcessStageAssignment(row.id, {
+        stageId: row.stageId,
+        userId: row.userId,
+        noOfDays: row.noOfDays,
+        branchId: row.branchId,
+        active
+      });
+    } catch (err) {
+      // Revert on failure and show error
+      setRows((prev) => prev.map((item) => (item.id === row.id ? { ...item, active: !active } : item)));
+      setError(err?.message || 'Failed to update active status');
+    }
+  };
+
   const loading = loadingBranches || loadingStages || loadingUsers || loadingAssignments;
 
   return (
@@ -211,8 +232,7 @@ export default function ProcessStageAssignment() {
             </Typography>
           )}
           <MasterList
-            title="Stage Assignments"
-            description="Assign active users to process stages per branch."
+            title={'\u200b'}
             columns={[
               { id: 'branchName', label: 'Branch' },
               { id: 'stageName', label: 'Process Stage' },
@@ -230,6 +250,7 @@ export default function ProcessStageAssignment() {
             }}
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
+            onToggleActive={handleToggleActive}
             loading={loading}
             showActiveColumn={false}
           />

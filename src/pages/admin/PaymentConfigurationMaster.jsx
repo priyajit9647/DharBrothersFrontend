@@ -354,6 +354,7 @@ export default function PaymentConfigurationMaster() {
                 )}
               </>
             }
+            title={<Box component="span" sx={{ display: 'none' }}>Payment Configuration</Box>}
             columns={[
               { id: 'branchName', label: 'Branch' },
               {
@@ -411,7 +412,7 @@ export default function PaymentConfigurationMaster() {
             onEdit={openEditDialog}
             loading={loadingBranches || loadingConfigurations}
             showActiveColumn={false}
-            showCreateButton={canCreate}
+            showCreateButton={true}
             createLabel="Create Payment Configuration"
             showActionsColumn={false}
             showActiveColumn={false}
