@@ -31,7 +31,7 @@ import {
   Copy
 } from 'lucide-react';
 
-import { getOrderById, downloadOrderFile } from 'api/orders';
+import { getOrderById, downloadOrderFile, downloadInvoice } from 'api/orders';
 
 function DetailsRow({ label, value }) {
   return (
@@ -204,6 +204,23 @@ export default function OrderDetailsAdmin() {
     }
   };
 
+  const handleDownloadInvoice = async () => {
+    if (!order?.orderId) return;
+    try {
+      const blob = await downloadInvoice(order.orderId);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener');
+      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Invoice download failed', e);
+      // fallback: open the raw endpoint in a new tab (may work if server supports direct GET)
+      try {
+        window.open(`${import.meta.env.VITE_API_BASE_URL}/api/v1/order/invoice/get/${encodeURIComponent(String(order.orderId))}`, '_blank', 'noopener');
+      } catch {}
+    }
+  };
+
   if (!order) return null;
 
   const hardBinding = order.printingDetails?.find((p) => (p.bindingType || '').toLowerCase().includes('hard')) || order.printingDetails?.find((p) => p.topContentArea || p.middleContentArea || p.bottomContentArea) || {};
@@ -268,10 +285,9 @@ export default function OrderDetailsAdmin() {
           variant="contained"
           startIcon={<Download size={18} />}
           onClick={async () => {
-            const thesis = order.files?.find((f) => f.label === 'Thesis Document');
-            await handleDownloadFile(thesis);
+            await handleDownloadInvoice();
           }}
-          disabled={!order.files?.some((f) => f.filePath)}
+          disabled={!order?.orderId}
           sx={{
             borderRadius: 3,
             px: 3,

@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { authorizedFetch } from './auth';
+import { authorizedCustomerFetch, authorizedFetch, getCustomerPortalSession } from './auth';
 
 // ==============================|| DOCUMENT API CLIENT ||============================== //
 
@@ -165,9 +165,18 @@ export async function getDocumentVersionList(docStageId) {
     throw new Error('docStageId is required');
   }
 
-  return authorizedFetch(`/api/v1/document/vrson-list?docStageId=${encodeURIComponent(String(docStageId))}`, {
-    method: 'GET'
-  });
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
+
+  if(isCustomerPortal) {
+    return authorizedCustomerFetch(`/api/v1/document/vrson-list?docStageId=${encodeURIComponent(String(docStageId))}`, {
+      method: 'GET'
+    });
+  } else {
+    return authorizedFetch(`/api/v1/document/vrson-list?docStageId=${encodeURIComponent(String(docStageId))}`, {
+      method: 'GET'
+    });
+  }
 }
 
 export default {

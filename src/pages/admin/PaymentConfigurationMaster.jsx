@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import Grid from '@mui/material/Grid';
+import Box from '@mui/material/Box';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -13,8 +14,7 @@ import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Checkbox from '@mui/material/Checkbox';
+import Slider from '@mui/material/Slider';
 import { Plus, Edit } from 'lucide-react';
 
 import MasterList from 'sections/admin/masters/MasterList';
@@ -47,12 +47,18 @@ export default function PaymentConfigurationMaster() {
     ifscCode: '',
     bankName: '',
     baseUrl: '',
-    sealImageName: '',
-    sealUploaded: false,
+    sealImage: '',
     sealImageFile: null
   });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [sealPreview, setSealPreview] = useState('');
+  const sealFileInputRef = useRef(null);
+
+  const [totalPercentage, setTotalPercentage] = useState(0);
+  const getAvailablePercentage = () => {
+    return 100 - parseInt(totalPercentage);
+  }
 
   const loadPaymentConfigurations = async (branchId) => {
     if (!branchId) {
@@ -67,6 +73,7 @@ export default function PaymentConfigurationMaster() {
       const items = Array.isArray(data) ? data : data?.items || data?.data || [];
       const normalized = items.map((item, index) => ({
         id: item.id ?? `${branchId}-${index + 1}`,
+        sealImage: item.sealImage ?? '',
         branchId: String(item.branchId ?? branchId),
         branchName: item.branchName || selectedBranchName || 'Branch',
         configId: item.id ?? '-',
@@ -81,6 +88,7 @@ export default function PaymentConfigurationMaster() {
         active: item.active
       }));
       setRows(normalized);
+      setTotalPercentage(normalized.reduce((acc, cur) => acc + Number(cur.percentage), 0));
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to load payment configurations', err);
@@ -131,7 +139,7 @@ export default function PaymentConfigurationMaster() {
 
   const openCreateDialog = () => {
     setEditingRow(null);
-    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true', accountNumber: '', accountHolderName: '', ifscCode: '', bankName: '', baseUrl: '', sealImageName: '', sealUploaded: false, sealImageFile: null });
+    setFormValues({ merchantId: '', aggregatorId: '', secretKey: '', percentage: '1', active: 'true', accountNumber: '', accountHolderName: '', ifscCode: '', bankName: '', baseUrl: '', sealImage: '', sealImageFile: null });
     setError('');
     setDialogOpen(true);
   };
@@ -149,13 +157,29 @@ export default function PaymentConfigurationMaster() {
       ifscCode: row.ifscCode || '',
       bankName: row.bankName || '',
       baseUrl: row.baseUrl || '',
-      sealImageName: row.sealImageName || '',
-      sealUploaded: Boolean(row.sealUploaded),
+      sealImage: row.sealImage || '',
       sealImageFile: null
     });
     setError('');
     setDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (formValues.sealImageFile) {
+      const url = URL.createObjectURL(formValues.sealImageFile);
+      setSealPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setSealPreview(formValues.sealImage ? `data:image/png;base64,${formValues.sealImage}` : '');
+  }, [formValues.sealImageFile, formValues.sealImage]);
+
+  const handleSealFileSelect = (file) => {
+    if (file) {
+      setFormValues((prev) => ({ ...prev, sealImageFile: file }));
+    }
+  };
+
+  const maxPercentage = Math.max(0, getAvailablePercentage() + (editingRow ? Number(editingRow.percentage || 0) : 0));
 
   const handleCloseDialog = () => {
     if (saving) return;
@@ -179,8 +203,6 @@ export default function PaymentConfigurationMaster() {
     const ifscCode = formValues.ifscCode?.trim();
     const bankName = formValues.bankName?.trim();
     const baseUrl = formValues.baseUrl?.trim();
-    const sealImageName = formValues.sealImageName?.trim();
-    const sealUploaded = Boolean(formValues.sealUploaded);
     const sealImageFile = formValues.sealImageFile || null;
     const percentage = Number(formValues.percentage);
     const active = String(formValues.active) === 'true';
@@ -215,8 +237,6 @@ export default function PaymentConfigurationMaster() {
           ifscCode,
           bankName,
           baseUrl,
-          sealImageName,
-          sealUploaded,
           sealImageFile,
           percentage,
           active
@@ -235,8 +255,6 @@ export default function PaymentConfigurationMaster() {
           ifscCode,
           bankName,
           baseUrl,
-          sealImageName,
-          sealUploaded,
           sealImageFile,
           percentage,
           active
@@ -300,10 +318,26 @@ export default function PaymentConfigurationMaster() {
 
           <MasterList
             title="Payment Configuration"
-            description="Configure payment gateway credentials branch-wise, including payment percentage allocation."
+            description={
+              <>
+                Configure payment gateway credentials branch-wise, including payment percentage allocation.
+                { totalPercentage != 100 && (
+                  <Box component="span" color="error.main"> Total Percentage is not 100%! (currently: {totalPercentage}%) </Box>
+                )}
+              </>
+            }
             columns={[
               { id: 'branchName', label: 'Branch' },
-              { id: 'configId', label: 'ID' },
+              {
+                id: 'sealImage',
+                label: 'Seal Image',
+                align: 'center',
+                render: (row) => (
+                  row.sealImage
+                    ? <img style={{objectFit: "contain"}} height="64px" width="64px" src={"data:image/png;base64," + row.sealImage} /> 
+                    : '-'
+                )
+              },
               { id: 'merchantId', label: 'Merchant ID' },
                 { id: 'aggregatorId', label: 'Aggregator ID' },
                 { id: 'bankName', label: 'Bank Name' },
@@ -362,36 +396,60 @@ export default function PaymentConfigurationMaster() {
             <TextField label="IFSC Code" value={formValues.ifscCode} onChange={handleFormChange('ifscCode')} fullWidth />
             <TextField label="Bank Name" value={formValues.bankName} onChange={handleFormChange('bankName')} fullWidth />
             <TextField label="Base URL" value={formValues.baseUrl} onChange={handleFormChange('baseUrl')} fullWidth />
-            <TextField label="Seal Image Name" value={formValues.sealImageName} onChange={handleFormChange('sealImageName')} fullWidth />
-            <FormControlLabel
-              control={<Checkbox checked={Boolean(formValues.sealUploaded)} onChange={(e) => setFormValues((p) => ({ ...p, sealUploaded: e.target.checked }))} />}
-              label="Seal Uploaded"
-            />
-            <input
-              accept="image/*"
-              style={{ display: 'block', marginTop: 8 }}
-              id="seal-image-file"
-              type="file"
-              onChange={(e) => setFormValues((p) => ({ ...p, sealImageFile: e.target.files && e.target.files[0] ? e.target.files[0] : null }))}
-            />
-            <FormControl fullWidth>
-              <InputLabel id="payment-config-percentage-label">Percentage</InputLabel>
-              <Select
-                labelId="payment-config-percentage-label"
-                label="Percentage"
-                value={formValues.percentage}
-                onChange={handleFormChange('percentage')}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Seal Image
+              </Typography>
+              <Box
+                onClick={() => sealFileInputRef.current?.click()}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                  handleSealFileSelect(file);
+                }}
+                sx={{
+                  border: '1px dashed',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  p: 2,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 1
+                }}
               >
-                {Array.from({ length: 100 }, (_, index) => {
-                  const value = String(index + 1);
-                  return (
-                    <MenuItem key={value} value={value}>
-                      {value}%
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            </FormControl>
+                {sealPreview ? (
+                  <img src={sealPreview} alt="Seal preview" style={{ maxHeight: 120, maxWidth: '100%', objectFit: 'contain' }} />
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Click or drag an image here to upload
+                  </Typography>
+                )}
+              </Box>
+              <input
+                ref={sealFileInputRef}
+                accept="image/*"
+                style={{ display: 'none' }}
+                type="file"
+                onChange={(e) => handleSealFileSelect(e.target.files && e.target.files[0])}
+              />
+            </Box>
+            <Box>
+              <Typography variant="body2" gutterBottom>
+                Percentage: {formValues.percentage}%
+              </Typography>
+              <Slider
+                value={Number(formValues.percentage)}
+                onChange={(_, value) => setFormValues((p) => ({ ...p, percentage: String(value) }))}
+                min={0}
+                max={maxPercentage}
+                step={1}
+                valueLabelDisplay="auto"
+              />
+            </Box>
             <FormControl fullWidth>
               <InputLabel id="payment-config-active-label">Active</InputLabel>
               <Select labelId="payment-config-active-label" label="Active" value={formValues.active} onChange={handleFormChange('active')}>

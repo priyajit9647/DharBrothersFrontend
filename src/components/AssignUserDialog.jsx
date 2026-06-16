@@ -215,7 +215,7 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
           Select a branch (if not automatically detected) and then choose a user.
         </Typography>
 
-        {!hasAutoBranch && (
+        {/* {!hasAutoBranch && (
           <FormControl fullWidth size="small" sx={{ mb: 2 }}>
             <InputLabel>Select Branch</InputLabel>
             <Select
@@ -231,7 +231,7 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
               ))}
             </Select>
           </FormControl>
-        )}
+        )} */}
 
         {selectedBranchId && (
           <>
