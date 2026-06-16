@@ -51,8 +51,7 @@ export default function NotificationEmail() {
             </Typography>
           )}
           <MasterList
-            title="Email Notifications"
-            description="View the history of email notifications sent to customers."
+            title=""
             columns={[
               { id: 'customerName', label: 'Customer Name' },
               { id: 'customerEmail', label: 'Email' },

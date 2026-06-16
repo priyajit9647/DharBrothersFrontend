@@ -51,8 +51,8 @@ export default function InAppNotifications() {
             </Typography>
           )}
           <MasterList
-            title="In-App Notifications"
-            description="View the history of in-app notifications sent to customers."
+            title=""
+            description=""
             columns={[
               { id: 'customerName', label: 'Customer Name' },
               { id: 'customerEmail', label: 'Email' },
