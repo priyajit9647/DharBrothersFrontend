@@ -23,7 +23,7 @@ import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 import { getJobList, completeMyJob } from 'api/myJobs';
-import { getDocumentVersionList, uploadDocumentVersionFormData } from 'api/document';
+import { getDocumentVersionListFromOrderId, uploadDocumentVersionFormData } from 'api/document';
 import { authorizedFetchRaw } from 'api/auth';
 import { useAuth } from 'hooks/useAuth';
 import useAccess from 'hooks/useAccess';
@@ -132,8 +132,12 @@ export default function MyJobs() {
     return job?.documentStageId ?? job?.documentId ?? job?.stageId ?? job?.processStageId;
   };
 
+  const getJobOrderId = (job) => {
+    return job?.orderId ?? null;
+  }
+
   const getJobDocumentName = (job) => {
-    return job?.documentFileName || job?.fileName || job?.filename || job?.currentDocumentName || job?.documentVersion || 'current-document';
+    return job?.documentFileName ?? '';
   };
 
   const handleDocumentApproval = async () => {
@@ -146,14 +150,14 @@ export default function MyJobs() {
     setSelectedApprovalJob(activeJob);
     setApprovalDialogOpen(true);
     handleActionsClose();
-    const identifier = getJobDocumentIdentifier(activeJob);
-    if (!identifier) {
-      setApprovalError('Document stage or document ID is not available for this job.');
+    const jobOrderId = getJobOrderId(activeJob);
+    if (!jobOrderId) {
+      setApprovalError('Document order ID is not available for this job.');
       return;
     }
     setVersionLoading(true);
     try {
-      const versionList = await getDocumentVersionList(identifier);
+      const versionList = await getDocumentVersionListFromOrderId(jobOrderId);
       if (Array.isArray(versionList)) {
         setVersions(versionList);
       } else if (versionList?.data && Array.isArray(versionList.data)) {
@@ -174,7 +178,7 @@ export default function MyJobs() {
   const downloadCurrentDocument = async () => {
     if (!selectedApprovalJob) return;
     const documentName = getJobDocumentName(selectedApprovalJob);
-    const orderId = selectedApprovalJob.orderId || selectedApprovalJob.id || selectedApprovalJob.orderNo || selectedApprovalJob.code;
+    const orderId = selectedApprovalJob.orderId ?? '';
     if (!orderId) {
       setApprovalError('Unable to determine order ID for current document download.');
       return;
@@ -218,9 +222,12 @@ export default function MyJobs() {
   };
 
   const handleUploadVersion = async () => {
-    const identifier = getJobDocumentIdentifier(selectedApprovalJob);
-    if (!identifier) {
-      setApprovalError('Document stage or document ID is not available for upload.');
+    const jobId = selectedApprovalJob?.id ?? null;
+    const jobOrderId = selectedApprovalJob?.orderId ?? null;
+    // console.log('identifier', identifier);
+    // return;
+    if (!jobId) {
+      setApprovalError('Document job ID is not available for upload.');
       return;
     }
     if (!uploadFile) {
@@ -230,8 +237,8 @@ export default function MyJobs() {
     setUploading(true);
     setApprovalError('');
     try {
-      await uploadDocumentVersionFormData({ documentStageId: identifier, file: uploadFile, remarks: uploadRemarks });
-      const versionList = await getDocumentVersionList(identifier);
+      await uploadDocumentVersionFormData({ documentStageId: jobId, file: uploadFile, remarks: uploadRemarks });
+      const versionList = await getDocumentVersionListFromOrderId(jobOrderId);
       setVersions(Array.isArray(versionList) ? versionList : Array.isArray(versionList?.data) ? versionList.data : []);
       setUploadFile(null);
       setUploadFileName('');

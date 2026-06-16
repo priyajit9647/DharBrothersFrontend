@@ -179,6 +179,25 @@ export async function getDocumentVersionList(docStageId) {
   }
 }
 
+export async function getDocumentVersionListFromOrderId(orderId) {
+  if (orderId == null || orderId === '') {
+    throw new Error('orderId is required');
+  }
+
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
+
+  if(isCustomerPortal) {
+    return authorizedCustomerFetch(`/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`, {
+      method: 'GET'
+    });
+  } else {
+    return authorizedFetch(`/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`, {
+      method: 'GET'
+    });
+  }
+}
+
 export default {
   uploadDocumentVersion,
   uploadDocumentVersionFormData,
