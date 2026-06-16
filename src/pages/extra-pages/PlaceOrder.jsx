@@ -200,7 +200,8 @@ function buildCustomerPayloadFromForm(checkoutForm) {
     state: checkoutForm.state || '',
     pincode: checkoutForm.pincode || '',
     landmark: checkoutForm.landmark || '',
-    universityName: checkoutForm.universityName || ''
+    universityName: checkoutForm.universityName || '',
+    gst: checkoutForm.gst || ''
   };
 }
 
