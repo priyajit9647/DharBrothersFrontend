@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import Grid from '@mui/material/Grid';
@@ -22,6 +22,10 @@ import ListItem from '@mui/material/ListItem';
 import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
+import Paper from '@mui/material/Paper';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import CloseIcon from '@mui/icons-material/Close';
 import { getJobList, completeMyJob } from 'api/myJobs';
 import { getDocumentVersionListFromOrderId, uploadDocumentVersionFormData } from 'api/document';
 import { authorizedFetchRaw } from 'api/auth';
@@ -60,6 +64,7 @@ export default function MyJobs() {
   const [uploadRemarks, setUploadRemarks] = useState('');
   const [uploading, setUploading] = useState(false);
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   const loadJobs = useCallback(async (uid) => {
     setLoading(true);
@@ -219,6 +224,14 @@ export default function MyJobs() {
     const file = event.target.files?.[0] || null;
     setUploadFile(file);
     setUploadFileName(file?.name || '');
+    // Reset input value so the same file can be re-selected after removal
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveFile = () => {
+    setUploadFile(null);
+    setUploadFileName('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleUploadVersion = async () => {
@@ -243,6 +256,7 @@ export default function MyJobs() {
       setUploadFile(null);
       setUploadFileName('');
       setUploadRemarks('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to upload document version', err);
@@ -261,6 +275,7 @@ export default function MyJobs() {
     setUploadFile(null);
     setUploadFileName('');
     setUploadRemarks('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleReinitiatePayment = () => {
@@ -461,9 +476,77 @@ export default function MyJobs() {
                   {downloadLoading ? 'Downloading...' : 'Download Current Document'}
                 </Button>
                 <Typography variant="subtitle1">Upload New Version</Typography>
-                <input type="file" accept="*/*" onChange={handleFileChange} />
-                {uploadFileName && (
-                  <Typography variant="body2">Selected file: {uploadFileName}</Typography>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="*/*"
+                  onChange={handleFileChange}
+                  style={{ display: 'none' }}
+                />
+                {!uploadFile ? (
+                  <Box
+                    onClick={() => fileInputRef.current?.click()}
+                    sx={{
+                      border: '2px dashed',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      p: 2.5,
+                      textAlign: 'center',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.2s, background-color 0.2s',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        bgcolor: 'action.hover',
+                      },
+                    }}
+                  >
+                    <CloudUploadIcon sx={{ fontSize: 36, color: 'text.secondary', mb: 0.5 }} />
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                      Click to browse or drag & drop
+                    </Typography>
+                    <Button variant="outlined" size="small" component="span" tabIndex={-1}>
+                      Browse File
+                    </Button>
+                  </Box>
+                ) : (
+                  <Paper
+                    variant="outlined"
+                    sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1, borderRadius: 1 }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                      <InsertDriveFileIcon color="primary" sx={{ flexShrink: 0, mt: 0.25 }} />
+                      <Box sx={{ flex: 1, maxWidth: '150px' }}>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                          {uploadFileName}
+                        </Typography>
+                        {uploadFile?.size != null && (
+                          <Typography variant="caption" color="text.secondary">
+                            {uploadFile.size < 1024 * 1024
+                              ? `${(uploadFile.size / 1024).toFixed(1)} KB`
+                              : `${(uploadFile.size / (1024 * 1024)).toFixed(2)} MB`}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Box sx={{ display: 'flex', flexShrink: 0, alignItems: 'center' }}>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                        >
+                          Change
+                        </Button>
+                        <IconButton
+                          size="small"
+                          onClick={handleRemoveFile}
+                          disabled={uploading}
+                          aria-label="Remove file"
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  </Paper>
                 )}
                 <TextField
                   label="Remarks from customer"
@@ -489,12 +572,12 @@ export default function MyJobs() {
                   </Box>
                 ) : versions.length > 0 ? (
                   <List dense>
-                    {versions.map((version) => {
+                    {versions.map((version, versionIndex) => {
                       const versionNumber = version.versionNo ?? version.version ?? 'Unknown';
                       const listKey = version.id ?? version.documentMasterId ?? versionNumber;
                       return (
-                        <div key={listKey}>
-                          <ListItem alignItems="flex-start" sx={{ flexDirection: 'column', alignItems: 'stretch' }}>
+                        <Box key={listKey}>
+                          <ListItem alignItems="flex-start" sx={{ flexDirection: 'column', alignItems: 'stretch', mt: versionIndex != 0 ? 2 : 0, }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 0.5 }}>
                               <Box>
                                 <Typography variant="subtitle2">
@@ -517,8 +600,8 @@ export default function MyJobs() {
                               </Typography>
                             ) : null}
                           </ListItem>
-                          <Divider component="li" />
-                        </div>
+                          {versionIndex != (versions.length - 1) && <Divider component="li" />}
+                        </Box>
                       );
                     })}
                   </List>

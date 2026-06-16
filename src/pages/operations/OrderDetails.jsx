@@ -19,7 +19,7 @@ import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
 import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline } from 'api/customerPortal';
 import { approveDocument } from 'api/document';
-import { getDocumentVersionListForOrder } from 'api/orders';
+import { getDocumentVersionListForOrder, downloadOrderFile } from 'api/orders';
 import { getCustomerPortalSession } from 'utils/authTokens';
 import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft } from 'lucide-react';
 
@@ -101,6 +101,12 @@ export default function OrderDetails() {
   const [approvalSubmitting, setApprovalSubmitting] = useState(false);
   const [versionOptions, setVersionOptions] = useState([]);
   const [versionLoading, setVersionLoading] = useState(false);
+  const [allDocVersionsList, setAllDocVersionsList] = useState([]);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [versionActionMode, setVersionActionMode] = useState(null);
+  const [versionActionRemarks, setVersionActionRemarks] = useState('');
+  const [versionActionSubmitting, setVersionActionSubmitting] = useState(false);
+  const [versionActionTargetNo, setVersionActionTargetNo] = useState(null);
   
 
   // Map document key to backend document stage id — adjust as required
@@ -112,40 +118,41 @@ export default function OrderDetails() {
   };
   
 
+  const loadVersions = async () => {
+    if (!orderId) return;
+    setVersionLoading(true);
+    setVersionOptions([]);
+    try {
+      const resp = await getDocumentVersionListForOrder(orderId);
+
+      let list = [];
+      if (Array.isArray(resp)) list = resp;
+      else if (resp && Array.isArray(resp.data)) list = resp.data;
+      else if (Array.isArray(resp?.content)) list = resp.content;
+
+      setAllDocVersionsList(list);
+
+      // Filter by selected document key where possible (match documentMasterId or name)
+      const stageId = DOC_STAGE_ID_BY_KEY[approvalDocumentKey];
+      const filtered = list.filter((v) => {
+        if (stageId != null && (v.documentMasterId == null ? false : Number(v.documentMasterId) === Number(stageId))) return true;
+        const name = String(v.documentMasterName || v.documentName || '').toLowerCase();
+        if (name && name.includes(String(approvalDocumentKey).toLowerCase())) return true;
+        return false;
+      });
+
+      setVersionOptions(filtered.length > 0 ? filtered : list);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load document versions for order', e);
+      setVersionOptions([]);
+    } finally {
+      setVersionLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-
-    const loadVersions = async () => {
-      if (!orderId) return;
-      setVersionLoading(true);
-      setVersionOptions([]);
-      try {
-        const resp = await getDocumentVersionListForOrder(orderId);
-        if (!mounted) return;
-
-        let list = [];
-        if (Array.isArray(resp)) list = resp;
-        else if (resp && Array.isArray(resp.data)) list = resp.data;
-        else if (Array.isArray(resp?.content)) list = resp.content;
-
-        // Filter by selected document key where possible (match documentMasterId or name)
-        const stageId = DOC_STAGE_ID_BY_KEY[approvalDocumentKey];
-        const filtered = list.filter((v) => {
-          if (stageId != null && (v.documentMasterId == null ? false : Number(v.documentMasterId) === Number(stageId))) return true;
-          const name = String(v.documentMasterName || v.documentName || '').toLowerCase();
-          if (name && name.includes(String(approvalDocumentKey).toLowerCase())) return true;
-          return false;
-        });
-
-        setVersionOptions(filtered.length > 0 ? filtered : list);
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load document versions for order', e);
-        if (mounted) setVersionOptions([]);
-      } finally {
-        if (mounted) setVersionLoading(false);
-      }
-    };
 
     loadVersions();
 
@@ -608,8 +615,8 @@ export default function OrderDetails() {
 
             
             
-            {/* Customer approval card */}
-            <Box sx={{ mb: 2 }}>
+            {/* Customer approval card Old */}
+            {/* <Box sx={{ mb: 2 }}>
               <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #fff5eb', boxShadow: '0 6px 18px rgba(250,240,230,0.6)' }}>
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: 1 }}>
@@ -723,7 +730,268 @@ export default function OrderDetails() {
                   </Button>
                 </Box>
               </Box>
+            </Box> */}
+
+            {/* ================= DOCUMENT VERSIONS ================= */}
+            <Box sx={{ mb: 3 }}>
+              <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+                  <Box sx={{ width: 40, height: 40, borderRadius: 2, background: '#f0f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Layers size={18} color="#2563eb" />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Document Versions</Typography>
+                    <Typography variant="body2" color="text.secondary">Review document versions sent for your approval</Typography>
+                  </Box>
+                </Box>
+
+                {versionLoading ? (
+                  <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={28} /></Box>
+                ) : (() => {
+                  const filteredVersions = allDocVersionsList;
+
+                  if (filteredVersions.length === 0) {
+                    return (
+                      <Box sx={{ py: 5, textAlign: 'center', border: '1px dashed rgba(0,0,0,0.1)', borderRadius: 2 }}>
+                        <Layers size={32} color="#9ca3af" />
+                        <Typography variant="subtitle2" sx={{ mt: 1.5, color: '#6b7280' }}>No document versions available</Typography>
+                        <Typography variant="caption" color="text.secondary">Document versions will appear here once uploaded</Typography>
+                      </Box>
+                    );
+                  }
+
+                  const sorted = [...filteredVersions].sort((a, b) => Number(b.versionNo ?? 0) - Number(a.versionNo ?? 0));
+                  const latestVer = sorted[0];
+                  const historyVers = sorted.slice(1);
+
+                  const handleDownloadVersion = async (v) => {
+                    if (!v?.filePath) return;
+                    try {
+                      const blob = await downloadOrderFile({ filePath: v?.filePath ?? '', fileName: v?.fileName ?? '' });
+                      const url = URL.createObjectURL(blob);
+                      window.open(url, '_blank', 'noopener');
+                      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+                    } catch (e) {
+                      // eslint-disable-next-line no-console
+                      console.error('Download failed', e);
+                      // lightweight fallback: try opening raw path
+                      try {
+                        window.open(file.filePath, '_blank', 'noopener');
+                      } catch {}
+                    }
+                  }
+
+                  const statusChipSx = (status) => ({
+                    bgcolor: /approve/i.test(status) ? '#dcfce7' : /reject/i.test(status) ? '#fee2e2' : '#f1f5f9',
+                    color: /approve/i.test(status) ? '#16a34a' : /reject/i.test(status) ? '#dc2626' : '#64748b',
+                    fontWeight: 700,
+                    fontSize: '11px',
+                    height: 20,
+                    borderRadius: '6px'
+                  });
+
+                  return (
+                    <>
+                      {/* Latest Version */}
+                      <Box sx={{ p: 2.5, borderRadius: 2.5, background: 'linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%)', border: '1.5px solid #7dd3fc', mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ width: 48, height: 48, borderRadius: 2, background: '#0ea5e9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <FileText size={22} color="#fff" />
+                            </Box>
+                            <Box>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 900, color: '#0c4a6e' }}>
+                                  Version {latestVer.versionNo ?? '-'}
+                                </Typography>
+                                <Chip label="Latest" size="small" sx={{ bgcolor: '#0ea5e9', color: '#fff', fontWeight: 700, fontSize: '11px', height: 20, borderRadius: '6px' }} />
+                                {latestVer.approvalStatus && (
+                                  <Chip label={latestVer.approvalStatus} size="small" sx={statusChipSx(latestVer.approvalStatus)} />
+                                )}
+                              </Box>
+                              {(latestVer.documentMasterName || latestVer.documentName) && (
+                                <Typography variant="caption" sx={{ color: '#0369a1', fontWeight: 600, display: 'block' }}>
+                                  {latestVer.documentMasterName || latestVer.documentName}
+                                </Typography>
+                              )}
+                              {latestVer.remarks && (
+                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>{latestVer.remarks}</Typography>
+                              )}
+                              {latestVer.createdAt && (
+                                <Typography variant="caption" sx={{ color: '#94a3b8', display: 'block' }}>{formatDateTime(latestVer.createdAt)}</Typography>
+                              )}
+                            </Box>
+                          </Box>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<DownloadCloud size={15} />}
+                            onClick={() => handleDownloadVersion(latestVer)}
+                            sx={{ textTransform: 'none', color: '#0ea5e9', borderColor: '#7dd3fc', '&:hover': { bgcolor: '#f0f9ff', borderColor: '#0ea5e9' }, borderRadius: '999px', whiteSpace: 'nowrap', flexShrink: 0 }}
+                          >
+                            Download
+                          </Button>
+                        </Box>
+
+                        <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid rgba(125,211,252,0.4)' }}>
+                          {versionActionMode === null ? (
+                            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                              {(!latestVer.approvalStatus || /pending/i.test(latestVer.approvalStatus)) && (
+                                <>
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    startIcon={<CheckCircle size={15} />}
+                                    onClick={() => { setVersionActionMode('approve'); setVersionActionTargetNo(latestVer.versionNo ?? 0); setVersionActionRemarks(''); }}
+                                    sx={{ textTransform: 'none', bgcolor: '#16a34a', '&:hover': { bgcolor: '#15803d' }, borderRadius: '999px', px: 2.5 }}
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    onClick={() => { setVersionActionMode('reject'); setVersionActionTargetNo(latestVer.versionNo ?? 0); setVersionActionRemarks(''); }}
+                                    sx={{ textTransform: 'none', color: '#dc2626', borderColor: '#fca5a5', '&:hover': { bgcolor: '#fef2f2', borderColor: '#dc2626' }, borderRadius: '999px', px: 2.5 }}
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                              {historyVers.length > 0 && (
+                                <Button
+                                  variant="text"
+                                  size="small"
+                                  endIcon={showVersionHistory ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                                  onClick={() => setShowVersionHistory((prev) => !prev)}
+                                  sx={{ textTransform: 'none', color: '#64748b', ml: 'auto' }}
+                                >
+                                  History ({historyVers.length})
+                                </Button>
+                              )}
+                            </Box>
+                          ) : (
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 700, color: versionActionMode === 'approve' ? '#16a34a' : '#dc2626', mb: 1, display: 'block' }}>
+                                {versionActionMode === 'approve' ? 'Approving' : 'Rejecting'} Version {versionActionTargetNo}
+                              </Typography>
+                              <TextField
+                                size="small"
+                                label="Remarks (Optional)"
+                                value={versionActionRemarks}
+                                onChange={(e) => setVersionActionRemarks(e.target.value.slice(0, 500))}
+                                fullWidth
+                                multiline
+                                minRows={2}
+                                sx={{ mb: 1.5 }}
+                              />
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Typography variant="caption" color="text.secondary">{versionActionRemarks.length}/500</Typography>
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                  <Button
+                                    size="small"
+                                    onClick={() => { setVersionActionMode(null); setVersionActionRemarks(''); }}
+                                    sx={{ textTransform: 'none', color: '#64748b' }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    disabled={versionActionSubmitting}
+                                    onClick={async () => {
+                                      setVersionActionSubmitting(true);
+                                      try {
+                                        const docDataObj = order?.documents || {};
+                                        let docEntry = docDataObj?.[approvalDocumentKey] ?? null;
+                                        if (!docEntry && Array.isArray(order?.documents)) {
+                                          docEntry = order.documents.find((d) => String(d.type ?? d.documentType ?? '').toLowerCase().includes(approvalDocumentKey));
+                                        }
+                                        const docOrderId = latestVer?.orderId ?? null;
+                                        const session = getCustomerPortalSession();
+                                        // if (!documentId) {
+                                        //   // eslint-disable-next-line no-alert
+                                        //   alert('Document identifier not available');
+                                        //   return;
+                                        // }
+                                        // if (!customerId) {
+                                        //   // eslint-disable-next-line no-alert
+                                        //   alert('Customer identity not available');
+                                        //   return;
+                                        // }
+                                        await approveDocument({
+                                          orderId: docOrderId,
+                                          approved: versionActionMode === 'approve',
+                                          remarks: versionActionRemarks
+                                        });
+                                        // eslint-disable-next-line no-alert
+                                        alert('Decision submitted successfully');
+                                        setVersionActionMode(null);
+                                        setVersionActionRemarks('');
+                                        loadVersions();
+                                      } catch (e) {
+                                        // eslint-disable-next-line no-console
+                                        console.error('version action error', e);
+                                        // eslint-disable-next-line no-alert
+                                        alert(e?.message || 'Failed to submit decision');
+                                      } finally {
+                                        setVersionActionSubmitting(false);
+                                      }
+                                    }}
+                                    sx={{
+                                      textTransform: 'none',
+                                      bgcolor: versionActionMode === 'approve' ? '#16a34a' : '#dc2626',
+                                      '&:hover': { bgcolor: versionActionMode === 'approve' ? '#15803d' : '#b91c1c' },
+                                      borderRadius: '999px',
+                                      px: 2.5
+                                    }}
+                                  >
+                                    {versionActionSubmitting
+                                      ? <CircularProgress size={14} color="inherit" />
+                                      : `Confirm ${versionActionMode === 'approve' ? 'Approval' : 'Rejection'}`}
+                                  </Button>
+                                </Box>
+                              </Box>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+
+                      {/* Previous Versions History */}
+                      {showVersionHistory && historyVers.length > 0 && (
+                        <Box>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#64748b', mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '11px' }}>
+                            Previous Versions
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            {historyVers.map((v, i) => (
+                              <Box key={v.versionNo ?? v.id ?? i} sx={{ p: 2, borderRadius: 2, border: '1px solid #eef2f7', background: '#fafbff', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ width: 36, height: 36, borderRadius: 1.5, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                  <FileText size={15} color="#94a3b8" />
+                                </Box>
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#374151' }}>
+                                    Version {v.versionNo ?? '—'}
+                                  </Typography>
+                                  {v.remarks && <Typography variant="caption" color="text.secondary">{v.remarks ?? ''}</Typography>}
+                                  {v.createdDate && (
+                                    <Typography variant="caption" sx={{ display: 'block', color: '#94a3b8' }}>{formatDateTime(v.createdDate)}</Typography>
+                                  )}
+                                </Box>
+                                {v.approvalStatus && (
+                                  <Chip label={v.approvalStatus} size="small" sx={statusChipSx(v.approvalStatus)} />
+                                )}
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      )}
+                    </>
+                  );
+                })()}
+              </Box>
             </Box>
+            {/* ================= END DOCUMENT VERSIONS ================= */}
+
             <Typography variant="h6" sx={{ mb: 2 }}>Bindings</Typography>
             {Array.isArray(order.bindings) && order.bindings.length > 0 ? (
               <Box sx={{ mb: 2, display: 'flex', gap: 3, flexWrap: 'wrap' }}>

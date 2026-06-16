@@ -97,9 +97,7 @@ export async function initDocument(payload) {
  * Approve a document version
  * Endpoint: /api/v1/document/approve
  * @typedef {Object} ApproveDocumentRequest
- * @property {number} documentId
- * @property {number} versionNo
- * @property {string} customerId
+ * @property {string} orderId
  * @property {boolean} approved
  * @property {string} remarks
  *
@@ -111,15 +109,26 @@ export async function approveDocument(payload) {
     throw new Error('Payload must be an object');
   }
 
-  const { documentId, versionNo, customerId, approved, remarks } = payload;
+  const { orderId, approved, remarks } = payload;
 
-  if (documentId == null || versionNo == null || !customerId || approved == null) {
-    throw new Error('documentId, versionNo, customerId and approved are required');
+  if (orderId == null || approved == null) {
+    throw new Error('documentId, customerId and approved are required');
+  }
+
+  //check has customer session or not
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
+
+  if(isCustomerPortal) {
+    return authorizedCustomerFetch('/api/v1/document/approve', {
+      method: 'POST',
+      body: JSON.stringify({ orderId, approved, remarks })
+    });
   }
 
   return authorizedFetch('/api/v1/document/approve', {
     method: 'POST',
-    body: JSON.stringify({ documentId, versionNo, customerId, approved, remarks })
+    body: JSON.stringify({ orderId, approved, remarks })
   });
 }
 

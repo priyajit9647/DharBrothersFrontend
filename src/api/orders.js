@@ -1,4 +1,4 @@
-import { authorizedFetch, authorizedFetchRaw, authorizedCustomerFetch, getCustomerPortalSession } from './auth';
+import { authorizedFetch, authorizedFetchRaw, authorizedCustomerFetch, authorizedCustomerFetchRaw, getCustomerPortalSession } from './auth';
 
 // ==============================|| ORDERS API CLIENT ||============================== //
 
@@ -191,12 +191,25 @@ export async function downloadOrderFile(payload) {
     throw new Error('filePath is required');
   }
 
-  const response = await authorizedFetchRaw('/api/v1/orders/admin/download', {
-    method: 'POST',
-    body: JSON.stringify({ filePath, fileName })
-  });
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
 
-  return response.blob();
+  if(isCustomerPortal) {
+    const response = await authorizedCustomerFetchRaw('/api/v1/orders/admin/download', {
+      method: 'POST',
+      body: JSON.stringify({ filePath, fileName })
+    });
+
+    return response.blob();
+  }
+  else {
+    const response = await authorizedFetchRaw('/api/v1/orders/admin/download', {
+      method: 'POST',
+      body: JSON.stringify({ filePath, fileName })
+    });
+
+    return response.blob();
+  }
 }
 
 /**
