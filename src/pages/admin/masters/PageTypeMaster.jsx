@@ -145,8 +145,7 @@ export default function PageTypeMaster() {
             </Typography>
           )}
           <MasterList
-            title="Page Types"
-            description="Configure page classifications like Color and B/W pages."
+            title={'\u200B'}
             columns={[
               { id: 'name', label: 'Name' },
               { id: 'code', label: 'Code' }

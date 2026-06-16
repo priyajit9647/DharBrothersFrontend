@@ -154,8 +154,7 @@ export default function PaperMaster() {
             </Typography>
           )}
           <MasterList
-            title="Paper Types"
-            description="Manage paper types such as Imported Matt, Bond, and Standard."
+            title=" "
             columns={[
               { id: 'name', label: 'Name' },
               { id: 'code', label: 'Code' },

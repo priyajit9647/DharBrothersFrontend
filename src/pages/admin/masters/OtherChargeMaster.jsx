@@ -165,8 +165,7 @@ export default function OtherChargeMaster() {
             </Typography>
           )}
           <MasterList
-            title="Other Charges"
-            description="Configure additional charges such as packing, urgent delivery, or customization."
+            title={'\u00A0'}
             columns={[
               { id: 'code', label: 'Code' },
               { id: 'quantityUnit', label: 'Quantity Unit' },

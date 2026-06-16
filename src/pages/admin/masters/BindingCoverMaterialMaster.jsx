@@ -197,8 +197,8 @@ export default function BindingCoverMaterialMaster() {
             </Typography>
           )}
           <MasterList
-            title="Binding Cover Materials"
-            description="Manage cover materials and reference designs for different binding types."
+            title={<span style={{ display: 'none' }}>Binding Cover Materials</span>}
+            description=""
             columns={[
               { id: 'name', label: 'Name' },
               { id: 'code', label: 'Code' },

@@ -146,8 +146,7 @@ export default function PrintColorMaster() {
             </Typography>
           )}
           <MasterList
-            title="Print Colors"
-            description="Maintain color options like Black & White, Mixed Color, Royal Print, etc."
+            title={<span style={{ visibility: 'hidden' }}>Print Colors</span>}
             columns={[
               { id: 'name', label: 'Name' },
               { id: 'code', label: 'Code' }
