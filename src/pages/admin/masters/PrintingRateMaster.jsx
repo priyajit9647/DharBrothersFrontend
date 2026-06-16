@@ -266,8 +266,7 @@ export default function PrintingRateMaster() {
             </Typography>
           )}
           <MasterList
-            title="Printing Rates"
-            description="Maintain rate cards for printing based on paper and color."
+            title=" "
             columns={[
               {
                 id: 'paperName',

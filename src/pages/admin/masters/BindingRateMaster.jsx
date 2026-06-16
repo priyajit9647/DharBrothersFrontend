@@ -191,8 +191,7 @@ export default function BindingRateMaster() {
             </Typography>
           )}
           <MasterList
-            title="Binding Rates"
-            description="Maintain rate cards for different binding types and cover materials."
+            title=" "
             columns={[
               {
                 id: 'bindingType',
@@ -225,7 +224,7 @@ export default function BindingRateMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
-            showCreateButton={canCreate}
+            showCreateButton={true}
             showActionsColumn={canEdit}
             showActiveColumn={canToggle}
             loading={loading}

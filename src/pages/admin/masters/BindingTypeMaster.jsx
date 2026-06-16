@@ -42,8 +42,6 @@ export default function BindingTypeMaster() {
     <Grid container sx={{ width: '100%', flexGrow: 1 }}>
       <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
         <MasterList
-          title="Binding Types"
-          description="View the list of available binding types. Actions are disabled for this master."
           columns={[
             { id: 'name', label: 'Name' },
             { id: 'code', label: 'Code' },

@@ -146,8 +146,8 @@ export default function PrintingTypeMaster() {
             </Typography>
           )}
           <MasterList
-            title="Printing Types"
-            description="Manage printing types such as Single Side or Double Side."
+            title={<span style={{ display: 'none' }} />}
+            description={undefined}
             columns={[
               { id: 'name', label: 'Name' },
               { id: 'code', label: 'Code' }

@@ -158,8 +158,7 @@ export default function ProcessStageMaster() {
             </Typography>
           )}
           <MasterList
-            title="Process Stages"
-            description="Define and maintain stages in the production workflow (e.g. Cutting, Binding, Packing)."
+            title=" "
             columns={[
               { id: 'stageName', label: 'Stage Name' },
               { id: 'code', label: 'Code' },
@@ -177,7 +176,7 @@ export default function ProcessStageMaster() {
             onCreate={openCreateDialog}
             onEdit={openEditDialog}
             onToggleActive={handleToggleActive}
-            showCreateButton={canCreate}
+            showCreateButton={true}
             showActionsColumn={canEdit}
             showActiveColumn={canToggle}
             loading={loading}
