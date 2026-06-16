@@ -76,7 +76,7 @@ function getUniversityName(order) {
 
 function getUniversityDept(order) {
   return (
-    order.universityDept || order.universityDepartment || order.department || order.university?.department || null
+    order.departmentName || null
   );
 }
 

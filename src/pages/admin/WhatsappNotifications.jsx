@@ -49,8 +49,8 @@ export default function WhatsappNotifications() {
             </Typography>
           )}
           <MasterList
-            title="WhatsApp Notifications"
-            description="View the history of WhatsApp notifications sent to customers."
+            title=""
+            description=""
             columns={[
               { id: 'customerName', label: 'Customer Name' },
               { id: 'customerPhone', label: 'Phone' },

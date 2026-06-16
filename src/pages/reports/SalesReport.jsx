@@ -20,11 +20,6 @@ const COLUMNS = [
   { key: 'university', label: 'University', width: 300 },
   { key: 'orderAmount', label: 'Order Amount', width: 140 },
   { key: 'totalTime', label: 'Total Time Taken', width: 160 },
-  { key: 'newPhase', label: 'New Phase', width: 140 },
-  { key: 'designPhase', label: 'Design Phase', width: 140 },
-  { key: 'printingTime', label: 'Printing Time', width: 140 },
-  { key: 'bindingTime', label: 'Binding Time', width: 140 },
-  { key: 'dispatchTime', label: 'Dispatch Time', width: 140 },
   { key: 'customerRating', label: 'Customer Rating', width: 120 }
 ];
 

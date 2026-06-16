@@ -247,8 +247,8 @@ export default function Template() {
             </Typography>
           )}
           <MasterList
-            title="Notification Templates"
-            description="Create and manage notification templates for branches and process stages."
+            title={<span style={{ display: 'none' }} />}
+            description=""
             columns={[
               { id: 'processStageName', label: 'Process Stage' },
               { id: 'roleName', label: 'Role' },
@@ -287,7 +287,7 @@ export default function Template() {
             page={page}
             rowsPerPage={rowsPerPage}
             totalCount={rows.length}
-            showCreateButton={canCreate}
+            showCreateButton={true}
             showActionsColumn={canEdit}
             showActiveColumn={canToggle}
             onPageChange={setPage}

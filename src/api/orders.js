@@ -164,11 +164,13 @@ export async function getOrderById(orderId) {
 
   if(isCustomerPortal) {
     return authorizedCustomerFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
-      method: 'GET'
+      method: 'GET',
+      allowRefresh: false
     });
   } else {
     return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
-      method: 'GET'
+      method: 'GET',
+      allowRefresh: false
     });
   }
 }
@@ -360,4 +362,46 @@ export async function getDocumentVersionList(docStageId) {
   return authorizedFetch(`/api/v1/document/vrson-list?docStageId=${encodeURIComponent(String(docStageId))}`, {
     method: 'GET'
   });
+}
+
+/**
+ * Fetch document version list scoped to an order
+ * Endpoint: /api/v1/document/version-list?orderid={orderId}
+ * @param {string|number} orderId
+ * @returns {Promise<Array>} Array of document version objects
+ */
+export async function getDocumentVersionListForOrder(orderId) {
+  if (orderId == null || orderId === '') {
+    throw new Error('orderId is required');
+  }
+
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
+
+  const url = `/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`;
+
+  if (isCustomerPortal) {
+    return authorizedCustomerFetch(url, { method: 'GET' });
+  }
+
+  return authorizedFetch(url, { method: 'GET' });
+}
+
+/**
+ * Download invoice PDF for an order by ID
+ * Endpoint: GET /api/v1/order/invoice/get/{orderId}
+ * @param {string} orderId
+ * @returns {Promise<Blob>} PDF blob
+ */
+export async function downloadInvoice(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+
+  const response = await authorizedFetchRaw(`/api/v1/order/invoice/get/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/pdf'
+    }
+  });
+
+  return response.blob();
 }

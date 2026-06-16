@@ -17,7 +17,7 @@ export default function Footer() {
         	&nbsp; Developed by Silicon Gen X Global
       </Typography>
       <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="https://google.com/" target="_blank" variant="caption" color="text.primary">
+        <Link href="https://dharbrothers.saraftechlab.org/order" target="_blank" variant="caption" color="text.primary">
           Place Order
         </Link>
       </Stack>
