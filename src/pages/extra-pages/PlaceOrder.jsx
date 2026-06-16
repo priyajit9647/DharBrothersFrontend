@@ -2034,25 +2034,37 @@ function DocumentDetailsStep({
             <Typography sx={{ fontSize: '0.92rem', color: 'text.secondary', flex: 1 }}>{thesisDocument?.name || 'No thesis file selected'}</Typography>
 
             <Button
-              onClick={onEditPageDetails}
-              variant="contained"
-              sx={{
-                px: 3,
-                py: 1.1,
-                borderRadius: 0,
-                bgcolor: theme.palette.info.main,
-                color: 'common.white',
-                boxShadow: 'none',
-                fontSize: '0.8rem',
-                letterSpacing: 0.4,
-                '&:hover': {
-                  bgcolor: theme.palette.info.dark,
-                  boxShadow: 'none'
-                }
-              }}
-            >
-              Edit
-            </Button>
+  onClick={onEditPageDetails}
+  variant="contained"
+  sx={{
+    px: 3,
+    py: 1.1,
+    borderRadius: 0,
+    bgcolor: theme.palette.info.main,
+    color: 'common.white',
+    boxShadow: 'none',
+    fontSize: '0.8rem',
+    letterSpacing: 0.4,
+    '&:hover': {
+      bgcolor: theme.palette.info.dark,
+      boxShadow: 'none',
+      animation: 'none' // Stops flashing when the user hovers over it
+    },
+    
+    // --- RAPID FLASHING ANIMATION ---
+    animation: 'rapidFlash 0.8s infinite alternate',
+    '@keyframes rapidFlash': {
+      '0%': {
+        bgcolor: theme.palette.info.main,
+      },
+      '100%': {
+        bgcolor: '#d32f2f', // MUI's standard error/red color
+      }
+    }
+  }}
+>
+  Edit
+</Button>
           </Box>
 
           {pageTypesError ? (
@@ -2127,7 +2139,7 @@ function DocumentDetailsStep({
 
               <Typography sx={{ fontSize: '0.92rem', color: 'text.secondary', flex: 1 }}>{synopsisDocument?.name}</Typography>
 
-              <Button
+                <Button
                 onClick={onEditSynopsisPageDetails}
                 variant="contained"
                 sx={{
@@ -2141,7 +2153,19 @@ function DocumentDetailsStep({
                   letterSpacing: 0.4,
                   '&:hover': {
                     bgcolor: theme.palette.info.dark,
-                    boxShadow: 'none'
+                    boxShadow: 'none',
+                    animation: 'none' // Pauses the intense flashing when they go to click it
+                  },
+                  
+                  // --- RAPID RED & CURRENT COLOR FLASH ---
+                  animation: 'rapidFlash 0.6s infinite alternate ease-in-out',
+                  '@keyframes rapidFlash': {
+                    '0%': {
+                      bgcolor: theme.palette.info.main,
+                    },
+                    '100%': {
+                      bgcolor: '#d32f2f', // A clean, standard error red
+                    }
                   }
                 }}
               >
@@ -2467,12 +2491,21 @@ export function BindingPrintDetailsCard({
           </Box>
           <Box>
             <QuantityField
-              label="No. Of Copies"
-              value={detail.copies}
-              onDecrease={() => onQuantityAdjust(detail.id, 'copies', -1)}
-              onIncrease={() => onQuantityAdjust(detail.id, 'copies', 1)}
-              onChange={(event) => onDetailChange(detail.id, 'copies', event.target.value)}
-            />
+                label="No. Of Copies"
+                value={detail.copies}
+                onDecrease={() => {
+                  if (detail.copies > 1) {
+                    onQuantityAdjust(detail.id, 'copies', -1);
+                  }
+                }}
+                onIncrease={() => onQuantityAdjust(detail.id, 'copies', 1)}
+                onChange={(event) => {
+                  const value = parseInt(event.target.value, 10);
+                  // If it's not a number or less than 1, force it to 1
+                  const safeValue = isNaN(value) || value < 1 ? 1 : value;
+                  onDetailChange(detail.id, 'copies', safeValue);
+                }}
+              />
           </Box>
           <Box>
             <MasterSelectField
