@@ -305,7 +305,8 @@ export default function PaymentConfigurationMaster() {
               { id: 'branchName', label: 'Branch' },
               { id: 'configId', label: 'ID' },
               { id: 'merchantId', label: 'Merchant ID' },
-              { id: 'aggregatorId', label: 'Aggregator ID' },
+                { id: 'aggregatorId', label: 'Aggregator ID' },
+                { id: 'bankName', label: 'Bank Name' },
               {
                 id: 'percentage',
                 label: 'Percentage',
