@@ -137,15 +137,15 @@ export async function authorizedFetch(path, options = {}) {
   if (!API_BASE_URL) {
     throw new Error('API base URL is not configured');
   }
+  const { allowRefresh = true, ...fetchOptions } = options;
 
   const localAuth = getAuthStateFromLocalStorage();
   let accessToken = getAccessTokenFromCookies() || localAuth?.accessToken || null;
   const refreshToken = getRefreshTokenFromCookies() || localAuth?.refreshToken || null;
 
-  // If there is no access token or it is expired, but a refresh
-  // token exists, attempt to obtain a new access token via the
-  // refresh token endpoint.
-  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
+  // If there is no access token or it is expired, and refresh is allowed,
+  // attempt to obtain a new access token via the refresh token endpoint.
+  if (allowRefresh && refreshToken && (!accessToken || isTokenExpired(accessToken))) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
@@ -154,15 +154,19 @@ export async function authorizedFetch(path, options = {}) {
       throw new Error('Session expired. Please login again.');
     }
   } else if (accessToken && isTokenExpired(accessToken)) {
-    // Access token expired and there is no refresh token
-    clearAuthCookies();
-    throw new Error('Session expired. Please login again.');
+    // Access token expired. If refresh is allowed we clear cookies and
+    // prompt re-login; otherwise allow the request to proceed with the
+    // existing token (caller explicitly disabled refresh attempts).
+    if (allowRefresh) {
+      clearAuthCookies();
+      throw new Error('Session expired. Please login again.');
+    }
   }
 
-  const isFormData = options.body instanceof FormData;
+  const isFormData = fetchOptions.body instanceof FormData;
 
   const headers = {
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
     ...(accessToken
       ? {
           Authorization: `Bearer ${accessToken}`
@@ -180,17 +184,17 @@ export async function authorizedFetch(path, options = {}) {
   }
 
   let response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers
   });
 
-  if (response.status === 401 && refreshToken) {
+  if (allowRefresh && response.status === 401 && refreshToken) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       const nextAccessToken = refreshed?.accessToken;
       if (nextAccessToken) {
         response = await fetch(`${API_BASE_URL}${path}`, {
-          ...options,
+          ...fetchOptions,
           headers: {
             ...headers,
             Authorization: `Bearer ${nextAccessToken}`
@@ -224,12 +228,13 @@ export async function authorizedFetchRaw(path, options = {}) {
   if (!API_BASE_URL) {
     throw new Error('API base URL is not configured');
   }
+  const { allowRefresh = true, ...fetchOptions } = options;
 
   const localAuth = getAuthStateFromLocalStorage();
   let accessToken = getAccessTokenFromCookies() || localAuth?.accessToken || null;
   const refreshToken = getRefreshTokenFromCookies() || localAuth?.refreshToken || null;
 
-  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
+  if (allowRefresh && refreshToken && (!accessToken || isTokenExpired(accessToken))) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
@@ -238,14 +243,16 @@ export async function authorizedFetchRaw(path, options = {}) {
       throw new Error('Session expired. Please login again.');
     }
   } else if (accessToken && isTokenExpired(accessToken)) {
-    clearAuthCookies();
-    throw new Error('Session expired. Please login again.');
+    if (allowRefresh) {
+      clearAuthCookies();
+      throw new Error('Session expired. Please login again.');
+    }
   }
 
-  const isFormData = options.body instanceof FormData;
+  const isFormData = fetchOptions.body instanceof FormData;
 
   const headers = {
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
     ...(accessToken
       ? {
           Authorization: `Bearer ${accessToken}`
@@ -261,17 +268,17 @@ export async function authorizedFetchRaw(path, options = {}) {
   }
 
   let response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers
   });
 
-  if (response.status === 401 && refreshToken) {
+  if (allowRefresh && response.status === 401 && refreshToken) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       const nextAccessToken = refreshed?.accessToken;
       if (nextAccessToken) {
         response = await fetch(`${API_BASE_URL}${path}`, {
-          ...options,
+          ...fetchOptions,
           headers: {
             ...headers,
             Authorization: `Bearer ${nextAccessToken}`
@@ -364,12 +371,13 @@ export async function authorizedCustomerFetch(path, options = {}) {
   if (!API_BASE_URL) {
     throw new Error('API base URL is not configured');
   }
+  const { allowRefresh = true, ...fetchOptions } = options;
 
   const localAuth = getCustomerAuthStateFromLocalStorage();
   let accessToken = localAuth?.accessToken || null;
   const refreshToken = localAuth?.refreshToken || null;
 
-  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
+  if (allowRefresh && refreshToken && (!accessToken || isTokenExpired(accessToken))) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
@@ -378,12 +386,14 @@ export async function authorizedCustomerFetch(path, options = {}) {
       throw new Error('Customer session expired. Please login again.');
     }
   } else if (accessToken && isTokenExpired(accessToken)) {
-    throw new Error('Customer session expired. Please login again.');
+    if (allowRefresh) {
+      throw new Error('Customer session expired. Please login again.');
+    }
   }
 
-  const isFormData = options.body instanceof FormData;
+  const isFormData = fetchOptions.body instanceof FormData;
   const headers = {
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
     ...(accessToken
       ? {
           Authorization: `Bearer ${accessToken}`
@@ -399,17 +409,17 @@ export async function authorizedCustomerFetch(path, options = {}) {
   }
 
   let response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers
   });
 
-  if (response.status === 401 && refreshToken) {
+  if (allowRefresh && response.status === 401 && refreshToken) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       const nextAccessToken = refreshed?.accessToken;
       if (nextAccessToken) {
         response = await fetch(`${API_BASE_URL}${path}`, {
-          ...options,
+          ...fetchOptions,
           headers: {
             ...headers,
             Authorization: `Bearer ${nextAccessToken}`
@@ -441,12 +451,13 @@ export async function authorizedCustomerFetchRaw(path, options = {}) {
   if (!API_BASE_URL) {
     throw new Error('API base URL is not configured');
   }
+  const { allowRefresh = true, ...fetchOptions } = options;
 
   const localAuth = getCustomerAuthStateFromLocalStorage();
   let accessToken = localAuth?.accessToken || null;
   const refreshToken = localAuth?.refreshToken || null;
 
-  if (refreshToken && (!accessToken || isTokenExpired(accessToken))) {
+  if (allowRefresh && refreshToken && (!accessToken || isTokenExpired(accessToken))) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       accessToken = refreshed.accessToken;
@@ -455,12 +466,14 @@ export async function authorizedCustomerFetchRaw(path, options = {}) {
       throw new Error('Customer session expired. Please login again.');
     }
   } else if (accessToken && isTokenExpired(accessToken)) {
-    throw new Error('Customer session expired. Please login again.');
+    if (allowRefresh) {
+      throw new Error('Customer session expired. Please login again.');
+    }
   }
 
-  const isFormData = options.body instanceof FormData;
+  const isFormData = fetchOptions.body instanceof FormData;
   const headers = {
-    ...(options.headers || {}),
+    ...(fetchOptions.headers || {}),
     ...(accessToken
       ? {
           Authorization: `Bearer ${accessToken}`
@@ -476,17 +489,17 @@ export async function authorizedCustomerFetchRaw(path, options = {}) {
   }
 
   let response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers
   });
 
-  if (response.status === 401 && refreshToken) {
+  if (allowRefresh && response.status === 401 && refreshToken) {
     try {
       const refreshed = await refreshTokenApi(refreshToken);
       const nextAccessToken = refreshed?.accessToken;
       if (nextAccessToken) {
         response = await fetch(`${API_BASE_URL}${path}`, {
-          ...options,
+          ...fetchOptions,
           headers: {
             ...headers,
             Authorization: `Bearer ${nextAccessToken}`
