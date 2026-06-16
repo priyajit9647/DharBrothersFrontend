@@ -365,6 +365,29 @@ export async function getDocumentVersionList(docStageId) {
 }
 
 /**
+ * Fetch document version list scoped to an order
+ * Endpoint: /api/v1/document/version-list?orderid={orderId}
+ * @param {string|number} orderId
+ * @returns {Promise<Array>} Array of document version objects
+ */
+export async function getDocumentVersionListForOrder(orderId) {
+  if (orderId == null || orderId === '') {
+    throw new Error('orderId is required');
+  }
+
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
+
+  const url = `/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`;
+
+  if (isCustomerPortal) {
+    return authorizedCustomerFetch(url, { method: 'GET' });
+  }
+
+  return authorizedFetch(url, { method: 'GET' });
+}
+
+/**
  * Download invoice PDF for an order by ID
  * Endpoint: GET /api/v1/order/invoice/get/{orderId}
  * @param {string} orderId

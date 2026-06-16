@@ -18,7 +18,8 @@ import MainCard from 'components/MainCard';
 import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
 import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline } from 'api/customerPortal';
-import { getDocumentVersionList, approveDocument } from 'api/document';
+import { approveDocument } from 'api/document';
+import { getDocumentVersionListForOrder } from 'api/orders';
 import { getCustomerPortalSession } from 'utils/authTokens';
 import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft } from 'lucide-react';
 
@@ -100,6 +101,7 @@ export default function OrderDetails() {
   const [approvalSubmitting, setApprovalSubmitting] = useState(false);
   const [versionOptions, setVersionOptions] = useState([]);
   const [versionLoading, setVersionLoading] = useState(false);
+  
 
   // Map document key to backend document stage id — adjust as required
   const DOC_STAGE_ID_BY_KEY = {
@@ -108,22 +110,37 @@ export default function OrderDetails() {
     thesis: 3,
     synopsis: 4
   };
+  
 
   useEffect(() => {
     let mounted = true;
+
     const loadVersions = async () => {
-      const stageId = DOC_STAGE_ID_BY_KEY[approvalDocumentKey] ?? 1;
+      if (!orderId) return;
       setVersionLoading(true);
       setVersionOptions([]);
       try {
-        const resp = await getDocumentVersionList(stageId);
+        const resp = await getDocumentVersionListForOrder(orderId);
         if (!mounted) return;
-        if (Array.isArray(resp)) setVersionOptions(resp);
-        else if (resp && Array.isArray(resp.data)) setVersionOptions(resp.data);
-        else setVersionOptions([]);
+
+        let list = [];
+        if (Array.isArray(resp)) list = resp;
+        else if (resp && Array.isArray(resp.data)) list = resp.data;
+        else if (Array.isArray(resp?.content)) list = resp.content;
+
+        // Filter by selected document key where possible (match documentMasterId or name)
+        const stageId = DOC_STAGE_ID_BY_KEY[approvalDocumentKey];
+        const filtered = list.filter((v) => {
+          if (stageId != null && (v.documentMasterId == null ? false : Number(v.documentMasterId) === Number(stageId))) return true;
+          const name = String(v.documentMasterName || v.documentName || '').toLowerCase();
+          if (name && name.includes(String(approvalDocumentKey).toLowerCase())) return true;
+          return false;
+        });
+
+        setVersionOptions(filtered.length > 0 ? filtered : list);
       } catch (e) {
         // eslint-disable-next-line no-console
-        console.error('Failed to load document versions', e);
+        console.error('Failed to load document versions for order', e);
         if (mounted) setVersionOptions([]);
       } finally {
         if (mounted) setVersionLoading(false);
@@ -131,12 +148,6 @@ export default function OrderDetails() {
     };
 
     loadVersions();
-
-    return () => { mounted = false; };
-  }, [approvalDocumentKey]);
-
-  useEffect(() => {
-    let mounted = true;
 
     const loadOrder = async () => {
       if (!orderId) return;
@@ -667,31 +678,35 @@ export default function OrderDetails() {
                   <Button variant="contained" disabled={approvalSubmitting} onClick={async () => {
                     setApprovalSubmitting(true);
                     try {
-                      if (!approvalVersion) {
-                        // eslint-disable-next-line no-alert
-                        alert('Please select a version');
-                        return;
-                      }
+                        if (!approvalVersion) {
+                          // eslint-disable-next-line no-alert
+                          alert('Please provide a version number');
+                          return;
+                        }
 
-                      const selected = (versionOptions || []).find((v) => String(v.versionNo ?? v.version ?? v.id) === String(approvalVersion));
-                      const documentId = selected?.documentId ?? selected?.id ?? selected?.documentId ?? null;
+                        const documentData = order?.documents || {};
+                        let docEntry = documentData?.[approvalDocumentKey] ?? null;
+                        if (!docEntry && Array.isArray(order?.documents)) {
+                          docEntry = order.documents.find((d) => String(d.type ?? d.documentType ?? '').toLowerCase().includes(approvalDocumentKey));
+                        }
+                        const documentId = docEntry?.documentId ?? docEntry?.id ?? null;
 
-                      const session = getCustomerPortalSession();
-                      const customerId = session?.customerId || session?.userId || session?.id || order?.customer?.customerId || order?.customer?.id || null;
+                        const session = getCustomerPortalSession();
+                        const customerId = session?.customerId || session?.userId || session?.id || order?.customer?.customerId || order?.customer?.id || null;
 
-                      if (!documentId) {
-                        // eslint-disable-next-line no-alert
-                        alert('Document identifier for selected version not available');
-                        return;
-                      }
+                        if (!documentId) {
+                          // eslint-disable-next-line no-alert
+                          alert('Document identifier for selected document not available');
+                          return;
+                        }
 
-                      if (!customerId) {
-                        // eslint-disable-next-line no-alert
-                        alert('Customer identity not available');
-                        return;
-                      }
+                        if (!customerId) {
+                          // eslint-disable-next-line no-alert
+                          alert('Customer identity not available');
+                          return;
+                        }
 
-                      await approveDocument({ documentId: Number(documentId), versionNo: Number(approvalVersion), customerId: String(customerId), approved: approvalDecision === 'Approve', remarks: approvalRemarks });
+                        await approveDocument({ documentId: Number(documentId), versionNo: Number(approvalVersion), customerId: String(customerId), approved: approvalDecision === 'Approve', remarks: approvalRemarks });
 
                       // eslint-disable-next-line no-alert
                       alert('Decision submitted');
