@@ -1,4 +1,4 @@
-import { authorizedFetch, authorizedFetchRaw, authorizedCustomerFetch } from './auth';
+import { authorizedFetch, authorizedFetchRaw, authorizedCustomerFetch, getCustomerPortalSession } from './auth';
 
 // ==============================|| ORDERS API CLIENT ||============================== //
 
@@ -159,9 +159,18 @@ export async function getOrderById(orderId) {
     throw new Error('orderId is required');
   }
 
-  return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
-    method: 'GET'
-  });
+  const session = getCustomerPortalSession();
+  const isCustomerPortal = Boolean(session);
+
+  if(isCustomerPortal) {
+    return authorizedCustomerFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
+      method: 'GET'
+    });
+  } else {
+    return authorizedFetch(`/api/v1/orders/admin/${encodeURIComponent(String(orderId))}`, {
+      method: 'GET'
+    });
+  }
 }
 
 /**
@@ -334,5 +343,21 @@ export async function reassignOrderStaff(jobId, toStaffId, comment = '') {
       toStaffId: String(toStaffId),
       comment
     })
+  });
+}
+
+/**
+ * Fetch document version list for a document stage id
+ * Endpoint: /api/v1/document/vrson-list?docStageId={docStageId}
+ * @param {number|string} docStageId
+ * @returns {Promise<Array>} Array of document versions
+ */
+export async function getDocumentVersionList(docStageId) {
+  if (docStageId == null || docStageId === '') {
+    throw new Error('docStageId is required');
+  }
+
+  return authorizedFetch(`/api/v1/document/vrson-list?docStageId=${encodeURIComponent(String(docStageId))}`, {
+    method: 'GET'
   });
 }

@@ -184,7 +184,7 @@ function MasterList({
 
 MasterList.propTypes = {
   title: PropTypes.string.isRequired,
-  description: PropTypes.string,
+  description: PropTypes.string | PropTypes.element,
   columns: PropTypes.arrayOf(
     PropTypes.shape({
       id: PropTypes.string.isRequired,
