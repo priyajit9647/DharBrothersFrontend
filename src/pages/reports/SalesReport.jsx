@@ -17,8 +17,8 @@ const COLUMNS = [
   { key: 'year', label: 'Year', width: 90 },
   { key: 'state', label: 'State', width: 160 },
   { key: 'pincode', label: 'Pincode', width: 120 },
-  { key: 'university', label: 'University', width: 300 },
-  { key: 'orderAmount', label: 'Order Amount', width: 140 },
+  { key: 'university', label: 'University', width: 200 },
+  { key: 'orderAmount', label: 'Order Amount', width: 120 },
   { key: 'totalTime', label: 'Total Time Taken', width: 160 },
   { key: 'customerRating', label: 'Customer Rating', width: 120 }
 ];

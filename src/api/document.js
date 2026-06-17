@@ -188,20 +188,20 @@ export async function getDocumentVersionList(docStageId) {
   }
 }
 
-export async function getDocumentVersionListFromOrderId(orderId) {
-  if (orderId == null || orderId === '') {
-    throw new Error('orderId is required');
+export async function getDocumentVersionListFromOrderId (orderNumber) {
+  if (orderNumber == null || orderNumber === '') {
+    throw new Error('orderNumber is required');
   }
 
   const session = getCustomerPortalSession();
   const isCustomerPortal = Boolean(session);
 
   if(isCustomerPortal) {
-    return authorizedCustomerFetch(`/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`, {
+    return authorizedCustomerFetch(`/api/v1/document/version-list?orderNumber=${encodeURIComponent(String(orderNumber))}`, {
       method: 'GET'
     });
   } else {
-    return authorizedFetch(`/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`, {
+    return authorizedFetch(`/api/v1/document/version-list?orderNumber=${encodeURIComponent(String(orderNumber))}`, {
       method: 'GET'
     });
   }
