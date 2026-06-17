@@ -46,7 +46,7 @@ function OrdersTableHead() {
     <TableHead>
       <TableRow>
         <TableCell sx={{ width: 48 }} />
-         <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Order #</TableCell>
+         <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 120 }}>Order #</TableCell>
         <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Customer</TableCell>
         <TableCell sx={{ minWidth: 180, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>University Name</TableCell>
         <TableCell sx={{ minWidth: 160, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>University Department</TableCell>
@@ -62,7 +62,7 @@ function OrdersTableHead() {
 }
 
 function renderOrderId(order) {
-  return order.orderId ?? order.orderNo ?? order.id ?? order.code ?? '—';
+  return order.orderNumber ?? '—';
 }
 
 function getUniversityName(order) {

@@ -187,12 +187,20 @@ const INITIAL_CHECKOUT_FORM = {
 };
 
 function buildCustomerPayloadFromForm(checkoutForm) {
+  const mobileStr = String(checkoutForm.mobile || '').trim();
+  let whatsappStr = String(checkoutForm.whatsapp || mobileStr || '').trim();
+
+  // If whatsapp looks invalid/too short (likely an accidental single digit), fall back to mobile
+  if (whatsappStr.length < 5 && mobileStr.length >= 5) {
+    whatsappStr = mobileStr;
+  }
+
   return {
     firstName: checkoutForm.firstName || '',
     lastName: checkoutForm.lastName || '',
     customerEmail: checkoutForm.customerEmail || '',
-    mobile: checkoutForm.mobile || '',
-    whatsapp: checkoutForm.whatsapp || checkoutForm.mobile || '',
+    mobile: mobileStr,
+    whatsapp: whatsappStr,
     customerAddress1: checkoutForm.customerAddress1 || '',
     customerAddress2: checkoutForm.customerAddress2 || '',
     customerCity: checkoutForm.customerCity || '',

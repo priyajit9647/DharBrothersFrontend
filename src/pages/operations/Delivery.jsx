@@ -274,6 +274,19 @@ function StageCard({ title, rows = [] }) {
                 try {
                   setOtpLoading(true);
                   const payload = { orderId: activeRow?.orderId || activeRow?.id || activeRow?.orderNo, otp: otpValue };
+
+                  // Prefer to send stageId if available (backend expects stageId),
+                  // fall back to jobId when stageId is not present.
+                  if (activeRow?.stageId != null && String(activeRow.stageId).trim() !== '') {
+                    payload.stageId = String(activeRow.jobId);
+                  }
+
+                  if (activeRow?.jobId != null && payload.stageId == null) {
+                    // Some APIs may accept jobId; include it as numeric when possible
+                    const numericJobId = /^\d+$/.test(String(activeRow.jobId)) ? Number(activeRow.jobId) : String(activeRow.jobId);
+                    payload.jobId = numericJobId;
+                  }
+
                   await verifyOrderReceivedOtp(payload);
                   setSnack({ open: true, message: 'Order marked received', severity: 'success' });
                   setOtpDialogOpen(false);
@@ -430,6 +443,9 @@ export default function DeliveryDispatch() {
             customerContact: o.customerPhone ?? o.customer?.phone ?? o.customerContact ?? '',
             customerEmail: o.customerEmail ?? o.customer?.email ?? o.email ?? '',
             stage: o.orderStageName ?? o.stageName ?? o.stage ?? stageName,
+            // Include stageId/jobId when present so we can forward them to verify API
+            stageId: o.orderStageId ?? o.stageId ?? (o.orderStage && (o.orderStage.id ?? o.orderStage.stageId)) ?? null,
+            jobId: o.jobId ?? (o.job && (o.job.id ?? o.job.jobId)) ?? null,
             amount: Number(o.totalAmount ?? o.amount ?? o.grandTotal ?? 0),
             payment: o.paymentStatus ?? o.payment ?? '—'
           }));

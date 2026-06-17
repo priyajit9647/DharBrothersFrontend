@@ -44,6 +44,18 @@ const headCells = [
     label: 'Payment Status'
   },
   {
+    id: 'mobile',
+    align: 'center',
+    disablePadding: false,
+    label: 'Customer Mobile'
+  },
+  {
+    id: 'email',
+    align: 'center',
+    disablePadding: false,
+    label: 'Customer Email'
+  },
+  {
     id: 'quantity',
     align: 'right',
     disablePadding: false,
@@ -111,11 +123,19 @@ function getStatusMeta(status) {
 }
 
 function getOrderId(order) {
-  return order?.trackingNumber ?? order?.orderId ?? order?.orderNo ?? order?.id ?? order?.code ?? 'N/A';
+  return order?.orderNumber ?? order?.orderId ?? order?.orderNo ?? order?.id ?? order?.code ?? 'N/A';
 }
 
 function getOrderLabel(order) {
   return order?.orderName ?? order?.title ?? order?.name ?? 'N/A';
+}
+
+function getCustomerMobile(order) {
+  return order?.customerMobileNo ?? order?.mobile ?? 'N/A';
+}
+
+function getCustomerEmail(order) {
+  return order?.customerEmail ?? order?.email ?? 'N/A';
 }
 
 function getStatusLabel(order) {
@@ -307,6 +327,8 @@ export default function OrderTable() {
                     <TableCell align="center">
                       <Chip label={statusMeta.label} color={statusMeta.color} size="small" variant="soft" />
                     </TableCell>
+                    <TableCell align="right">{getCustomerMobile(row)}</TableCell>
+                    <TableCell align="right">{getCustomerEmail(row)}</TableCell>
                     <TableCell align="right">{getQuantity(row)}</TableCell>
                     <TableCell align="right">{formatAmount(row.totalAmount ?? row.amount ?? row.netAmount)}</TableCell>
                     <TableCell>{formatDate(row.createdDate ?? row.createdAt ?? row.orderDate)}</TableCell>
