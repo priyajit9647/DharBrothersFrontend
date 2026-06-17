@@ -134,7 +134,7 @@ export default function PaperSizeMaster() {
             </Typography>
           )}
           <MasterList
-            title="Paper Sizes"
+            title={<span style={{ display: 'none' }}>Paper Sizes</span>}
             columns={[
               { id: 'name', label: 'Name' },
               { id: 'code', label: 'Code' }
