@@ -231,6 +231,101 @@ export default function DashboardDefault() {
     setOrderMenuAnchor(null);
   };
 
+  const downloadBlob = (blob, filename) => {
+    try {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => window.URL.revokeObjectURL(url), 1500);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error('Download failed', e);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const table = document.querySelector('[aria-labelledby="recent-orders-table"]');
+    if (!table) {
+      // eslint-disable-next-line no-console
+      console.warn('Orders table not found for CSV export');
+      return;
+    }
+
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const csv = rows
+      .map((row) => {
+        const cells = Array.from(row.querySelectorAll('th,td'));
+        return cells
+          .map((cell) => {
+            let text = cell.innerText || '';
+            text = String(text).replace(/"/g, '""');
+            if (/[",\n]/.test(text)) {
+              return `"${text}"`;
+            }
+            return text;
+          })
+          .join(',');
+      })
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    downloadBlob(blob, 'recent-orders.csv');
+  };
+
+  const handleExportExcel = () => {
+    const table = document.querySelector('[aria-labelledby="recent-orders-table"]');
+    if (!table) {
+      // eslint-disable-next-line no-console
+      console.warn('Orders table not found for Excel export');
+      return;
+    }
+
+    const html = `\uFEFF<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"/></head><body>${table.outerHTML}</body></html>`;
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    downloadBlob(blob, 'recent-orders.xls');
+  };
+
+  const handlePrintTable = () => {
+    const table = document.querySelector('[aria-labelledby="recent-orders-table"]');
+    if (!table) {
+      // eslint-disable-next-line no-console
+      console.warn('Orders table not found for printing');
+      return;
+    }
+
+    const newWin = window.open('', '_blank');
+    if (!newWin) {
+      // eslint-disable-next-line no-console
+      console.warn('Unable to open print window');
+      return;
+    }
+
+    const style = `
+      <style>
+        table{border-collapse:collapse;width:100%}
+        th,td{border:1px solid #ddd;padding:8px;text-align:left}
+        th{background:#f5f5f5}
+      </style>
+    `;
+
+    newWin.document.open();
+    newWin.document.write(`<!doctype html><html><head><meta charset="utf-8">${style}</head><body>${table.outerHTML}</body></html>`);
+    newWin.document.close();
+    newWin.focus();
+    setTimeout(() => {
+      try {
+        newWin.print();
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error('Print failed', e);
+      }
+    }, 300);
+  };
+
   return (
     <Grid container rowSpacing={4.5} columnSpacing={2.75}>
       {/* row 1 */}
@@ -283,9 +378,30 @@ export default function DashboardDefault() {
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-              <MenuItem onClick={handleOrderMenuClose}>Export as CSV</MenuItem>
-              <MenuItem onClick={handleOrderMenuClose}>Export as Excel</MenuItem>
-              <MenuItem onClick={handleOrderMenuClose}>Print Table</MenuItem>
+              <MenuItem
+                onClick={() => {
+                  handleExportCsv();
+                  handleOrderMenuClose();
+                }}
+              >
+                Export as CSV
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  handleExportExcel();
+                  handleOrderMenuClose();
+                }}
+              >
+                Export as Excel
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  handlePrintTable();
+                  handleOrderMenuClose();
+                }}
+              >
+                Print Table
+              </MenuItem>
             </Menu>
           </Grid>
         </Grid>
