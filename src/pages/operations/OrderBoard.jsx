@@ -520,31 +520,33 @@ export default function OrderBoard() {
                             key={renderOrderId(order)}
                             sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
                           >
-                            <TableCell>
-                              <Button
-                                onClick={(e) => handleActionClick(e, order)}
-                                variant="outlined"
-                                size="small"
-                                sx={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  textTransform: 'none',
-                                  minWidth: 86,
-                                  height: 64,
-                                  borderRadius: 1.5,
-                                  boxShadow: 1,
-                                  px: 1,
-                                  bgcolor: 'background.paper',
-                                  color: 'text.primary'
-                                }}
-                              >
-                                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                                  Action
-                                </Typography>
-                                <EllipsisOutlined style={{ fontSize: '1rem', marginTop: 8 }} />
-                              </Button>
+                            <TableCell sx={{ width: 48, px: 1 }}>
+                              <Tooltip title="Actions" arrow placement="top">
+                                <IconButton
+                                  onClick={(e) => handleActionClick(e, order)}
+                                  size="small"
+                                  aria-label="Order actions"
+                                  sx={(theme) => ({
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: '10px',
+                                    border: '1px solid',
+                                    borderColor: theme.palette.mode === 'light' ? '#e5e7eb' : theme.palette.divider,
+                                    bgcolor: theme.palette.mode === 'light' ? '#f8fafc' : theme.palette.background.paper,
+                                    color: theme.palette.text.secondary,
+                                    transition: 'all 0.18s ease',
+                                    '&:hover': {
+                                      bgcolor: theme.palette.primary.lighter || 'rgba(37,99,235,0.08)',
+                                      borderColor: theme.palette.primary.main,
+                                      color: theme.palette.primary.main,
+                                      transform: 'translateY(-1px)',
+                                      boxShadow: '0 4px 12px rgba(37,99,235,0.14)'
+                                    }
+                                  })}
+                                >
+                                  <EllipsisOutlined style={{ fontSize: 16 }} />
+                                </IconButton>
+                              </Tooltip>
                             </TableCell>
                             <TableCell>
                               <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
@@ -612,8 +614,26 @@ export default function OrderBoard() {
                     anchorEl={anchorEl}
                     open={Boolean(anchorEl)}
                     onClose={handleMenuClose}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                    slotProps={{
+                      paper: {
+                        elevation: 4,
+                        sx: {
+                          mt: 0.5,
+                          minWidth: 160,
+                          borderRadius: '10px',
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          '& .MuiMenuItem-root': {
+                            fontSize: '0.875rem',
+                            py: 1,
+                            px: 2,
+                            gap: 1
+                          }
+                        }
+                      }
+                    }}
                   >
                     <MenuItem onClick={handleViewOrder}>View Order</MenuItem>
                     <MenuItem onClick={handleOpenAssign}>Assign</MenuItem>

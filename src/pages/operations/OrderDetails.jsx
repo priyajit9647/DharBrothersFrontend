@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
+import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Divider from '@mui/material/Divider';
@@ -471,54 +472,54 @@ export default function OrderDetails() {
               </Box>
             </Box>
 
-            {/* Three main info cards - responsive flex to fill row */}
-            <Box sx={{ mb: 3, display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-              <Box sx={{ flex: '1 1 340px' }}>
-                <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, fontSize: '16px' }}>Order Information</Typography>
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>Order ID: {order.orderId || '—'}</Typography>
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>Order Number: {order.orderNumber || order.orderNo || '—'}</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
-                    <Typography variant="body2">Status:</Typography>
+            {/* Three main info cards — equal-width columns, stretch to same height */}
+            <Grid container spacing={3} sx={{ mb: 3 }} alignItems="stretch">
+              <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
+                <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)', flex: 1, width: '100%', minWidth: 0 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, fontSize: '16px' }}>Order Information</Typography>
+                  <Typography variant="body2" sx={{ mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>Order ID: {order.orderId || '—'}</Typography>
+                  <Typography variant="body2" sx={{ mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>Order Number: {order.orderNumber || order.orderNo || '—'}</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mt: 1 }}>
+                    <Typography variant="body2" sx={{ flexShrink: 0 }}>Status:</Typography>
                     <Chip label={order.orderStatus || order.orderStageName || '—'} color="primary" size="small" sx={{ fontWeight: 700, borderRadius: '8px', backgroundColor: '#e8f0ff', color: '#2563eb' }} />
                   </Box>
-                  <Typography variant="body2" sx={{ mt: 1 }}>Payment Status: {order.paymentStatus || '—'}</Typography>
-                  <Typography variant="body2">Total Amount: ₹{order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}</Typography>
+                  <Typography variant="body2" sx={{ mt: 1, mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>Payment Status: {order.paymentStatus || '—'}</Typography>
+                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>Total Amount: ₹{order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}</Typography>
                 </Box>
-              </Box>
+              </Grid>
 
-              <Box sx={{ flex: '1 1 340px' }}>
-                <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, fontSize: '16px' }}>Customer & Billing Details</Typography>
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>Name: {order.customer?.firstName || order.customer?.lastName ? `${order.customer?.firstName ?? ''} ${order.customer?.lastName ?? ''}`.trim() : '—'}</Typography>
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>Email: {order.customer?.email || '—'}</Typography>
-                  <Typography variant="body2" sx={{ mb: 1 }}>Phone: {order.customer?.mobile || '—'}</Typography>
+              <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
+                <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)', flex: 1, width: '100%', minWidth: 0 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, fontSize: '16px' }}>Customer & Billing Details</Typography>
+                  <Typography variant="body2" sx={{ mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>Name: {order.customer?.firstName || order.customer?.lastName ? `${order.customer?.firstName ?? ''} ${order.customer?.lastName ?? ''}`.trim() : '—'}</Typography>
+                  <Typography variant="body2" sx={{ mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>Email: {order.customer?.email || '—'}</Typography>
+                  <Typography variant="body2" sx={{ mb: 1, wordBreak: 'break-word', overflowWrap: 'break-word' }}>Phone: {order.customer?.mobile || '—'}</Typography>
                   <Box sx={{ mt: 1 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>Billing Address</Typography>
-                    <Typography variant="body2">{order.billingAddress?.address1 || '—'}</Typography>
-                    {order.billingAddress?.address2 && <Typography variant="body2">{order.billingAddress.address2}</Typography>}
-                    <Typography variant="body2">{[order.billingAddress?.city, order.billingAddress?.state].filter(Boolean).join(', ')}</Typography>
-                    <Typography variant="body2">{[order.billingAddress?.country, order.billingAddress?.pincode].filter(Boolean).join(' - ')}</Typography>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.75 }}>Billing Address</Typography>
+                    <Typography variant="body2" sx={{ mb: 0.5, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{order.billingAddress?.address1 || '—'}</Typography>
+                    {order.billingAddress?.address2 && <Typography variant="body2" sx={{ mb: 0.5, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{order.billingAddress.address2}</Typography>}
+                    <Typography variant="body2" sx={{ mb: 0.5, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{[order.billingAddress?.city, order.billingAddress?.state].filter(Boolean).join(', ') || '—'}</Typography>
+                    <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{[order.billingAddress?.country, order.billingAddress?.pincode].filter(Boolean).join(' - ') || '—'}</Typography>
                   </Box>
                 </Box>
-              </Box>
+              </Grid>
 
-              <Box sx={{ flex: '1 1 340px' }}>
-                <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)' }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, fontSize: '16px' }}>Shipping Details</Typography>
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>{order.shippingAddress?.address1 || '—'}</Typography>
-                  {order.shippingAddress?.address2 && <Typography variant="body2" sx={{ mb: 0.5 }}>{order.shippingAddress.address2}</Typography>}
-                  <Typography variant="body2" sx={{ mb: 0.5 }}>{[order.shippingAddress?.city, order.shippingAddress?.state].filter(Boolean).join(', ')}</Typography>
-                  <Typography variant="body2">{[order.shippingAddress?.country, order.shippingAddress?.pincode].filter(Boolean).join(' - ')}</Typography>
+              <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
+                <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)', flex: 1, width: '100%', minWidth: 0 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, fontSize: '16px' }}>Shipping Details</Typography>
+                  <Typography variant="body2" sx={{ mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{order.shippingAddress?.address1 || '—'}</Typography>
+                  {order.shippingAddress?.address2 && <Typography variant="body2" sx={{ mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{order.shippingAddress.address2}</Typography>}
+                  <Typography variant="body2" sx={{ mb: 0.75, wordBreak: 'break-word', overflowWrap: 'break-word' }}>{[order.shippingAddress?.city, order.shippingAddress?.state].filter(Boolean).join(', ') || '—'}</Typography>
+                  <Typography variant="body2" sx={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{[order.shippingAddress?.country, order.shippingAddress?.pincode].filter(Boolean).join(' - ') || '—'}</Typography>
                 </Box>
-              </Box>
-            </Box>
+              </Grid>
+            </Grid>
 
             <Divider sx={{ my: 3 }} />
 
-            {/* Documents + Thesis/Synopsis - responsive flex layout */}
-            <Box sx={{ mb: 2, display: 'flex', gap: 3, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-              <Box sx={{ flex: '1 1 520px' }}>
+            {/* Documents + Thesis/Synopsis — full width stacked */}
+            <Stack spacing={3} sx={{ mb: 2 }}>
+              <Box sx={{ width: '100%' }}>
                 <Box sx={{ p: 3, borderRadius: 3, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ width: 28, height: 28, bgcolor: '#eef6ff', borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={16} color="#2563eb" /></Box>
@@ -532,21 +533,21 @@ export default function OrderDetails() {
                     { key: 'softcoverdesign', label: 'Soft Cover Design', name: documentData.softCoverDesignName, path: documentData.softCoverDesignPath }
                   ].map((d) => (
                     <Box key={d.key} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', py: 1.25, borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                        <Box sx={{ width: 36, height: 36, borderRadius: 1, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0, flex: 1 }}>
+                        <Box sx={{ width: 36, height: 36, borderRadius: 1, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <FileText size={16} />
                         </Box>
-                        <Box>
+                        <Box sx={{ minWidth: 0 }}>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>{d.label}</Typography>
                           {d.name ? (
-                            <Typography component="a" href={getDownloadHref(d.path) || '#'} onClick={(e) => { e.preventDefault(); downloadDocument(d.key, d.name, d.path); }} variant="body2" sx={{ color: 'primary.main', textDecoration: 'underline' }}>{d.name}</Typography>
+                            <Typography component="a" href={getDownloadHref(d.path) || '#'} onClick={(e) => { e.preventDefault(); downloadDocument(d.key, d.name, d.path); }} variant="body2" sx={{ color: 'primary.main', textDecoration: 'underline', wordBreak: 'break-word' }}>{d.name}</Typography>
                           ) : (
                             <Typography variant="body2" color="text.secondary">Not available</Typography>
                           )}
                         </Box>
                       </Box>
 
-                      <Box>
+                      <Box sx={{ flexShrink: 0 }}>
                         {d.name && (
                           <IconButton size="small" onClick={() => downloadDocument(d.key, d.name, d.path)} aria-label={`download-${d.key}`} sx={{ border: '1px solid #eef2f7' }}>
                             <DownloadCloud size={18} />
@@ -558,9 +559,7 @@ export default function OrderDetails() {
                 </Box>
               </Box>
 
-              <Box sx={{ flex: '0 0 1px', width: 16 }} />
-
-              <Box sx={{ flex: '1 1 260px' }}>
+              <Box sx={{ width: '100%' }}>
                 <Box sx={{ p: 2.5, borderRadius: 3, background: 'linear-gradient(180deg,#f3f6ff 0%, #ffffff 100%)', border: '1px solid #eef6ff', boxShadow: '0 6px 18px rgba(2,6,23,0.04)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ width: 24, height: 24, bgcolor: '#eef6ff', borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={14} color="#2563eb" /></Box>
@@ -586,7 +585,7 @@ export default function OrderDetails() {
                 </Box>
               </Box>
 
-              <Box sx={{ flex: '1 1 260px' }}>
+              <Box sx={{ width: '100%' }}>
                 <Box sx={{ p: 2.5, borderRadius: 3, background: 'linear-gradient(180deg,#f0fff4 0%, #ffffff 100%)', border: '1px solid #ecf9f0', boxShadow: '0 6px 18px rgba(2,6,23,0.04)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1, color: '#0f172a', display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Box sx={{ width: 24, height: 24, bgcolor: '#ecfff4', borderRadius: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><FileText size={14} color="#16a34a" /></Box>
@@ -611,7 +610,7 @@ export default function OrderDetails() {
                   ) }} />
                 </Box>
               </Box>
-            </Box>
+            </Stack>
 
             
             
@@ -1155,7 +1154,7 @@ export default function OrderDetails() {
 
                 {/* Timeline */}
 
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', minWidth: '1200px', position: 'relative' }}>
+                <Box sx={{ display: 'flex', alignItems: 'stretch', width: '100%', position: 'relative', gap: { xs: 1, md: 1.5 }, overflowX: { xs: 'auto', md: 'visible' }, pb: { xs: 1, md: 0 } }}>
                   {timeline.stages?.map((s, idx) => {
                     const active = s.isCompleted;
 
@@ -1173,7 +1172,8 @@ export default function OrderDetails() {
                       <Box
                         key={idx}
                         sx={{
-                          flex: 1,
+                          flex: '1 1 0',
+                          minWidth: { xs: 140, sm: 150, md: 0 },
                           position: 'relative',
                           display: 'flex',
                           flexDirection: 'column',
@@ -1202,6 +1202,7 @@ export default function OrderDetails() {
                             zIndex: 2,
                             width: 48,
                             height: 48,
+                            flexShrink: 0,
                             borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
@@ -1217,21 +1218,86 @@ export default function OrderDetails() {
 
                         {/* Line */}
 
-                        <Box sx={{ width: 3, height: 24, background: active ? '#1976d2' : '#d1d5db' }} />
+                        <Box sx={{ width: 3, height: 24, flexShrink: 0, background: active ? '#1976d2' : '#d1d5db' }} />
 
                         {/* Card */}
 
-                        <Box sx={{ width: 180, background: '#fff', borderRadius: '18px', p: 2, textAlign: 'center', border: '1px solid #edf2f7', boxShadow: '0 4px 14px rgba(0,0,0,0.05)', transition: '0.3s', '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 22px rgba(0,0,0,0.10)' } }}>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1, fontSize: '15px' }}>{s.stageName}</Typography>
+                        <Box
+                          sx={{
+                            flex: 1,
+                            width: '100%',
+                            minHeight: 150,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            background: '#fff',
+                            borderRadius: '18px',
+                            p: 2,
+                            textAlign: 'center',
+                            border: '1px solid #edf2f7',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.05)',
+                            transition: '0.3s',
+                            '&:hover': { transform: 'translateY(-4px)', boxShadow: '0 10px 22px rgba(0,0,0,0.10)' }
+                          }}
+                        >
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 700,
+                              mb: 1,
+                              fontSize: '14px',
+                              lineHeight: 1.35,
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              minHeight: 38
+                            }}
+                          >
+                            {s.stageName}
+                          </Typography>
 
-                          <Typography variant="caption" sx={{ color: '#6b7280', display: 'block', minHeight: 36, mb: 1.5, fontSize: '12px' }}>{s.remarks || 'No remarks available'}</Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              flex: 1,
+                              color: '#6b7280',
+                              display: 'block',
+                              mb: 1.5,
+                              fontSize: '12px',
+                              lineHeight: 1.45,
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word'
+                            }}
+                          >
+                            {s.remarks || 'No remarks available'}
+                          </Typography>
 
-                          <Chip label={s.isCompleted ? 'Completed' : 'Pending'} color={s.isCompleted ? 'primary' : 'default'} size="small" sx={{ borderRadius: '8px', fontWeight: 600, fontSize: '11px' }} />
+                          <Chip
+                            label={s.isCompleted ? 'Completed' : 'Pending'}
+                            color={s.isCompleted ? 'primary' : 'default'}
+                            size="small"
+                            sx={{ borderRadius: '8px', fontWeight: 600, fontSize: '11px', alignSelf: 'center', mt: 'auto' }}
+                          />
                         </Box>
 
                         {/* Time */}
 
-                        <Typography variant="caption" sx={{ mt: 1.5, fontWeight: 600, color: active ? '#1976d2' : '#94a3b8', textAlign: 'center', fontSize: '11px', px: 1 }}>{s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}</Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            mt: 1.5,
+                            flexShrink: 0,
+                            fontWeight: 600,
+                            color: active ? '#1976d2' : '#94a3b8',
+                            textAlign: 'center',
+                            fontSize: '11px',
+                            px: 0.5,
+                            width: '100%',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
+                            lineHeight: 1.4
+                          }}
+                        >
+                          {s.updatedAt ? new Date(s.updatedAt).toLocaleString() : '—'}
+                        </Typography>
                       </Box>
                     );
                   })}
