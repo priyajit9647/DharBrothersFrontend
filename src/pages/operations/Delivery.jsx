@@ -11,6 +11,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Chip from '@mui/material/Chip';
@@ -21,12 +22,12 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
-import { QrCode, MessageSquare, CheckCircle } from 'lucide-react';
+import { QrCode, MessageSquare, CheckCircle, Send } from 'lucide-react';
 
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
 
-import { getOrdersByStatus, verifyOrderReceivedOtp } from 'api/orders';
+import { getOrdersByStatus, verifyOrderReceivedOtp, sendPaymentLink } from 'api/orders';
 import TextField from '@mui/material/TextField';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
@@ -166,44 +167,65 @@ function StageCard({ title, rows = [] }) {
                       )}
                       {/* show QR buttons for ready-to-dispatch rows */}
                       {isReadyToDispatchStage(r.stage) && canDispatch && (
-                        <Box sx={{ display: 'inline-flex', flexDirection: 'column', gap: 1, ml: 0.5 }}>
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="outlined"
-                            color="primary"
-                            startIcon={<QrCode size={16} />}
-                            onClick={() => handleShowQr(r, 'shipping')}
-                            sx={{ textTransform: 'none' }}
-                          >
-                            Shipping QR
-                          </Button>
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="outlined"
-                            color="secondary"
-                            startIcon={<MessageSquare size={16} />}
-                            onClick={() => handleShowQr(r, 'feedback')}
-                            sx={{ textTransform: 'none' }}
-                          >
-                            Feedback QR
-                          </Button>
-                          <Button
-                            type="button"
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            startIcon={<CheckCircle size={16} />}
-                            onClick={() => {
-                              setActiveRow(r);
-                              setOtpValue('');
-                              setOtpDialogOpen(true);
-                            }}
-                            sx={{ textTransform: 'none' }}
-                          >
-                            Order Received
-                          </Button>
+                        <Box sx={{ display: 'inline-flex', flexDirection: 'row', gap: 1, ml: 0.5, alignItems: 'center' }}>
+                          <Tooltip title="Shipping Address QR">
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              onClick={() => handleShowQr(r, 'shipping')}
+                              aria-label="Shipping Address QR"
+                              sx={{ border: '1px solid', borderColor: 'divider', p: 0.5, borderRadius: 1 }}
+                            >
+                              <QrCode size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Feedback QR">
+                            <IconButton
+                              size="small"
+                              color="inherit"
+                              onClick={() => handleShowQr(r, 'feedback')}
+                              aria-label="Feedback QR"
+                              sx={{ border: '1px solid', borderColor: 'divider', p: 0.5, borderRadius: 1 }}
+                            >
+                              <MessageSquare size={14} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Order Received">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => {
+                                setActiveRow(r);
+                                setOtpValue('');
+                                setOtpDialogOpen(true);
+                              }}
+                              aria-label="Order Received"
+                              sx={{ bgcolor: 'success.main', color: 'success.contrastText', '&:hover': { bgcolor: 'success.dark' } }}
+                            >
+                              <CheckCircle size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Resend Link">
+                            <IconButton
+                              size="small"
+                              color="secondary"
+                              onClick={async () => {
+                                try {
+                                  console.log('[Delivery.StageCard] Resend link clicked for', r);
+                                  const id = r?.orderId ?? r?.id ?? r?.orderNo ?? r?.code;
+                                  await sendPaymentLink(id);
+                                  setSnack({ open: true, message: 'Resend link sent', severity: 'success' });
+                                } catch (err) {
+                                  console.error('resend link error', err);
+                                  setSnack({ open: true, message: err?.message || 'Failed to resend link', severity: 'error' });
+                                }
+                              }}
+                              aria-label="Resend Link"
+                              sx={{ border: '1px solid', borderColor: 'divider', p: 0.5, borderRadius: 1 }}
+                            >
+                              <Send size={14} />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
                       )}
                     </TableCell>
