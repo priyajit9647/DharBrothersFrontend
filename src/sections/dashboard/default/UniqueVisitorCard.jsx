@@ -207,9 +207,9 @@ export default function UniqueVisitorCard() {
           }}
         >
           <Stack spacing={2.5}>
-            <Grid container spacing={1.5}>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <MainCard contentSX={{ p: 2 }} sx={{ bgcolor: withAlpha(theme.vars.palette.warning.main, 0.1), boxShadow: 'none' }}>
+            <Grid container spacing={1.5} alignItems="stretch">
+              <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex', flexBasis: { md: "calc(25% - 9px)" }, maxWidth: { md: "calc(25% - 9px)" } }}>
+                <MainCard contentSX={{ p: 2 }} sx={{ bgcolor: withAlpha(theme.vars.palette.warning.main, 0.1), boxShadow: 'none', flex: 1, minHeight: 140 }}>
                   <Typography variant="overline" color="text.secondary">
                     Highest Pincode Volume
                   </Typography>
@@ -219,8 +219,8 @@ export default function UniqueVisitorCard() {
                   </Typography>
                 </MainCard>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <MainCard contentSX={{ p: 2 }} sx={{ bgcolor: withAlpha(theme.vars.palette.primary.main, 0.1), boxShadow: 'none' }}>
+              <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex', flexBasis: { md: "calc(25% - 9px)" }, maxWidth: { md: "calc(25% - 9px)" } }}>
+                <MainCard contentSX={{ p: 2 }} sx={{ bgcolor: withAlpha(theme.vars.palette.primary.main, 0.1), boxShadow: 'none', flex: 1, minHeight: 140 }}>
                   <Typography variant="overline" color="text.secondary">
                     Highest City Volume
                   </Typography>
@@ -230,8 +230,8 @@ export default function UniqueVisitorCard() {
                   </Typography>
                 </MainCard>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <MainCard contentSX={{ p: 2 }} sx={{ boxShadow: `0 14px 30px ${withAlpha(theme.vars.palette.warning.main, 0.08)}` }}>
+              <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex', flexBasis: { md: "calc(25% - 9px)" }, maxWidth: { md: "calc(25% - 9px)" } }}>
+                <MainCard contentSX={{ p: 2 }} sx={{ boxShadow: `0 14px 30px ${withAlpha(theme.vars.palette.warning.main, 0.08)}`, flex: 1, minHeight: 140 }}>
                   <Typography variant="overline" color="text.secondary">
                     Active Pincodes
                   </Typography>
@@ -241,8 +241,8 @@ export default function UniqueVisitorCard() {
                   </Typography>
                 </MainCard>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <MainCard contentSX={{ p: 2 }} sx={{ boxShadow: `0 14px 30px ${withAlpha(theme.vars.palette.primary.main, 0.08)}` }}>
+              <Grid item xs={12} sm={6} md={3} sx={{ display: 'flex', flexBasis: { md: "calc(25% - 9px)" }, maxWidth: { md: "calc(25% - 9px)" } }}>
+                <MainCard contentSX={{ p: 2 }} sx={{ boxShadow: `0 14px 30px ${withAlpha(theme.vars.palette.primary.main, 0.08)}`, flex: 1, minHeight: 140 }}>
                   <Typography variant="overline" color="text.secondary">
                     Active Cities
                   </Typography>
