@@ -12,7 +12,7 @@ import { getSalesReport, exportSalesReport } from 'api/Reports&Insights';
 
 const COLUMNS = [
   { key: 'customerId', label: 'Customer ID', width: 120 },
-  { key: 'orderId', label: 'Order ID', width: 160 },
+  { key: 'orderId', label: 'Order Number', width: 160 },
   { key: 'month', label: 'Month', width: 120 },
   { key: 'year', label: 'Year', width: 90 },
   { key: 'state', label: 'State', width: 160 },
