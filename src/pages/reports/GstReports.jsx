@@ -280,8 +280,23 @@ export default function GstReports() {
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              {canExportCsv && <button onClick={exportCSV} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#2f6df6', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}><Download size={15} /> Export Excel</button>}
-              {canExportXlsx && <button onClick={exportExcel} style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#16a34a', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}><FileSpreadsheet size={15} /> Export Excel</button>}
+              <button
+                onClick={exportCSV}
+                disabled={!canExportCsv}
+                title={!canExportCsv ? 'You do not have permission to export CSV' : 'Export CSV'}
+                style={{ display: 'flex', gap: 6, alignItems: 'center', background: canExportCsv ? '#2f6df6' : '#9ca3af', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: canExportCsv ? 'pointer' : 'not-allowed', opacity: canExportCsv ? 1 : 0.75 }}
+              >
+                <Download size={15} /> Export CSV
+              </button>
+
+              <button
+                onClick={exportExcel}
+                disabled={!canExportXlsx}
+                title={!canExportXlsx ? 'You do not have permission to export Excel' : 'Export Excel'}
+                style={{ display: 'flex', gap: 6, alignItems: 'center', background: canExportXlsx ? '#16a34a' : '#9ca3af', color: '#fff', padding: '8px 14px', borderRadius: 8, border: 'none', cursor: canExportXlsx ? 'pointer' : 'not-allowed', opacity: canExportXlsx ? 1 : 0.75 }}
+              >
+                <FileSpreadsheet size={15} /> Export Excel
+              </button>
             </div>
           </div>
           {/* Summary cards removed per request */}
