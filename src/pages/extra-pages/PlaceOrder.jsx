@@ -2052,11 +2052,13 @@ function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChang
           borderRadius: 0,
           border: '1px solid',
           borderColor: 'divider',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          px: { xs: 2, md: 4 },
+          py: { xs: 3, md: 5 }
         }}
       >
-        <Grid container>
-          <Grid item xs={12} md={6}>
+        <Grid container spacing={8} justifyContent="center" alignItems="flex-start">
+          <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <UploadCard
               title="UPLOAD THESIS DOCUMENT"
               fieldName="thesisDocument"
@@ -2065,7 +2067,7 @@ function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChang
               errorMessage={uploadError}
             />
           </Grid>
-          <Grid item xs={12} md={6} sx={{ borderLeft: { md: '1px solid' }, borderColor: 'divider' }}>
+          <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <UploadCard
               title="UPLOAD SYNOPSIS DOCUMENT (Optional)"
               fieldName="synopsisDocument"
@@ -2113,7 +2115,19 @@ function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '' })
 
   return (
     <Box sx={{ px: { xs: 2, md: 4 }, py: { xs: 3, md: 5 }, textAlign: 'center' }}>
-      <Typography sx={{ fontSize: { xs: '1.15rem', md: '1.55rem' }, lineHeight: 1.15, fontWeight: 700, mb: 4 }}>{title}</Typography>
+      <Typography
+        sx={{
+          fontSize: { xs: '1.15rem', md: '1.55rem' },
+          lineHeight: 1.15,
+          fontWeight: 700,
+          mb: 4,
+          maxWidth: 300,
+          mx: 'auto',
+          textAlign: 'center'
+        }}
+      >
+        {title}
+      </Typography>
 
       <Box
         component="label"
@@ -2159,7 +2173,13 @@ function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '' })
         {helperError && <Typography sx={{ fontSize: '0.84rem', color: 'error.main', mb: 0.5 }}>{helperError}</Typography>}
         <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>Maximum size allowed is 512MB.</Typography>
         <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>Supported formats are: pdf</Typography>
-        <Typography sx={{ mt: 0.75, fontSize: '0.84rem', color: 'info.main', textDecoration: 'underline' }}>
+        <Typography
+          component="a"
+          href="https://www.ilovepdf.com/word_to_pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          sx={{ mt: 0.75, fontSize: '0.84rem', color: 'info.main', textDecoration: 'underline' }}
+        >
           Convert Doc to Pdf here
         </Typography>
       </Box>
