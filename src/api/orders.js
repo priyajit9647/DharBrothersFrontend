@@ -386,7 +386,7 @@ export async function getDocumentVersionList(docStageId) {
 
 /**
  * Fetch document version list scoped to an order
- * Endpoint: /api/v1/document/version-list?orderid={orderId}
+ * Endpoint: /api/v1/document/version-list/customer?orderid={orderId}
  * @param {string|number} orderId
  * @returns {Promise<Array>} Array of document version objects
  */
@@ -398,7 +398,7 @@ export async function getDocumentVersionListForOrder(orderId) {
   const session = getCustomerPortalSession();
   const isCustomerPortal = Boolean(session);
 
-  const url = `/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`;
+  const url = `/api/v1/document/version-list/customer?orderid=${encodeURIComponent(String(orderId))}`;
 
   if (isCustomerPortal) {
     return authorizedCustomerFetch(url, { method: 'GET' });
