@@ -294,18 +294,20 @@ export async function getOrderShippingAddressQrBase64(orderId) {
 
 /**
  * Fetch feedback QR for a given order as base64 string.
- * Endpoint: /api/customer/feedback/qr/{orderId}
+ * New endpoint: /api/customer/feedback/qr/{orderId}/base64
+ * Response JSON shape: { orderId, orderNumber, qrCodeBase64 }
  * @param {string} orderId
- * @returns {Promise<string>} base64-encoded QR content
+ * @returns {Promise<string>} base64-encoded QR content (may include data: prefix)
  */
 export async function getOrderFeedbackQrBase64(orderId) {
   console.log('[API.getOrderFeedbackQrBase64] Called with orderId:', orderId);
   if (!orderId) throw new Error('orderId is required');
 
-  const res = await authorizedFetchRaw(`/api/customer/feedback/qr/${encodeURIComponent(String(orderId))}`, {
+  // New endpoint returns JSON containing `qrCodeBase64` field (data URL or raw base64)
+  const res = await authorizedFetchRaw(`/api/customer/feedback/qr/${encodeURIComponent(String(orderId))}/base64`, {
     method: 'GET',
     headers: {
-      Accept: 'image/png'
+      Accept: 'application/json'
     }
   });
 
