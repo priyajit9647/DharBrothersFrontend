@@ -294,18 +294,20 @@ export async function getOrderShippingAddressQrBase64(orderId) {
 
 /**
  * Fetch feedback QR for a given order as base64 string.
- * Endpoint: /api/customer/feedback/qr/{orderId}
+ * New endpoint: /api/customer/feedback/qr/{orderId}/base64
+ * Response JSON shape: { orderId, orderNumber, qrCodeBase64 }
  * @param {string} orderId
- * @returns {Promise<string>} base64-encoded QR content
+ * @returns {Promise<string>} base64-encoded QR content (may include data: prefix)
  */
 export async function getOrderFeedbackQrBase64(orderId) {
   console.log('[API.getOrderFeedbackQrBase64] Called with orderId:', orderId);
   if (!orderId) throw new Error('orderId is required');
 
-  const res = await authorizedFetchRaw(`/api/customer/feedback/qr/${encodeURIComponent(String(orderId))}`, {
+  // New endpoint returns JSON containing `qrCodeBase64` field (data URL or raw base64)
+  const res = await authorizedFetchRaw(`/api/customer/feedback/qr/${encodeURIComponent(String(orderId))}/base64`, {
     method: 'GET',
     headers: {
-      Accept: 'image/png'
+      Accept: 'application/json'
     }
   });
 
@@ -386,7 +388,7 @@ export async function getDocumentVersionList(docStageId) {
 
 /**
  * Fetch document version list scoped to an order
- * Endpoint: /api/v1/document/version-list?orderid={orderId}
+ * Endpoint: /api/v1/document/version-list/customer?orderid={orderId}
  * @param {string|number} orderId
  * @returns {Promise<Array>} Array of document version objects
  */
@@ -398,7 +400,7 @@ export async function getDocumentVersionListForOrder(orderId) {
   const session = getCustomerPortalSession();
   const isCustomerPortal = Boolean(session);
 
-  const url = `/api/v1/document/version-list?orderid=${encodeURIComponent(String(orderId))}`;
+  const url = `/api/v1/document/version-list/customer?orderid=${encodeURIComponent(String(orderId))}`;
 
   if (isCustomerPortal) {
     return authorizedCustomerFetch(url, { method: 'GET' });

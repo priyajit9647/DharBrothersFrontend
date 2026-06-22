@@ -10,6 +10,13 @@ export default function RequireAuth({ children }) {
   const location = useLocation();
 
   if (!isAuthenticated) {
+    const pathname = location?.pathname || '';
+    // Special-case: customer feedback links should send unauthenticated users
+    // to the customer landing page instead of the global login page.
+    if (pathname.startsWith('/customer/orders/feedback')) {
+      return <Navigate to="/customer" replace state={{ from: location }} />;
+    }
+
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 

@@ -1358,7 +1358,7 @@ export default function OrderDetails() {
                               overflowWrap: 'break-word'
                             }}
                           >
-                            {s.remarks || 'No remarks available'}
+                            {s.updatedBy ? `${s.updatedBy}: ` : ''}{s.remarks || 'No remarks available'}
                           </Typography>
 
                           <Chip
