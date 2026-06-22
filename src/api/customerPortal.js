@@ -176,6 +176,20 @@ export async function createCustomerFeedbackForOrder(orderId, payload) {
   });
 }
 
+/**
+ * Edit customer feedback for an order
+ * Endpoint: PUT /api/customer/feedback/edit/order/{orderId}
+ * Body example: { customerId: number, orderId: string, feedbacks: [{ questionNo: number, rating: number }] }
+ */
+export async function editCustomerFeedbackForOrder(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  if (!payload) throw new Error('payload is required');
+  return authorizedCustomerFetch(`/api/customer/feedback/edit/order/${encodeURIComponent(String(orderId))}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
 // ==============================|| CUSTOMER ORDERS (PUBLIC/CLIENT) ||============================== //
 
 /**

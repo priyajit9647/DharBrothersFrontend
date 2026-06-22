@@ -14,15 +14,19 @@ import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import MenuItem from '@mui/material/MenuItem';
 import InputAdornment from '@mui/material/InputAdornment';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import MainCard from 'components/MainCard';
 
 import { getOrderById } from 'api/orders';
 import { authorizedFetchRaw } from 'api/auth';
-import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline } from 'api/customerPortal';
+import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline, editCustomerFeedbackForOrder } from 'api/customerPortal';
 import { approveDocument } from 'api/document';
 import { getDocumentVersionListForOrder, downloadOrderFile } from 'api/orders';
 import { getCustomerPortalSession } from 'utils/authTokens';
-import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft, Star } from 'lucide-react';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -85,6 +89,10 @@ export default function OrderDetails() {
   const [feedback, setFeedback] = useState(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editableFeedback, setEditableFeedback] = useState([]);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState(null);
   const [timeline, setTimeline] = useState(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [timelineError, setTimelineError] = useState(null);
@@ -312,6 +320,43 @@ export default function OrderDetails() {
     }
   };
 
+  const openEditFeedback = () => {
+    const initial = Array.isArray(feedback) ? feedback.map((f) => ({ questionNo: f.questionNo ?? f.id ?? f.question_id, question: f.question || f.text || '', rating: Number(f.rating) || 0 })) : [];
+    setEditableFeedback(initial);
+    setEditError(null);
+    setEditOpen(true);
+  };
+
+  const handleEditRatingChange = (questionNo, value) => {
+    setEditableFeedback((prev) => prev.map((it) => (String(it.questionNo) === String(questionNo) ? { ...it, rating: value || 0 } : it)));
+  };
+
+  const submitEditedFeedback = async () => {
+    if (!orderId) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      const session = getCustomerPortalSession();
+      const customerId = session?.customerId || session?.userId || order?.customer?.customerId || order?.customer?.id || null;
+
+      const payload = {
+        customerId,
+        orderId,
+        feedbacks: (editableFeedback || []).map((f) => ({ questionNo: f.questionNo, rating: Number(f.rating) || 0 }))
+      };
+
+      const resp = await editCustomerFeedbackForOrder(orderId, payload);
+      // Update local feedback state from response if available, otherwise use editableFeedback
+      const updated = resp?.feedbacks || resp?.data || editableFeedback;
+      setFeedback(Array.isArray(updated) ? updated : (updated?.feedbacks || editableFeedback));
+      setEditOpen(false);
+    } catch (e) {
+      setEditError(e?.message || String(e) || 'Failed to update feedback');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   const renderDocRow = (label, name, path, docKey) => {
     const isDownloading = Boolean(downloading[docKey]);
     return (
@@ -383,6 +428,7 @@ export default function OrderDetails() {
             >
               Feedback
             </Button>
+            
             <Button
               startIcon={<ArrowLeft size={16} />}
               variant="contained"
@@ -989,6 +1035,39 @@ export default function OrderDetails() {
                 })()}
               </Box>
             </Box>
+
+            <Dialog open={editOpen} onClose={() => setEditOpen(false)} fullWidth maxWidth="sm">
+              <DialogTitle>Edit Feedback</DialogTitle>
+              <DialogContent dividers>
+                {editableFeedback && editableFeedback.length > 0 ? (
+                  <Grid container spacing={2}>
+                    {editableFeedback.map((f) => (
+                      <Grid item xs={12} key={String(f.questionNo)}>
+                        <Box sx={{ p: 1 }}>
+                          <Typography variant="subtitle2" sx={{ mb: 1 }}>{f.question || `Question ${f.questionNo}`}</Typography>
+                          <Rating
+                            name={`edit-feedback-${f.questionNo}`}
+                            value={Number(f.rating) || 0}
+                            onChange={(e, v) => handleEditRatingChange(f.questionNo, v)}
+                            precision={1}
+                            max={5}
+                          />
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                ) : (
+                  <Typography>No feedback items available to edit.</Typography>
+                )}
+                {editError && <Typography color="error" sx={{ mt: 1 }}>{editError}</Typography>}
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={() => setEditOpen(false)} disabled={editSubmitting}>Cancel</Button>
+                <Button variant="contained" onClick={submitEditedFeedback} disabled={editSubmitting}>
+                  {editSubmitting ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : 'Save Changes'}
+                </Button>
+              </DialogActions>
+            </Dialog>
             {/* ================= END DOCUMENT VERSIONS ================= */}
 
             <Typography variant="h6" sx={{ mb: 2 }}>Bindings</Typography>
@@ -1062,11 +1141,23 @@ export default function OrderDetails() {
 
             <Box sx={{ mb: 3 }}>
               <Box sx={{ p: 2.5, borderRadius: 2, background: '#fff', border: '1px solid #eef2f7', boxShadow: '0 8px 22px rgba(2,6,23,0.04)' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                  <Box sx={{ width: 36, height: 36, borderRadius: 1.5, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MessageCircle size={16} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                    <Box sx={{ width: 36, height: 36, borderRadius: 1.5, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MessageCircle size={16} />
+                    </Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Feedback</Typography>
                   </Box>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>Feedback</Typography>
+                  {isFeedbackSubmitted && (
+                    <Button
+                      startIcon={<Star size={14} />}
+                      variant="outlined"
+                      onClick={openEditFeedback}
+                      sx={{ textTransform: 'none', borderRadius: 2, px: 2 }}
+                    >
+                      Edit Feedback
+                    </Button>
+                  )}
                 </Box>
 
                 <Box sx={{ mt: 2 }}>
