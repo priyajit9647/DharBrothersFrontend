@@ -271,23 +271,25 @@ export default function OrderTable() {
                 const labelId = `recent-order-row-${index}`;
                 const statusMeta = getStatusMeta(getStatusLabel(row));
                 const orderId = getOrderId(row);
-                const isSending = Boolean(sending[orderId]);
+                const orderApiId = row?.orderId ?? row?.id ?? row?.orderNo ?? row?.orderNumber ?? row?.code;
+                const isSending = Boolean(sending[orderApiId]);
 
                 const handleSendPaymentLink = async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  setSending((s) => ({ ...s, [orderId]: true }));
+                  if (!orderApiId) return;
+                  setSending((s) => ({ ...s, [orderApiId]: true }));
                   try {
-                    await sendPaymentLink(orderId);
+                    await sendPaymentLink(orderApiId);
                     // Optional: show success toast/notification
                     // eslint-disable-next-line no-console
-                    console.log(`Payment link sent for order ${orderId}`);
+                    console.log(`Payment link sent for order ${orderApiId}`);
                   } catch (err) {
                     // Optional: show error toast/notification
                     // eslint-disable-next-line no-console
-                    console.error(`Failed to send payment link for order ${orderId}:`, err);
+                    console.error(`Failed to send payment link for order ${orderApiId}:`, err);
                   } finally {
-                    setSending((s) => ({ ...s, [orderId]: false }));
+                    setSending((s) => ({ ...s, [orderApiId]: false }));
                   }
                 };
 

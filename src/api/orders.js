@@ -261,16 +261,9 @@ export async function sendPaymentLink(orderId) {
     throw new Error('orderId is required');
   }
 
-  const session = getCustomerPortalSession();
-  const isCustomerPortal = Boolean(session);
-
-  const url = `/api/delivery-dispatch/${encodeURIComponent(String(orderId))}/send-payment-link`;
-
-  if (isCustomerPortal) {
-    return authorizedCustomerFetch(url, { method: 'POST' });
-  }
-
-  return authorizedFetch(url, { method: 'POST' });
+  return authorizedFetch(`/api/v1/dashboard/send-payment-link/${encodeURIComponent(String(orderId))}`, {
+    method: 'GET'
+  });
 }
 
 /**

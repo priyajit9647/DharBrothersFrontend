@@ -363,7 +363,7 @@ export default function DashboardDefault() {
         <UniqueVisitorCard />
         <Grid container sx={{ mt: 2, alignItems: 'center', justifyContent: 'space-between' }}>
           <Grid>
-            <Typography variant="h5">Recent Orders</Typography>
+            <Typography variant="h5">Recent Orders </Typography>
           </Grid>
           <Grid>
             <IconButton onClick={handleOrderMenuClick}>

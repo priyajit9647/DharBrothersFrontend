@@ -111,6 +111,7 @@ function normalizeOrderResponse(raw) {
           paper: item.paper,
           color: item.printColour || item.printColor,
           printingType: item.printingType,
+          noOfCopies: item.noOfCopies ?? item.noOfCopies === 0 ? item.noOfCopies : null,
           a4Pockets: item.a4Pockets,
           cdPockets: item.cdPockets,
           additionalInformation: item.additionalInformation || ''
@@ -122,6 +123,7 @@ function normalizeOrderResponse(raw) {
           paper: null,
           color: null,
           printingType: null,
+          noOfCopies: null,
           a4Pockets: null,
           cdPockets: null,
           additionalInformation: ''
@@ -462,7 +464,7 @@ export default function OrderDetailsAdmin() {
             )}
           </Stack>
           <Typography variant="body2" color="text.secondary" fontSize={13}>
-            Manage and track order details
+            Manage and track order details gggg
           </Typography>
         </Box>
 
@@ -498,7 +500,7 @@ export default function OrderDetailsAdmin() {
               <Table sx={{ minWidth: 900 }}>
                 <TableBody>
                   <TableRow sx={{ background: '#f8fafc' }}>
-                    {['Description', 'Paper Size', 'Paper Type', 'Colour', 'Printing', 'A4', 'CD', 'Information'].map((h) => (
+                    {['Description', 'Paper Size', 'Paper Type', 'Colour', 'No. Copies', 'Printing', 'A4', 'CD', 'Information', 'Top Content', 'Middle Content', 'Bottom Content'].map((h) => (
                       <TableCell
                         key={h}
                         sx={{ fontWeight: 700, fontSize: 11, color: '#374151', py: 1.5, px: 2, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.3px' }}
@@ -514,7 +516,7 @@ export default function OrderDetailsAdmin() {
                       hover
                       sx={{ '&:last-child td': { borderBottom: 'none' }, '&:hover': { background: '#f8fafc' } }}
                     >
-                      {[r.desc, r.size, r.paper, r.color, r.printingType, r.a4Pockets, r.cdPockets, r.additionalInformation || '—'].map((v, ci) => (
+                      {[r.desc, r.size, r.paper, r.color, (r.noOfCopies != null ? String(r.noOfCopies) : '—'), r.printingType, r.a4Pockets, r.cdPockets, r.additionalInformation || '—', r.topContentArea || '—', r.middleContentArea || '—', r.bottomContentArea || '—'].map((v, ci) => (
                         <TableCell
                           key={ci}
                           sx={{
@@ -522,10 +524,10 @@ export default function OrderDetailsAdmin() {
                             color: '#374151',
                             py: 1.75,
                             px: 2,
-                            whiteSpace: ci === 7 ? 'normal' : 'nowrap',
+                            whiteSpace: ci === 8 ? 'normal' : 'nowrap',
                             wordBreak: 'break-word',
                             verticalAlign: 'top',
-                            minWidth: ci === 7 ? 200 : undefined
+                            minWidth: ci === 8 ? 200 : undefined
                           }}
                         >
                           {v ?? '—'}

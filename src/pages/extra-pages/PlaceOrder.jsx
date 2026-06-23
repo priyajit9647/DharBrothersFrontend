@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import {
+  CheckCircleOutlined,
   CloudUploadOutlined,
   DeleteOutlined,
   EnvironmentOutlined,
@@ -13,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import Container from '@mui/material/Container';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
@@ -341,6 +343,8 @@ export default function PlaceOrder({
   const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [thesisDocument, setThesisDocument] = useState(null);
   const [synopsisDocument, setSynopsisDocument] = useState(null);
+  const [thesisUploading, setThesisUploading] = useState(false);
+  const [synopsisUploading, setSynopsisUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [submitMessage, setSubmitMessage] = useState('');
   const [submitError, setSubmitError] = useState('');
@@ -746,7 +750,44 @@ export default function PlaceOrder({
     setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
-  const handleFileChange = (fieldName, file) => {
+  const applyPageDetailsResponse = (pageDetails, includeSynopsis = false) => {
+    const resolvedPageTypes = pageTypeOptions.length ? pageTypeOptions : FALLBACK_PAGE_TYPES;
+
+    setPageRows(
+      normalizePageDetails(
+        {
+          totalPages: pageDetails?.totalPages,
+          pageAndPageTypeIdMap: pageDetails?.pageAndPageTypeIdMap
+        },
+        resolvedPageTypes
+      )
+    );
+
+    if (includeSynopsis) {
+      setSynopsisPageRows(
+        normalizePageDetails(
+          {
+            totalPages: pageDetails?.synopsisTotalPages,
+            pageAndPageTypeIdMap: pageDetails?.synopsisPageAndPageTypeIdMap
+          },
+          resolvedPageTypes
+        )
+      );
+    }
+  };
+
+  const fetchPageDetails = async (thesisFile, synopsisFile = null) => {
+    const payload = new FormData();
+    payload.append('thesisDocument', thesisFile);
+
+    if (synopsisFile) {
+      payload.append('synopsisDocument', synopsisFile);
+    }
+
+    return getOrderPageDetails(payload);
+  };
+
+  const handleFileChange = async (fieldName, file) => {
     if (file && file.type !== 'application/pdf') {
       setUploadError('Please upload PDF files only.');
 
@@ -765,12 +806,48 @@ export default function PlaceOrder({
       setThesisDocument(file || null);
       setSubmitError('');
       setPageRows([]);
+      setSynopsisPageRows([]);
+
+      if (!file) {
+        return;
+      }
+
+      setThesisUploading(true);
+
+      try {
+        const pageDetails = await fetchPageDetails(file, synopsisDocument);
+        applyPageDetailsResponse(pageDetails, Boolean(synopsisDocument));
+      } catch (error) {
+        setSubmitError(error.message || 'Failed to load page details.');
+        setThesisDocument(null);
+        setPageRows([]);
+      } finally {
+        setThesisUploading(false);
+      }
+
       return;
     }
 
     setSynopsisDocument(file || null);
     setSubmitError('');
     setSynopsisPageRows([]);
+
+    if (!file || !thesisDocument) {
+      return;
+    }
+
+    setSynopsisUploading(true);
+
+    try {
+      const pageDetails = await fetchPageDetails(thesisDocument, file);
+      applyPageDetailsResponse(pageDetails, true);
+    } catch (error) {
+      setSubmitError(error.message || 'Failed to load synopsis page details.');
+      setSynopsisDocument(null);
+      setSynopsisPageRows([]);
+    } finally {
+      setSynopsisUploading(false);
+    }
   };
 
   const handleCheckoutFieldChange = (field, value) => {
@@ -928,43 +1005,17 @@ export default function PlaceOrder({
       return false;
     }
 
+    if (pageRows.length > 0 && (!synopsisDocument || synopsisPageRows.length > 0)) {
+      return true;
+    }
+
     setUploadError('');
     setSubmitError('');
     setPageDetailsLoading(true);
 
     try {
-      const payload = new FormData();
-      payload.append('thesisDocument', thesisDocument);
-
-      if (synopsisDocument) {
-        payload.append('synopsisDocument', synopsisDocument);
-      }
-
-      const pageDetails = await getOrderPageDetails(payload);
-      const resolvedPageTypes = pageTypeOptions.length ? pageTypeOptions : FALLBACK_PAGE_TYPES;
-
-      setPageRows(
-        normalizePageDetails(
-          {
-            totalPages: pageDetails?.totalPages,
-            pageAndPageTypeIdMap: pageDetails?.pageAndPageTypeIdMap
-          },
-          resolvedPageTypes
-        )
-      );
-
-      if (synopsisDocument) {
-        setSynopsisPageRows(
-          normalizePageDetails(
-            {
-              totalPages: pageDetails?.synopsisTotalPages,
-              pageAndPageTypeIdMap: pageDetails?.synopsisPageAndPageTypeIdMap
-            },
-            resolvedPageTypes
-          )
-        );
-      }
-
+      const pageDetails = await fetchPageDetails(thesisDocument, synopsisDocument);
+      applyPageDetailsResponse(pageDetails, Boolean(synopsisDocument));
       return true;
     } catch (error) {
       setSubmitError(error.message || 'Failed to load page details.');
@@ -1113,6 +1164,8 @@ export default function PlaceOrder({
                   synopsisDocument={synopsisDocument}
                   uploadError={uploadError}
                   onFileChange={handleFileChange}
+                  thesisUploading={thesisUploading}
+                  synopsisUploading={synopsisUploading}
                 />
               )}
               {currentStepKey === 'details' && (
@@ -1216,7 +1269,7 @@ export default function PlaceOrder({
                   <Button
                     onClick={handlePrimaryAction}
                     variant="contained"
-                    disabled={isSubmittingOrder || pageDetailsLoading}
+                    disabled={isSubmittingOrder || pageDetailsLoading || thesisUploading || synopsisUploading}
                     sx={{
                       minWidth: 110,
                       borderRadius: 0,
@@ -1235,7 +1288,7 @@ export default function PlaceOrder({
                         : 'Make Payment'
                       : currentStepKey === 'summary'
                         ? 'Proceed to Checkout'
-                        : currentStepKey === 'upload' && pageDetailsLoading
+                        : currentStepKey === 'upload' && (pageDetailsLoading || thesisUploading || synopsisUploading)
                           ? 'Loading...'
                           : 'Next'}
                   </Button>
@@ -1997,53 +2050,93 @@ export function HeaderNav({ pageTitle = 'Order Thesis Online', hideOrderButton =
 
 function ProgressHeader({ activeIndex, stepLabels }) {
   const theme = useTheme();
+  const circleSize = 14;
+  const lineHeight = 2;
+  const inactiveLine = alpha(theme.palette.secondary.main, 0.22);
+  const inactiveCircle = alpha(theme.palette.info.main, 0.38);
 
   return (
-    <Box sx={{ maxWidth: 760, mx: 'auto', mb: 3 }}>
-      <Box sx={{ position: 'relative', px: { xs: 2, md: 3 }, pb: 1.25 }}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 7,
-            left: 24,
-            right: 24,
-            height: 2,
-            bgcolor: alpha(theme.palette.secondary.main, 0.22)
-          }}
-        />
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          {stepLabels.map((label, index) => {
-            const isActive = index <= activeIndex;
+    <Box sx={{ maxWidth: 900, mx: 'auto', mb: 3, px: { xs: 0.5, md: 1 } }}>
+      <Box sx={{ display: 'flex', width: '100%' }}>
+        {stepLabels.map((label, index) => {
+          const isActive = index <= activeIndex;
+          const isFirst = index === 0;
+          const isLast = index === stepLabels.length - 1;
+          const leftLineActive = index > 0 && index <= activeIndex;
+          const rightLineActive = index < activeIndex;
 
-            return (
-              <Stack key={label} alignItems="center" spacing={1} sx={{ position: 'relative', zIndex: 1 }}>
+          return (
+            <Box
+              key={`${label}-${index}`}
+              sx={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                minWidth: 0
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  width: '100%',
+                  height: circleSize
+                }}
+              >
                 <Box
                   sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    bgcolor: isActive ? theme.palette.info.main : alpha(theme.palette.info.main, 0.38)
+                    flex: 1,
+                    height: lineHeight,
+                    bgcolor: isFirst ? 'transparent' : leftLineActive ? theme.palette.info.main : inactiveLine,
+                    transition: 'background-color 0.2s ease'
                   }}
                 />
-                <Typography
+                <Box
                   sx={{
-                    fontSize: { xs: '0.8rem', md: '0.88rem' },
-                    color: isActive ? theme.palette.info.main : 'text.secondary',
-                    fontWeight: 500
+                    width: circleSize,
+                    height: circleSize,
+                    borderRadius: '50%',
+                    bgcolor: isActive ? theme.palette.info.main : 'common.white',
+                    border: `2px solid ${isActive ? theme.palette.info.main : inactiveCircle}`,
+                    boxSizing: 'border-box',
+                    flexShrink: 0,
+                    position: 'relative',
+                    zIndex: 1
                   }}
-                >
-                  {label}
-                </Typography>
-              </Stack>
-            );
-          })}
-        </Stack>
+                />
+                <Box
+                  sx={{
+                    flex: 1,
+                    height: lineHeight,
+                    bgcolor: isLast ? 'transparent' : rightLineActive ? theme.palette.info.main : inactiveLine,
+                    transition: 'background-color 0.2s ease'
+                  }}
+                />
+              </Box>
+
+              <Typography
+                sx={{
+                  mt: 1,
+                  fontSize: { xs: '0.68rem', sm: '0.76rem', md: '0.84rem' },
+                  color: isActive ? theme.palette.info.main : 'text.secondary',
+                  fontWeight: isActive ? 600 : 500,
+                  textAlign: 'center',
+                  lineHeight: 1.25,
+                  px: 0.25
+                }}
+              >
+                {label}
+              </Typography>
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );
 }
 
-function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChange }) {
+function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChange, thesisUploading = false, synopsisUploading = false }) {
   return (
     <Box>
       <Paper
@@ -2065,6 +2158,7 @@ function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChang
               file={thesisDocument}
               onFileChange={onFileChange}
               errorMessage={uploadError}
+              isLoading={thesisUploading}
             />
           </Grid>
           <Grid item xs={12} md={6} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -2073,6 +2167,7 @@ function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChang
               fieldName="synopsisDocument"
               file={synopsisDocument}
               onFileChange={onFileChange}
+              isLoading={synopsisUploading}
             />
           </Grid>
         </Grid>
@@ -2101,13 +2196,13 @@ function UploadStep({ thesisDocument, synopsisDocument, uploadError, onFileChang
   );
 }
 
-function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '' }) {
+function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '', isLoading = false }) {
   const theme = useTheme();
 
   const handleInputChange = (event) => {
     const selectedFile = event.target.files?.[0] || null;
-    onFileChange(fieldName, selectedFile);
     event.target.value = '';
+    onFileChange(fieldName, selectedFile);
   };
 
   const isThesisUpload = fieldName === 'thesisDocument';
@@ -2144,29 +2239,53 @@ function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '' })
           px: 2,
           py: 3.5,
           bgcolor: 'common.white',
-          cursor: 'pointer'
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          position: 'relative',
+          pointerEvents: isLoading ? 'none' : 'auto'
         }}
       >
-        <input type="file" accept="application/pdf,.pdf" hidden onChange={handleInputChange} />
-        <Box
-          sx={{
-            width: 42,
-            height: 42,
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            bgcolor: theme.palette.info.main,
-            color: 'common.white',
-            mb: 2
-          }}
-        >
-          <CloudUploadOutlined style={{ fontSize: 22 }} />
-        </Box>
+        <input type="file" accept="application/pdf,.pdf" hidden onChange={handleInputChange} disabled={isLoading} />
 
-        <Typography sx={{ fontSize: '0.83rem', letterSpacing: 0.5 }}>DROP YOUR FILE HERE</Typography>
-        <Typography color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-          {file ? file.name : 'or click to select'}
-        </Typography>
+        {isLoading ? (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              bgcolor: alpha(theme.palette.common.white, 0.85),
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1.5,
+              zIndex: 1
+            }}
+          >
+            <CircularProgress size={36} color="info" />
+            <Typography sx={{ fontSize: '0.82rem', color: 'text.secondary' }}>Uploading...</Typography>
+          </Box>
+        ) : (
+          <>
+            <Box
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: theme.palette.info.main,
+                color: 'common.white',
+                mb: 2
+              }}
+            >
+              <CloudUploadOutlined style={{ fontSize: 22 }} />
+            </Box>
+
+            <Typography sx={{ fontSize: '0.83rem', letterSpacing: 0.5 }}>DROP YOUR FILE HERE</Typography>
+            <Typography color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+              {file ? file.name : 'or click to select'}
+            </Typography>
+          </>
+        )}
       </Box>
 
       <Box sx={{ mt: 2.5 }}>
@@ -2534,6 +2653,149 @@ function BindingOptionCard({ label, active, onClick }) {
         )}
       </Box>
       <Typography sx={{ fontSize: '0.9rem', fontWeight: 500 }}>{label}</Typography>
+    </Box>
+  );
+}
+
+function CoverMaterialOptionCard({ coverMaterial, active, onSelect, onPreviewImage }) {
+  const theme = useTheme();
+
+  return (
+    <Box
+      role="button"
+      tabIndex={0}
+      aria-pressed={active}
+      aria-label={`Select cover material ${coverMaterial.name}`}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+      sx={{
+        cursor: 'pointer',
+        position: 'relative',
+        height: '100%',
+        border: '2px solid',
+        borderColor: active ? theme.palette.info.main : alpha(theme.palette.secondary.main, 0.22),
+        bgcolor: active ? alpha(theme.palette.info.main, 0.08) : 'common.white',
+        p: 1.25,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 0.75,
+        transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+        boxShadow: active ? `inset 0 0 0 1px ${alpha(theme.palette.info.main, 0.2)}` : 'none',
+        '&:hover': {
+          borderColor: theme.palette.info.main,
+          bgcolor: active ? alpha(theme.palette.info.main, 0.12) : alpha(theme.palette.info.main, 0.04)
+        },
+        outline: 'none',
+        '&:focus-visible': {
+          borderColor: theme.palette.info.main,
+          boxShadow: `0 0 0 3px ${alpha(theme.palette.info.main, 0.25)}`
+        }
+      }}
+    >
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 8,
+          left: 8,
+          width: 18,
+          height: 18,
+          borderRadius: '50%',
+          border: `2px solid ${active ? theme.palette.info.main : alpha(theme.palette.secondary.main, 0.45)}`,
+          bgcolor: 'common.white',
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0
+        }}
+      >
+        {active ? (
+          <Box
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              bgcolor: theme.palette.info.main
+            }}
+          />
+        ) : null}
+      </Box>
+
+      {active ? (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 6,
+            right: 6,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 0.35,
+            px: 0.75,
+            py: 0.2,
+            bgcolor: theme.palette.info.main,
+            color: 'common.white',
+            borderRadius: 0.5,
+            fontSize: '0.62rem',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase'
+          }}
+        >
+          <CheckCircleOutlined style={{ fontSize: 11 }} />
+          Selected
+        </Box>
+      ) : null}
+
+      <Box
+        component={coverMaterial.design ? 'img' : 'div'}
+        src={coverMaterial.design || undefined}
+        alt={coverMaterial.name}
+        onClick={
+          coverMaterial.design
+            ? (event) => {
+                event.stopPropagation();
+                onPreviewImage(coverMaterial.design);
+              }
+            : undefined
+        }
+        sx={{
+          width: 72,
+          height: 96,
+          objectFit: 'cover',
+          borderRadius: 0.5,
+          border: `2px solid ${active ? theme.palette.info.main : 'rgba(0,0,0,0.12)'}`,
+          cursor: coverMaterial.design ? 'zoom-in' : 'default',
+          transition: 'transform 0.15s ease-in-out, border-color 0.2s ease',
+          bgcolor: active ? alpha(theme.palette.info.main, 0.15) : alpha(theme.palette.secondary.main, 0.08),
+          mt: 2.5,
+          '&:hover': coverMaterial.design
+            ? {
+                transform: 'scale(1.06)'
+              }
+            : undefined
+        }}
+      />
+
+      <Box sx={{ textAlign: 'center', width: '100%' }}>
+        <Typography
+          sx={{
+            fontSize: '0.78rem',
+            fontWeight: active ? 700 : 600,
+            color: active ? theme.palette.info.main : 'text.primary'
+          }}
+        >
+          {coverMaterial.code}
+        </Typography>
+        {coverMaterial.name && coverMaterial.name !== coverMaterial.code ? (
+          <Typography sx={{ fontSize: '0.7rem', color: active ? 'text.primary' : 'text.secondary', mt: 0.25 }}>
+            {coverMaterial.name}
+          </Typography>
+        ) : null}
+      </Box>
     </Box>
   );
 }
@@ -3044,6 +3306,7 @@ function BindingStep({
 
   const isSameCoverDesign = coverDesignMode === 'same';
   const isUploadCoverDesign = coverDesignMode === 'upload';
+  const selectedCoverMaterial = coverMaterials.find((item) => item.id === selectedCover);
 
   return (
     <Box>
@@ -3090,7 +3353,36 @@ function BindingStep({
         <Box sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 2.5 } }}>
           <Typography sx={{ fontSize: '0.98rem', fontWeight: 600, mb: 2 }}>{bindingTitle}</Typography>
 
-          <Typography sx={{ fontSize: '0.8rem', mb: 1.5 }}>{coverLabel}</Typography>
+          <Typography sx={{ fontSize: '0.8rem', mb: 0.75 }}>{coverLabel}</Typography>
+          <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary', mb: 1.5 }}>
+            Click a cover to select it. Selected cover is highlighted with a checkmark.
+          </Typography>
+
+          {selectedCoverMaterial ? (
+            <Box
+              sx={{
+                mb: 2,
+                px: 1.5,
+                py: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 1,
+                bgcolor: alpha(theme.palette.info.main, 0.08),
+                border: `1px solid ${alpha(theme.palette.info.main, 0.35)}`
+              }}
+            >
+              <CheckCircleOutlined style={{ fontSize: 14, color: theme.palette.info.main }} />
+              <Typography sx={{ fontSize: '0.78rem' }}>
+                Selected cover:{' '}
+                <Box component="span" sx={{ fontWeight: 700, color: theme.palette.info.main }}>
+                  {selectedCoverMaterial.code}
+                </Box>
+                {selectedCoverMaterial.name && selectedCoverMaterial.name !== selectedCoverMaterial.code
+                  ? ` — ${selectedCoverMaterial.name}`
+                  : ''}
+              </Typography>
+            </Box>
+          ) : null}
 
           <Grid container spacing={1.5} sx={{ mb: 2 }}>
             {coverMaterials.map((coverMaterial) => {
@@ -3098,60 +3390,17 @@ function BindingStep({
 
               return (
                 <Grid key={coverMaterial.id} item xs={6} sm={4} md={3}>
-                  <Box
-                    onClick={() =>
+                  <CoverMaterialOptionCard
+                    coverMaterial={coverMaterial}
+                    active={isActive}
+                    onSelect={() =>
                       onBindingConfigChange((prev) => ({
                         ...prev,
                         selectedCover: coverMaterial.id
                       }))
                     }
-                    sx={{
-                      cursor: 'pointer',
-                      border: '1px solid',
-                      borderColor: isActive ? theme.palette.info.main : 'divider',
-                      bgcolor: 'common.white',
-                      p: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 0.75
-                    }}
-                  >
-                    <Box
-                      component={coverMaterial.design ? 'img' : 'div'}
-                      src={coverMaterial.design || undefined}
-                      alt={coverMaterial.name}
-                      onClick={
-                        coverMaterial.design
-                          ? (event) => {
-                              event.stopPropagation();
-                              openImagePreview(coverMaterial.design);
-                            }
-                          : undefined
-                      }
-                      sx={{
-                        width: 60,
-                        height: 81,
-                        objectFit: 'cover',
-                        borderRadius: 0.5,
-                        border: '1px solid rgba(0,0,0,0.12)',
-                        cursor: coverMaterial.design ? 'zoom-in' : 'default',
-                        transition: 'transform 0.15s ease-in-out',
-                        bgcolor: isActive ? alpha(theme.palette.info.main, 0.3) : alpha(theme.palette.secondary.main, 0.08),
-                        '&:hover': coverMaterial.design
-                          ? {
-                              transform: 'scale(1.1)'
-                            }
-                          : undefined
-                      }}
-                    />
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{coverMaterial.code}</Typography>
-                      {coverMaterial.name && coverMaterial.name !== coverMaterial.code ? (
-                        <Typography sx={{ fontSize: '0.72rem', color: 'text.secondary' }}>{coverMaterial.name}</Typography>
-                      ) : null}
-                    </Box>
-                  </Box>
+                    onPreviewImage={openImagePreview}
+                  />
                 </Grid>
               );
             })}
