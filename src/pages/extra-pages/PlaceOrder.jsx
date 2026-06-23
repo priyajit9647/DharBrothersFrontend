@@ -19,9 +19,12 @@ import Container from '@mui/material/Container';
 import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText';
 import Grid from '@mui/material/Grid';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
+import Select from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
@@ -3932,6 +3935,34 @@ function CheckoutStep({ summary, checkoutForm, checkoutError, branchOptions, bra
     }
   };
 
+  const branchSelectWidth = 280;
+
+  const branchSelectControlSx = {
+    width: branchSelectWidth,
+    maxWidth: '100%'
+  };
+
+  const branchSelectSx = {
+    borderRadius: 0,
+    bgcolor: 'common.white',
+    width: branchSelectWidth,
+    maxWidth: '100%',
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderRadius: 0
+    },
+    '& .MuiSelect-select': {
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      display: 'block',
+      boxSizing: 'border-box',
+      py: 0.75
+    },
+    '& .MuiSelect-icon': {
+      color: 'text.secondary'
+    }
+  };
+
   return (
     <Box>
       <Typography sx={{ fontSize: { xs: '1.2rem', md: '1.45rem' }, fontWeight: 600, mb: 3 }}>Check Out</Typography>
@@ -4144,21 +4175,50 @@ function CheckoutStep({ summary, checkoutForm, checkoutError, branchOptions, bra
               <Grid container spacing={2.5} sx={{ mt: 0.5 }}>
                 <Grid item xs={12}>
                   <FieldLabel>Select Branch</FieldLabel>
-                  <TextField
-                    select
-                    fullWidth
-                    value={checkoutForm.shippingBranchId}
-                    onChange={(event) => onFieldChange('shippingBranchId', event.target.value)}
-                    sx={inputSx}
+                  <FormControl
+                    variant="outlined"
+                    size="small"
+                    error={Boolean(branchError)}
                     disabled={branchLoading || !branchOptions.length}
-                    helperText={branchError || (branchLoading ? 'Loading branches...' : '')}
+                    sx={branchSelectControlSx}
                   >
-                    {branchOptions.map((branch) => (
-                      <MenuItem key={branch.value} value={branch.value}>
-                        {branch.label}
+                    <Select
+                      displayEmpty
+                      value={checkoutForm.shippingBranchId || ''}
+                      onChange={(event) => onFieldChange('shippingBranchId', event.target.value)}
+                      sx={branchSelectSx}
+                      renderValue={(selected) => {
+                        if (!selected) {
+                          return (
+                            <Typography component="span" sx={{ fontSize: '0.88rem', color: 'text.secondary' }}>
+                              Select a branch
+                            </Typography>
+                          );
+                        }
+
+                        const branch = branchOptions.find((option) => option.value === selected);
+                        return branch?.label || selected;
+                      }}
+                      MenuProps={{
+                        autoWidth: false,
+                        PaperProps: {
+                          sx: { maxHeight: 280, width: branchSelectWidth, maxWidth: '100%' }
+                        }
+                      }}
+                    >
+                      <MenuItem value="" disabled>
+                        <Typography sx={{ fontSize: '0.88rem', color: 'text.secondary' }}>Select a branch</Typography>
                       </MenuItem>
-                    ))}
-                  </TextField>
+                      {branchOptions.map((branch) => (
+                        <MenuItem key={branch.value} value={branch.value} sx={{ whiteSpace: 'normal' }}>
+                          {branch.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    {branchError || branchLoading ? (
+                      <FormHelperText>{branchError || 'Loading branches...'}</FormHelperText>
+                    ) : null}
+                  </FormControl>
                 </Grid>
               </Grid>
             )}

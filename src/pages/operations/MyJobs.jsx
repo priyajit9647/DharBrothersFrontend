@@ -387,7 +387,7 @@ export default function MyJobs() {
                   </Box>
                 )
               },
-              { id: 'orderId', label: 'Order ID' },
+              { id: 'orderNumber', label: 'Order ID ' },
               { id: 'processStageName', label: 'Stage' },
               {
                 id: 'customerFullName',
