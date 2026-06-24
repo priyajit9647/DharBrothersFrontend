@@ -11,6 +11,7 @@ const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')))
 // render - BMS Operations
 const OrderBoard = Loadable(lazy(() => import('pages/operations/OrderBoard')));
 const MyJobs = Loadable(lazy(() => import('pages/operations/MyJobs')));
+const Binddashboard = Loadable(lazy(() => import('pages/operations/Binddashboard')));
 const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')));
 const OrderDetails = Loadable(lazy(() => import('pages/operations/OrderDetails')));
 const Whatsapp = Loadable(lazy(() => import('pages/operations/Whatsapp')));
@@ -85,8 +86,12 @@ const MainRoutes = {
       element: <OrderBoard />
     },
     {
-      path: 'my-jobs',
+      path: 'print-dashboard',
       element: <MyJobs />
+    },
+    {
+      path: 'bind-dashboard',
+      element: <Binddashboard/>
     },
     {
       path: 'orders/view/:orderId',

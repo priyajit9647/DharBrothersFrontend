@@ -25,9 +25,16 @@ const utilities = {
     },
     {
       id: 'my-jobs',
-      title: 'My Jobs',
+      title: 'print dashboard',
       type: 'item',
-      url: '/my-jobs',
+      url: '/print-dashboard',
+      icon: icons.ScheduleOutlined
+    },
+    {
+      id: 'bind-dashboard',
+      title: 'Bind Dashboard',
+      type: 'item',
+      url: '/bind-dashboard',
       icon: icons.ScheduleOutlined
     },
     {

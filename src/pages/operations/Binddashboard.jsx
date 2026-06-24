@@ -13,13 +13,10 @@ import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
-
-import MasterList from 'sections/admin/masters/MasterList';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
@@ -28,7 +25,9 @@ import Alert from '@mui/material/Alert';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import CloseIcon from '@mui/icons-material/Close';
-import { getJobList, completeMyJob } from 'api/myJobs';
+
+import MasterList from 'sections/admin/masters/MasterList';
+import { getJobList, completeMyJob } from 'api/bind-dashboard';
 import { getDocumentVersionListFromOrderId, uploadDocumentVersionFormData } from 'api/document';
 import { authorizedFetchRaw } from 'api/auth';
 import { useAuth } from 'hooks/useAuth';
@@ -36,14 +35,15 @@ import useAccess from 'hooks/useAccess';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 import DownloadDocumentButton from 'components/DownloadDocumentButton';
 
-// ==============================|| MY JOBS ||============================== //
+// ==============================|| BIND DASHBOARD ||============================== //
 
-export default function MyJobs() {
+export default function Binddashboard() {
   const { user, accessToken } = useAuth();
   const { hasAccess } = useAccess();
-  const canComplete = hasAccess('MY_JOBS_MGMT') || hasAccess('MYJOBS_VIEW_ORDER');
-  const canViewOrder = hasAccess('MYJOBS_VIEW_ORDER') || hasAccess('MY_JOBS_MGMT');
+  const canComplete = hasAccess('MY_JOBS_MGMT') || hasAccess('BIND_DASHBOARD_VIEW_ORDER');
+  const canViewOrder = hasAccess('BIND_DASHBOARD_VIEW_ORDER') || hasAccess('MY_JOBS_MGMT');
   const canApproveDocument = hasAccess('MY_JOBS_MGMT');
+
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -69,55 +69,50 @@ export default function MyJobs() {
   const showSnack = (message, severity = 'success') => setSnack({ open: true, message, severity });
   const closeSnack = () => setSnack((s) => ({ ...s, open: false }));
 
-  // 5 upload slots: thesis (required), synopsis, hardCover, softCover, synopsisCover
   const FILE_SLOTS = [
-    { key: 'thesisDocument',            label: 'Thesis Document',           required: true  },
-    { key: 'synopsisDocument',          label: 'Synopsis Document',         required: false },
-    { key: 'coverPageDesignFileHard',   label: 'Hard Cover Design',         required: false },
-    { key: 'coverPageDesignFileSoft',   label: 'Soft Cover Design',         required: false },
-    { key: 'synopsisCoverPageDesignFile', label: 'Synopsis Cover Design',   required: false },
+    { key: 'thesisDocument',              label: 'Thesis Document',       required: true  },
+    { key: 'synopsisDocument',            label: 'Synopsis Document',     required: false },
+    { key: 'coverPageDesignFileHard',     label: 'Hard Cover Design',     required: false },
+    { key: 'coverPageDesignFileSoft',     label: 'Soft Cover Design',     required: false },
+    { key: 'synopsisCoverPageDesignFile', label: 'Synopsis Cover Design', required: false },
   ];
   const emptyFiles = () => Object.fromEntries(FILE_SLOTS.map((s) => [s.key, null]));
-  const [uploadFiles, setUploadFiles] = useState(emptyFiles());
+  const [uploadFiles, setUploadFiles] = useState(emptyFiles);
   const fileInputRefs = useRef({});
-  // keep a single ref map per slot key
 
   const loadJobs = useCallback(async (uid) => {
     setLoading(true);
     setError('');
-
     try {
-      // Determine effective userId to send — backend requires `userId` param
       let effectiveUid = uid || user?.id || user?.userId || user?.uid || null;
-
       if (!effectiveUid && accessToken) {
         try {
-          // Decode token payload for common fields.
           const { parseJwt } = require('utils/authTokens');
           const payload = parseJwt(accessToken);
           if (payload) {
             effectiveUid = payload.userId || payload.user_id || payload.sub || payload.uid || payload.id || null;
           }
-        } catch (err) {
+        } catch (_e) {
           // ignore token parse errors
         }
       }
-
-      if (!effectiveUid) {
-        throw new Error('User ID not available for job list request');
-      }
-
+      if (!effectiveUid) throw new Error('User ID not available for job list request');
       const data = await getJobList(effectiveUid);
       const items = Array.isArray(data) ? data : data?.items || data?.data || [];
       setJobs(items);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to load jobs', err);
       setError(err?.message || 'Failed to load jobs');
     } finally {
       setLoading(false);
     }
   }, [user, accessToken]);
+
+  useEffect(() => {
+    loadJobs(user?.id);
+  }, [loadJobs, user?.id]);
+
+  const navigate = useNavigate();
 
   const openCompleteDialog = (id) => {
     if (!id) return;
@@ -132,8 +127,6 @@ export default function MyJobs() {
     setActiveJob(job);
   };
 
-  const navigate = useNavigate();
-
   const handleActionsClose = () => {
     setActionAnchorEl(null);
     setActiveJob(null);
@@ -142,24 +135,12 @@ export default function MyJobs() {
   const handleViewOrder = () => {
     if (!activeJob) return;
     const id = activeJob.orderId || activeJob.id || activeJob.orderNo || activeJob.code;
-    if (id) {
-      // Navigate to admin-only order details page
-      navigate(`/admin/orders/view/${encodeURIComponent(String(id))}`);
-    }
+    if (id) navigate(`/admin/orders/view/${encodeURIComponent(String(id))}`);
     handleActionsClose();
   };
 
-  const getJobDocumentIdentifier = (job) => {
-    return job?.documentStageId ?? job?.documentId ?? job?.stageId ?? job?.processStageId;
-  };
-
-  const getJobOrderId = (job) => {
-    return job?.orderId ?? null;
-  }
-
-  const getJobDocumentName = (job) => {
-    return job?.documentFileName ?? '';
-  };
+  const getJobOrderId = (job) => job?.orderId ?? null;
+  const getJobDocumentName = (job) => job?.documentFileName ?? '';
 
   const handleDocumentApproval = async () => {
     if (!activeJob) return;
@@ -178,15 +159,10 @@ export default function MyJobs() {
     setVersionLoading(true);
     try {
       const versionList = await getDocumentVersionListFromOrderId(jobOrderId);
-      if (Array.isArray(versionList)) {
-        setVersions(versionList);
-      } else if (versionList?.data && Array.isArray(versionList.data)) {
-        setVersions(versionList.data);
-      } else {
-        setVersions([]);
-      }
+      if (Array.isArray(versionList)) setVersions(versionList);
+      else if (Array.isArray(versionList?.data)) setVersions(versionList.data);
+      else setVersions([]);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to load document status', err);
       setApprovalError(err?.message || 'Failed to load document version history');
       setVersions([]);
@@ -211,12 +187,8 @@ export default function MyJobs() {
       const cd = res.headers.get('Content-Disposition') || res.headers.get('content-disposition') || '';
       let filename = documentName;
       const m = /filename\*=UTF-8''([^;\n]+)/i.exec(cd) || /filename="?([^";\n]+)"?/i.exec(cd);
-      if (m && m[1]) {
-        try {
-          filename = decodeURIComponent(m[1]);
-        } catch (_e) {
-          filename = m[1];
-        }
+      if (m?.[1]) {
+        try { filename = decodeURIComponent(m[1]); } catch (_e) { filename = m[1]; }
       }
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -228,7 +200,6 @@ export default function MyJobs() {
       setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
       showSnack('Document downloaded successfully!', 'success');
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to download current document', err);
       const msg = err?.message || 'Failed to download current document';
       setApprovalError(msg);
@@ -241,7 +212,6 @@ export default function MyJobs() {
   const handleFileChange = (slotKey, event) => {
     const file = event.target.files?.[0] || null;
     setUploadFiles((prev) => ({ ...prev, [slotKey]: file }));
-    // reset so same file can be re-selected
     if (fileInputRefs.current[slotKey]) fileInputRefs.current[slotKey].value = '';
   };
 
@@ -253,14 +223,8 @@ export default function MyJobs() {
   const handleUploadVersion = async () => {
     const jobId = selectedApprovalJob?.id ?? null;
     const jobOrderId = selectedApprovalJob?.orderId ?? null;
-    if (!jobId) {
-      setApprovalError('Document job ID is not available for upload.');
-      return;
-    }
-    if (!uploadFiles.thesisDocument) {
-      setApprovalError('Thesis Document is required.');
-      return;
-    }
+    if (!jobId) { setApprovalError('Document job ID is not available for upload.'); return; }
+    if (!uploadFiles.thesisDocument) { setApprovalError('Thesis Document is required.'); return; }
     setUploading(true);
     setApprovalError('');
     try {
@@ -280,7 +244,6 @@ export default function MyJobs() {
       Object.values(fileInputRefs.current).forEach((ref) => { if (ref) ref.value = ''; });
       showSnack('Documents uploaded successfully!', 'success');
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to upload document version', err);
       const msg = err?.message || 'Upload failed';
       setApprovalError(msg);
@@ -301,14 +264,7 @@ export default function MyJobs() {
     Object.values(fileInputRefs.current).forEach((ref) => { if (ref) ref.value = ''; });
   };
 
-  const handleReinitiatePayment = () => {
-    if (!activeJob) return;
-    window.alert(`Re-initiate payment clicked for Order ID: ${activeJob.orderId || activeJob.id || 'unknown'}`);
-    handleActionsClose();
-  };
-
   const handleCloseCompleteDialog = () => {
-    // prevent closing while a completion request is active for this job
     if (completingId && completingId === selectedCompleteId) return;
     setCompleteDialogOpen(false);
     setSelectedCompleteId(null);
@@ -319,65 +275,39 @@ export default function MyJobs() {
   const handleSubmitRemark = async () => {
     if (!selectedCompleteId) return;
     const r = String(remark || '').trim();
-    if (!r) {
-      setRemarkError('Please enter a remark');
-      return;
-    }
-
+    if (!r) { setRemarkError('Please enter a remark'); return; }
     try {
       setCompletingId(selectedCompleteId);
       setRemarkError('');
       setError('');
       await completeMyJob(selectedCompleteId, r);
       await loadJobs();
-      // on success close dialog and clear selected id/remark
       setCompleteDialogOpen(false);
       setSelectedCompleteId(null);
       setRemark('');
       setRemarkError('');
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to complete job', err);
       setRemarkError(err?.message || 'Failed to complete job');
       setError(err?.message || 'Failed to complete job');
     } finally {
-      // always clear completing flag; keep selectedCompleteId/remark so user can retry or cancel
       setCompletingId(null);
     }
   };
 
-  useEffect(() => {
-    // Always attempt to load jobs on mount; pass user id when available
-    loadJobs(user?.id);
-  }, [loadJobs, user?.id]);
-
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
-    const end = start + rowsPerPage;
-    return jobs.slice(start, end);
+    return jobs.slice(start, start + rowsPerPage);
   }, [page, rowsPerPage, jobs]);
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-
     const date = new Date(dateString);
-
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = String(date.getFullYear()).slice(-2);
-
-    const time = date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    }).replace(' ', '');
-
+    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).replace(' ', '');
     return `${day}/${month}/${year} - ${time}`;
-  };
-
-  const getCustomerName = (customer) => {
-    if (!customer) return '';
-    return customer.name || customer.customerName || '';
   };
 
   return (
@@ -399,34 +329,18 @@ export default function MyJobs() {
                 render: (row) => (
                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                     {(canViewOrder || canApproveDocument) && (
-                      <IconButton
-                        size="small"
-                        onClick={(event) => handleActionsOpen(event, row)}
-                        aria-label="Job actions"
-                      >
+                      <IconButton size="small" onClick={(event) => handleActionsOpen(event, row)} aria-label="Job actions">
                         <EllipsisOutlined style={{ fontSize: 18 }} />
                       </IconButton>
                     )}
                   </Box>
                 )
               },
-              { id: 'orderNumber', label: 'Order ID ' },
+              { id: 'orderNumber', label: 'Order ID' },
               { id: 'processStageName', label: 'Stage' },
-              {
-                id: 'customerFullName',
-                label: 'Customer',
-              },
-              {
-                id: 'dueTime',
-                label: 'Due Time',
-                render: (row) => formatDate(row.dueTime)
-              },
-              {
-                id: 'assignedDate',
-                label: 'Assigned at',
-                align: 'center',
-                render: (row) => formatDate(row.assignedDate)
-              },
+              { id: 'customerFullName', label: 'Customer' },
+              { id: 'dueTime', label: 'Due Time', render: (row) => formatDate(row.dueTime) },
+              { id: 'assignedDate', label: 'Assigned at', align: 'center', render: (row) => formatDate(row.assignedDate) },
               {
                 id: 'documentVersion',
                 label: 'Current Document',
@@ -443,7 +357,7 @@ export default function MyJobs() {
                 id: 'actions',
                 label: 'Actions',
                 align: 'center',
-                render: (row) => (
+                render: (row) =>
                   canComplete ? (
                     <Button
                       variant="contained"
@@ -455,7 +369,6 @@ export default function MyJobs() {
                       {completingId === row.id ? 'Completing...' : 'Complete'}
                     </Button>
                   ) : null
-                )
               }
             ]}
             rows={pagedRows}
@@ -463,10 +376,7 @@ export default function MyJobs() {
             rowsPerPage={rowsPerPage}
             totalCount={jobs.length}
             onPageChange={setPage}
-            onRowsPerPageChange={(value) => {
-              setRowsPerPage(value);
-              setPage(0);
-            }}
+            onRowsPerPageChange={(value) => { setRowsPerPage(value); setPage(0); }}
             loading={loading}
             hideCreateButton
             showActiveColumn={false}
@@ -484,6 +394,8 @@ export default function MyJobs() {
           </Menu>
         </Grid>
       </Grid>
+
+      {/* Document Version Approval Dialog */}
       <Dialog open={approvalDialogOpen} onClose={handleCloseApprovalDialog} fullWidth maxWidth="lg">
         <DialogTitle>Document Version Approval</DialogTitle>
         <DialogContent>
@@ -491,11 +403,7 @@ export default function MyJobs() {
             <Grid item xs={12} md={5}>
               <Stack spacing={2} sx={{ py: 1 }}>
                 <Typography variant="subtitle1">Current Document</Typography>
-                <Button
-                  variant="outlined"
-                  onClick={downloadCurrentDocument}
-                  disabled={downloadLoading || !selectedApprovalJob}
-                >
+                <Button variant="outlined" onClick={downloadCurrentDocument} disabled={downloadLoading || !selectedApprovalJob}>
                   {downloadLoading ? 'Downloading...' : 'Download Current Document'}
                 </Button>
 
@@ -505,7 +413,6 @@ export default function MyJobs() {
                   const file = uploadFiles[slot.key];
                   return (
                     <Box key={slot.key}>
-                      {/* hidden input per slot */}
                       <input
                         ref={(el) => { fileInputRefs.current[slot.key] = el; }}
                         type="file"
@@ -567,19 +474,16 @@ export default function MyJobs() {
                   minRows={2}
                 />
                 {approvalError && (
-                  <Typography variant="body2" color="error">
-                    {approvalError}
-                  </Typography>
+                  <Typography variant="body2" color="error">{approvalError}</Typography>
                 )}
               </Stack>
             </Grid>
+
             <Grid item xs={12} md={7}>
               <Typography variant="subtitle1">Previous Versions & Customer Remarks</Typography>
               <Box sx={{ mt: 1, maxHeight: 460, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
                 {versionLoading ? (
-                  <Box sx={{ py: 4, textAlign: 'center' }}>
-                    <CircularProgress />
-                  </Box>
+                  <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress /></Box>
                 ) : versions.length > 0 ? (
                   <List dense>
                     {versions.map((version, versionIndex) => {
@@ -587,12 +491,10 @@ export default function MyJobs() {
                       const listKey = version.id ?? version.documentMasterId ?? versionNumber;
                       return (
                         <Box key={listKey}>
-                          <ListItem alignItems="flex-start" sx={{ flexDirection: 'column', alignItems: 'stretch', mt: versionIndex != 0 ? 2 : 0, }}>
+                          <ListItem alignItems="flex-start" sx={{ flexDirection: 'column', alignItems: 'stretch', mt: versionIndex !== 0 ? 2 : 0 }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', mb: 0.5 }}>
                               <Box>
-                                <Typography variant="subtitle2">
-                                  {`Version ${versionNumber}`}
-                                </Typography>
+                                <Typography variant="subtitle2">{`Version ${versionNumber}`}</Typography>
                                 <Typography variant="body2" color="text.secondary">
                                   {version.fileName || version.documentMasterName || 'Unnamed file'}
                                 </Typography>
@@ -602,15 +504,15 @@ export default function MyJobs() {
                             <Typography variant="body2" sx={{ mb: 1 }}>
                               {version.remarks || 'No remarks from customer.'}
                             </Typography>
-                            {version.customerName || version.customerEmail || version.customerPhone ? (
+                            {(version.customerName || version.customerEmail || version.customerPhone) && (
                               <Typography variant="caption" color="text.secondary">
                                 {version.customerName ? `Customer: ${version.customerName}` : ''}
                                 {version.customerEmail ? ` ${version.customerEmail}` : ''}
                                 {version.customerPhone ? ` ${version.customerPhone}` : ''}
                               </Typography>
-                            ) : null}
+                            )}
                           </ListItem>
-                          {versionIndex != (versions.length - 1) && <Divider component="li" />}
+                          {versionIndex !== versions.length - 1 && <Divider component="li" />}
                         </Box>
                       );
                     })}
@@ -625,43 +527,38 @@ export default function MyJobs() {
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseApprovalDialog} disabled={uploading || downloadLoading}>
-            Close
-          </Button>
+          <Button onClick={handleCloseApprovalDialog} disabled={uploading || downloadLoading}>Close</Button>
           <Button variant="contained" onClick={handleUploadVersion} disabled={uploading || !uploadFiles.thesisDocument}>
             {uploading ? 'Uploading...' : 'Upload Version'}
           </Button>
         </DialogActions>
       </Dialog>
-        <Dialog open={completeDialogOpen} onClose={handleCloseCompleteDialog} maxWidth="sm" fullWidth>
-          <DialogTitle>Mark Job Complete</DialogTitle>
-          <DialogContent>
-            <TextField
-              label="Remark"
-              value={remark}
-              onChange={(e) => setRemark(e.target.value)}
-              fullWidth
-              multiline
-              minRows={3}
-              error={Boolean(remarkError)}
-              helperText={remarkError}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseCompleteDialog} disabled={completingId === selectedCompleteId}>
-              Cancel
-            </Button>
-            <Button variant="contained" onClick={handleSubmitRemark} disabled={completingId === selectedCompleteId}>
-              {completingId === selectedCompleteId ? 'Completing...' : 'Submit'}
-            </Button>
-          </DialogActions>
-        </Dialog>
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={4000}
-        onClose={closeSnack}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+
+      {/* Mark Complete Dialog */}
+      <Dialog open={completeDialogOpen} onClose={handleCloseCompleteDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Mark Job Complete</DialogTitle>
+        <DialogContent>
+          <TextField
+            label="Remark"
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+            fullWidth
+            multiline
+            minRows={3}
+            error={Boolean(remarkError)}
+            helperText={remarkError}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCompleteDialog} disabled={completingId === selectedCompleteId}>Cancel</Button>
+          <Button variant="contained" onClick={handleSubmitRemark} disabled={completingId === selectedCompleteId}>
+            {completingId === selectedCompleteId ? 'Completing...' : 'Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Toast */}
+      <Snackbar open={snack.open} autoHideDuration={4000} onClose={closeSnack} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert onClose={closeSnack} severity={snack.severity} variant="filled" sx={{ width: '100%' }}>
           {snack.message}
         </Alert>

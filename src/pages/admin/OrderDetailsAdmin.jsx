@@ -74,18 +74,26 @@ function normalizeOrderResponse(raw) {
   };
 
   const documents = resp?.documents && typeof resp.documents === 'object' ? resp.documents : resp;
-  const files = [];
+  const approvedDocumentsSource = resp?.approvedDocuments && typeof resp.approvedDocuments === 'object' ? resp.approvedDocuments : null;
   const fileMap = [
     ['thesisDocumentName', 'thesisDocumentPath', 'Thesis Document'],
     ['synopsisDocumentName', 'synopsisDocumentPath', 'Synopsis Document'],
     ['hardCoverDesignName', 'hardCoverDesignPath', 'Hard Cover Design'],
-    ['softCoverDesignName', 'softCoverDesignPath', 'Soft Cover Design']
+    ['softCoverDesignName', 'softCoverDesignPath', 'Soft Cover Design'],
+    ['synopsisCoverDesignName', 'synopsisCoverDesignPath', 'Synopsis Cover Design']
   ];
+  const files = [];
+  const approvedFiles = [];
   for (const [nameKey, pathKey, label] of fileMap) {
     files.push({
       label,
       fileName: documents?.[nameKey] || null,
       filePath: documents?.[pathKey] || null
+    });
+    approvedFiles.push({
+      label,
+      fileName: approvedDocumentsSource?.[nameKey] || null,
+      filePath: approvedDocumentsSource?.[pathKey] || null
     });
   }
 
@@ -135,6 +143,7 @@ function normalizeOrderResponse(raw) {
   return {
     ...resp,
     files,
+    approvedFiles,
     printingDetails,
     billingAddress,
     shippingAddress,
@@ -492,7 +501,7 @@ export default function OrderDetailsAdmin() {
         {/* Printing table — full width */}
         <Card sx={CARD_SX}>
           <CardContent sx={CARD_CONTENT_SX}>
-            <CardTitle>Hard Printing & Binding Details</CardTitle>
+            <CardTitle>Hard Printing & Binding Details </CardTitle>
             <TableContainer
               component={Paper}
               sx={{ borderRadius: '10px', overflowX: 'auto', border: '1px solid #edf2f7', boxShadow: 'none' }}
@@ -661,9 +670,9 @@ export default function OrderDetailsAdmin() {
           </CardContent>
         </Card>
 
-        {/* Documents | Customer — equal width */}
+        {/* Documents | Approved Documents | Customer — equal width */}
         <Grid container spacing={3} alignItems="stretch">
-          <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', minWidth: 0 }}>
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
             <Card sx={{ ...CARD_SX, flex: 1 }}>
               <CardContent sx={CARD_CONTENT_SX}>
                 <CardTitle>Documents</CardTitle>
@@ -695,7 +704,39 @@ export default function OrderDetailsAdmin() {
             </Card>
           </Grid>
 
-          <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', minWidth: 0 }}>
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
+            <Card sx={{ ...CARD_SX, flex: 1 }}>
+              <CardContent sx={CARD_CONTENT_SX}>
+                <CardTitle color="#16a34a">Approved Documents</CardTitle>
+                <Stack spacing={1.5} divider={<Divider sx={{ borderColor: '#f1f5f9' }} />}>
+                  {order.approvedFiles?.map((file, i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 0.5 }}>
+                      <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: file.fileName ? '#f0fdf4' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FileText size={18} color={file.fileName ? '#16a34a' : '#9ca3af'} />
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography fontWeight={600} fontSize={14} color="#111827">{file.label}</Typography>
+                        {file.fileName ? (
+                          <Typography sx={{ color: '#16a34a', cursor: 'pointer', fontSize: 13, textDecoration: 'underline', wordBreak: 'break-word', lineHeight: 1.5, mt: 0.25 }} onClick={() => handleDownloadFile(file)}>
+                            {file.fileName}
+                          </Typography>
+                        ) : (
+                          <Typography sx={{ color: '#9ca3af', fontSize: 13, mt: 0.25 }}>Not uploaded</Typography>
+                        )}
+                      </Box>
+                      {file.filePath && (
+                        <IconButton size="small" onClick={() => handleDownloadFile(file)} sx={{ width: 32, height: 32, borderRadius: '8px', bgcolor: '#f0fdf4', flexShrink: 0 }}>
+                          <Download size={14} color="#16a34a" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
             <Card sx={{ ...CARD_SX, flex: 1 }}>
               <CardContent sx={CARD_CONTENT_SX}>
                 <SectionHeader icon={<User size={15} />} title="Customer" subtitle="Contact information" />

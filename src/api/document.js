@@ -31,10 +31,19 @@ export async function uploadDocumentVersionFormData(payload) {
     throw new Error('Payload must be an object');
   }
 
-  const { documentStageId, documentId, file, remarks } = payload;
+  const {
+    documentStageId,
+    documentId,
+    remarks,
+    thesisDocument,
+    synopsisDocument,
+    coverPageDesignFileHard,
+    coverPageDesignFileSoft,
+    synopsisCoverPageDesignFile
+  } = payload;
 
-  if (file == null) {
-    throw new Error('file is required for multipart upload');
+  if (thesisDocument == null) {
+    throw new Error('thesisDocument is required');
   }
 
   const formData = new FormData();
@@ -50,7 +59,11 @@ export async function uploadDocumentVersionFormData(payload) {
     formData.append('remarks', String(remarks));
   }
 
-  formData.append('file', file);
+  formData.append('thesisDocument', thesisDocument);
+  if (synopsisDocument != null)          formData.append('synopsisDocument', synopsisDocument);
+  if (coverPageDesignFileHard != null)   formData.append('coverPageDesignFileHard', coverPageDesignFileHard);
+  if (coverPageDesignFileSoft != null)   formData.append('coverPageDesignFileSoft', coverPageDesignFileSoft);
+  if (synopsisCoverPageDesignFile != null) formData.append('synopsisCoverPageDesignFile', synopsisCoverPageDesignFile);
 
   return authorizedFetch('/api/v1/document/upload', {
     method: 'POST',
