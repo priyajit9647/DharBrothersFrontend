@@ -473,7 +473,7 @@ export default function OrderDetailsAdmin() {
             )}
           </Stack>
           <Typography variant="body2" color="text.secondary" fontSize={13}>
-            Manage and track order details gggg
+            Manage and track order details
           </Typography>
         </Box>
 

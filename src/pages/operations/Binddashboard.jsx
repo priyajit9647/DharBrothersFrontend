@@ -27,7 +27,7 @@ import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import CloseIcon from '@mui/icons-material/Close';
 
 import MasterList from 'sections/admin/masters/MasterList';
-import { getJobList, completeMyJob } from 'api/bind-dashboard';
+import { getBindingDashboardJobs, completeMyJob } from 'api/bind-dashboard';
 import { getDocumentVersionListFromOrderId, uploadDocumentVersionFormData } from 'api/document';
 import { authorizedFetchRaw } from 'api/auth';
 import { useAuth } from 'hooks/useAuth';
@@ -38,7 +38,7 @@ import DownloadDocumentButton from 'components/DownloadDocumentButton';
 // ==============================|| BIND DASHBOARD ||============================== //
 
 export default function Binddashboard() {
-  const { user, accessToken } = useAuth();
+  const { accessToken } = useAuth();
   const { hasAccess } = useAccess();
   const canComplete = hasAccess('MY_JOBS_MGMT') || hasAccess('BIND_DASHBOARD_VIEW_ORDER');
   const canViewOrder = hasAccess('BIND_DASHBOARD_VIEW_ORDER') || hasAccess('MY_JOBS_MGMT');
@@ -80,24 +80,11 @@ export default function Binddashboard() {
   const [uploadFiles, setUploadFiles] = useState(emptyFiles);
   const fileInputRefs = useRef({});
 
-  const loadJobs = useCallback(async (uid) => {
+  const loadJobs = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      let effectiveUid = uid || user?.id || user?.userId || user?.uid || null;
-      if (!effectiveUid && accessToken) {
-        try {
-          const { parseJwt } = require('utils/authTokens');
-          const payload = parseJwt(accessToken);
-          if (payload) {
-            effectiveUid = payload.userId || payload.user_id || payload.sub || payload.uid || payload.id || null;
-          }
-        } catch (_e) {
-          // ignore token parse errors
-        }
-      }
-      if (!effectiveUid) throw new Error('User ID not available for job list request');
-      const data = await getJobList(effectiveUid);
+      const data = await getBindingDashboardJobs();
       const items = Array.isArray(data) ? data : data?.items || data?.data || [];
       setJobs(items);
     } catch (err) {
@@ -106,11 +93,11 @@ export default function Binddashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, accessToken]);
+  }, []);
 
   useEffect(() => {
-    loadJobs(user?.id);
-  }, [loadJobs, user?.id]);
+    loadJobs();
+  }, [loadJobs]);
 
   const navigate = useNavigate();
 
@@ -140,7 +127,7 @@ export default function Binddashboard() {
   };
 
   const getJobOrderId = (job) => job?.orderId ?? null;
-  const getJobDocumentName = (job) => job?.documentFileName ?? '';
+  const getJobDocumentName = (job) => job?.printingDetails ?? job?.documentFileName ?? '';
 
   const handleDocumentApproval = async () => {
     if (!activeJob) return;
@@ -151,19 +138,20 @@ export default function Binddashboard() {
     setSelectedApprovalJob(activeJob);
     setApprovalDialogOpen(true);
     handleActionsClose();
-    const jobOrderId = getJobOrderId(activeJob);
-    if (!jobOrderId) {
-      setApprovalError('Document order ID is not available for this job.');
+    // Use orderNumber for version list lookup (API expects orderNumber query param)
+    const orderNumber = activeJob.orderNumber ?? getJobOrderId(activeJob);
+    if (!orderNumber) {
+      setApprovalError('Order number is not available for this job.');
       return;
     }
     setVersionLoading(true);
     try {
-      const versionList = await getDocumentVersionListFromOrderId(jobOrderId);
+      const versionList = await getDocumentVersionListFromOrderId(orderNumber);
       if (Array.isArray(versionList)) setVersions(versionList);
       else if (Array.isArray(versionList?.data)) setVersions(versionList.data);
       else setVersions([]);
     } catch (err) {
-      console.error('Failed to load document status', err);
+      console.error('Failed to load document versions', err);
       setApprovalError(err?.message || 'Failed to load document version history');
       setVersions([]);
     } finally {
@@ -185,7 +173,7 @@ export default function Binddashboard() {
       const res = await authorizedFetchRaw(path, { method: 'GET' });
       const blob = await res.blob();
       const cd = res.headers.get('Content-Disposition') || res.headers.get('content-disposition') || '';
-      let filename = documentName;
+      let filename = documentName || String(orderId);
       const m = /filename\*=UTF-8''([^;\n]+)/i.exec(cd) || /filename="?([^";\n]+)"?/i.exec(cd);
       if (m?.[1]) {
         try { filename = decodeURIComponent(m[1]); } catch (_e) { filename = m[1]; }
@@ -221,9 +209,9 @@ export default function Binddashboard() {
   };
 
   const handleUploadVersion = async () => {
-    const jobId = selectedApprovalJob?.id ?? null;
-    const jobOrderId = selectedApprovalJob?.orderId ?? null;
-    if (!jobId) { setApprovalError('Document job ID is not available for upload.'); return; }
+    const jobId = selectedApprovalJob?.orderId ?? null;
+    const jobOrderId = selectedApprovalJob?.orderNumber ?? selectedApprovalJob?.orderId ?? null;
+    if (!jobId) { setApprovalError('Order ID is not available for upload.'); return; }
     if (!uploadFiles.thesisDocument) { setApprovalError('Thesis Document is required.'); return; }
     setUploading(true);
     setApprovalError('');
@@ -300,16 +288,6 @@ export default function Binddashboard() {
     return jobs.slice(start, start + rowsPerPage);
   }, [page, rowsPerPage, jobs]);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(-2);
-    const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }).replace(' ', '');
-    return `${day}/${month}/${year} - ${time}`;
-  };
-
   return (
     <>
       <Grid container sx={{ width: '100%', flexGrow: 1 }}>
@@ -336,11 +314,78 @@ export default function Binddashboard() {
                   </Box>
                 )
               },
-              { id: 'orderNumber', label: 'Order ID' },
-              { id: 'processStageName', label: 'Stage' },
-              { id: 'customerFullName', label: 'Customer' },
-              { id: 'dueTime', label: 'Due Time', render: (row) => formatDate(row.dueTime) },
-              { id: 'assignedDate', label: 'Assigned at', align: 'center', render: (row) => formatDate(row.assignedDate) },
+              { id: 'orderNumber', label: 'Order ID', sx: { whiteSpace: 'nowrap' } },
+              {
+                id: 'customerName',
+                label: 'Customer',
+                sx: { maxWidth: 140 },
+                render: (row) => (
+                  <Typography
+                    variant="body2"
+                    title={row.customerName || ''}
+                    sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {row.customerName || ''}
+                  </Typography>
+                )
+              },
+              { id: 'noOfCopies', label: 'Copies', align: 'center', sx: { whiteSpace: 'nowrap', width: 70 } },
+              {
+                id: 'coverDesign',
+                label: 'Cover Design',
+                sx: { maxWidth: 150 },
+                render: (row) => (
+                  <Typography
+                    variant="body2"
+                    title={row.coverDesign || ''}
+                    sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {row.coverDesign || ''}
+                  </Typography>
+                )
+              },
+              { id: 'bindingType', label: 'Binding Type', sx: { whiteSpace: 'nowrap' } },
+              {
+                id: 'delivery',
+                label: 'Delivery',
+                sx: { maxWidth: 180 },
+                render: (row) => (
+                  <Box sx={{ maxWidth: 180 }}>
+                    <Typography
+                      variant="body2"
+                      title={row.deliveryBranchName || ''}
+                      sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {row.deliveryBranchName || ''}
+                    </Typography>
+                    {row.deleveryBranchAddress && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        title={row.deleveryBranchAddress}
+                        sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      >
+                        {row.deleveryBranchAddress}
+                      </Typography>
+                    )}
+                  </Box>
+                )
+              },
+              { id: 'deliveryType', label: 'Delivery Type', sx: { whiteSpace: 'nowrap' } },
+              {
+                id: 'printingDetails',
+                label: 'Printing Details',
+                sx: { maxWidth: 180 },
+                render: (row) => (
+                  <Typography
+                    variant="body2"
+                    title={row.printingDetails || ''}
+                    sx={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {row.printingDetails || ''}
+                  </Typography>
+                )
+              },
               {
                 id: 'documentVersion',
                 label: 'Current Document',
@@ -363,10 +408,10 @@ export default function Binddashboard() {
                       variant="contained"
                       color="primary"
                       size="small"
-                      onClick={() => openCompleteDialog(row.id)}
-                      disabled={loading || completingId === row.id}
+                      onClick={() => openCompleteDialog(row.orderId)}
+                      disabled={loading || completingId === row.orderId}
                     >
-                      {completingId === row.id ? 'Completing...' : 'Complete'}
+                      {completingId === row.orderId ? 'Completing...' : 'Complete'}
                     </Button>
                   ) : null
               }

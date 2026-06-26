@@ -345,29 +345,78 @@ export default function MyJobs() {
                   </Box>
                 )
               },
-              { id: 'orderNumber', label: 'Order ID' },
-              { id: 'customerName', label: 'Customer' },
-              { id: 'noOfCopies', label: 'No. of Copies', align: 'center' },
-              { id: 'coverDesign', label: 'Cover Design' },
-              { id: 'bindingType', label: 'Binding Type' },
+              { id: 'orderNumber', label: 'Order ID', sx: { whiteSpace: 'nowrap' } },
+              {
+                id: 'customerName',
+                label: 'Customer',
+                sx: { maxWidth: 140 },
+                render: (row) => (
+                  <Typography
+                    variant="body2"
+                    title={row.customerName || ''}
+                    sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {row.customerName || ''}
+                  </Typography>
+                )
+              },
+              { id: 'noOfCopies', label: 'Copies', align: 'center', sx: { whiteSpace: 'nowrap', width: 70 } },
+              {
+                id: 'coverDesign',
+                label: 'Cover Design',
+                sx: { maxWidth: 150 },
+                render: (row) => (
+                  <Typography
+                    variant="body2"
+                    title={row.coverDesign || ''}
+                    sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {row.coverDesign || ''}
+                  </Typography>
+                )
+              },
+              { id: 'bindingType', label: 'Binding Type', sx: { whiteSpace: 'nowrap' } },
               {
                 id: 'delivery',
                 label: 'Delivery',
+                sx: { maxWidth: 180 },
                 render: (row) => (
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  <Box sx={{ maxWidth: 180 }}>
+                    <Typography
+                      variant="body2"
+                      title={row.deliveryBranchName || ''}
+                      sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
                       {row.deliveryBranchName || ''}
                     </Typography>
                     {row.deleveryBranchAddress && (
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        title={row.deleveryBranchAddress}
+                        sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      >
                         {row.deleveryBranchAddress}
                       </Typography>
                     )}
                   </Box>
                 )
               },
-              { id: 'deliveryType', label: 'Delivery Type' },
-              { id: 'printingDetails', label: 'Printing Details' },
+              { id: 'deliveryType', label: 'Delivery Type', sx: { whiteSpace: 'nowrap' } },
+              {
+                id: 'printingDetails',
+                label: 'Printing Details',
+                sx: { maxWidth: 180 },
+                render: (row) => (
+                  <Typography
+                    variant="body2"
+                    title={row.printingDetails || ''}
+                    sx={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {row.printingDetails || ''}
+                  </Typography>
+                )
+              },
               {
                 id: 'actions',
                 label: 'Actions',
