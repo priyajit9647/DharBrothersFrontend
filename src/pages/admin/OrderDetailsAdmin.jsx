@@ -506,13 +506,38 @@ export default function OrderDetailsAdmin() {
               component={Paper}
               sx={{ borderRadius: '10px', overflowX: 'auto', border: '1px solid #edf2f7', boxShadow: 'none' }}
             >
-              <Table sx={{ minWidth: 900 }}>
+              <Table sx={{ minWidth: 900, tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: '130px' }} /> {/* Description */}
+                  <col style={{ width: '90px' }}  /> {/* Paper Size */}
+                  <col style={{ width: '110px' }} /> {/* Paper Type */}
+                  <col style={{ width: '90px' }}  /> {/* Colour */}
+                  <col style={{ width: '80px' }}  /> {/* No. Copies */}
+                  <col style={{ width: '100px' }} /> {/* Printing */}
+                  <col style={{ width: '60px' }}  /> {/* A4 */}
+                  <col style={{ width: '60px' }}  /> {/* CD */}
+                  <col style={{ width: '160px' }} /> {/* Information */}
+                  <col style={{ width: '110px' }} /> {/* Top Content */}
+                  <col style={{ width: '120px' }} /> {/* Middle Content */}
+                  <col style={{ width: '120px' }} /> {/* Bottom Content */}
+                </colgroup>
                 <TableBody>
                   <TableRow sx={{ background: '#f8fafc' }}>
                     {['Description', 'Paper Size', 'Paper Type', 'Colour', 'No. Copies', 'Printing', 'A4', 'CD', 'Information', 'Top Content', 'Middle Content', 'Bottom Content'].map((h) => (
                       <TableCell
                         key={h}
-                        sx={{ fontWeight: 700, fontSize: 11, color: '#374151', py: 1.5, px: 2, whiteSpace: 'nowrap', textTransform: 'uppercase', letterSpacing: '0.3px' }}
+                        sx={{
+                          fontWeight: 700,
+                          fontSize: 11,
+                          color: '#374151',
+                          py: 1.5,
+                          px: 1.5,
+                          whiteSpace: 'nowrap',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.3px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
                       >
                         {h}
                       </TableCell>
@@ -531,12 +556,13 @@ export default function OrderDetailsAdmin() {
                           sx={{
                             fontSize: 13,
                             color: '#374151',
-                            py: 1.75,
-                            px: 2,
-                            whiteSpace: ci === 8 ? 'normal' : 'nowrap',
-                            wordBreak: 'break-word',
+                            py: 1.5,
+                            px: 1.5,
                             verticalAlign: 'top',
-                            minWidth: ci === 8 ? 200 : undefined
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: ci === 8 ? 'normal' : 'nowrap',
+                            wordBreak: ci === 8 ? 'break-word' : 'normal'
                           }}
                         >
                           {v ?? '—'}

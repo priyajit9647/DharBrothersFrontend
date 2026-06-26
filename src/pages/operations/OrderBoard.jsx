@@ -45,17 +45,17 @@ function OrdersTableHead() {
   return (
     <TableHead>
       <TableRow>
-        <TableCell sx={{ width: 48 }} />
-         <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 120 }}>Order #</TableCell>
-        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Customer</TableCell>
-        <TableCell sx={{ minWidth: 180, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>University Name</TableCell>
-        <TableCell sx={{ minWidth: 160, fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>University Department</TableCell>
-        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Stage</TableCell>
-        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Assigned Staff</TableCell>
-        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Date Assigned</TableCell>
-        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Expected Done</TableCell>
-        <TableCell align="right" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Amount</TableCell>
-        <TableCell align="center" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Payment</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 48, p: 1 }} />
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 110, whiteSpace: 'nowrap' }}>Order #</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 150, whiteSpace: 'nowrap' }}>Customer</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 160, whiteSpace: 'nowrap' }}>University</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 150, whiteSpace: 'nowrap' }}>Department</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 130, whiteSpace: 'nowrap' }}>Stage</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 150, whiteSpace: 'nowrap' }}>Assigned Staff</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 140, whiteSpace: 'nowrap' }}>Date Assigned</TableCell>
+        <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 140, whiteSpace: 'nowrap' }}>Expected Done</TableCell>
+        <TableCell align="right" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 90, whiteSpace: 'nowrap' }}>Amount</TableCell>
+        <TableCell align="center" sx={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem', width: 100, whiteSpace: 'nowrap' }}>Payment</TableCell>
       </TableRow>
     </TableHead>
   );
@@ -510,7 +510,20 @@ export default function OrderBoard() {
                   </Box>
 
                   <TableContainer sx={{ px: 2, overflowX: 'auto', flex: 1 }}>
-                    <Table size="small" aria-labelledby={`orders-${stageName}`} sx={{ tableLayout: 'auto', minWidth: '100%' }}>
+                    <Table size="small" aria-labelledby={`orders-${stageName}`} sx={{ tableLayout: 'fixed', minWidth: 1372 }}>
+                      <colgroup>
+                        <col style={{ width: '48px' }} />
+                        <col style={{ width: '110px' }} />
+                        <col style={{ width: '150px' }} />
+                        <col style={{ width: '160px' }} />
+                        <col style={{ width: '150px' }} />
+                        <col style={{ width: '130px' }} />
+                        <col style={{ width: '150px' }} />
+                        <col style={{ width: '140px' }} />
+                        <col style={{ width: '140px' }} />
+                        <col style={{ width: '90px' }} />
+                        <col style={{ width: '100px' }} />
+                      </colgroup>
                       <OrdersTableHead />
                       <TableBody>
                         {filteredRows.map((order) => (
@@ -548,51 +561,50 @@ export default function OrderBoard() {
                                 </IconButton>
                               </Tooltip>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="subtitle2">{renderOrderId(order)}</Typography>
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="subtitle2" noWrap title={renderOrderId(order)}>{renderOrderId(order)}</Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="subtitle2">
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="subtitle2" noWrap title={
+                                order.firstName || order.lastName
+                                  ? `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim()
+                                  : (order.customer?.name ?? order.customerName ?? '—')
+                              }>
                                 {order.firstName || order.lastName
                                   ? `${order.firstName ?? ''} ${order.lastName ?? ''}`.trim()
                                   : (order.customer?.name ?? order.customerName ?? '—')}
                               </Typography>
                               {(order.customerPhone || order.customerEmail) && (
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" noWrap title={[order.customerPhone, order.customerEmail].filter(Boolean).join(' • ')}>
                                   {[order.customerPhone, order.customerEmail].filter(Boolean).join(' • ')}
                                 </Typography>
                               )}
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{getUniversityName(order) ?? '—'}</Typography>
-                              {getUniversityName(order) && (
-                                <Typography variant="caption" color="text.secondary">
-                                  {order.university?.location ?? ''}
-                                </Typography>
-                              )}
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="body2" noWrap title={getUniversityName(order) ?? '—'}>{getUniversityName(order) ?? '—'}</Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{getUniversityDept(order) ?? '—'}</Typography>
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="body2" noWrap title={getUniversityDept(order) ?? '—'}>{getUniversityDept(order) ?? '—'}</Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{order.orderStageName ?? order.stageName ?? order.stage ?? stageName}</Typography>
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="body2" noWrap title={order.orderStageName ?? order.stageName ?? order.stage ?? stageName}>{order.orderStageName ?? order.stageName ?? order.stage ?? stageName}</Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="subtitle2">{order.assignedStaffName || '—'}</Typography>
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="subtitle2" noWrap title={order.assignedStaffName || '—'}>{order.assignedStaffName || '—'}</Typography>
                               {(order.assignedStaffEmail || order.assignedStaffPhone) && (
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography variant="caption" color="text.secondary" noWrap title={[order.assignedStaffEmail, order.assignedStaffPhone].filter(Boolean).join(' • ')}>
                                   {[order.assignedStaffEmail, order.assignedStaffPhone].filter(Boolean).join(' • ')}
                                 </Typography>
                               )}
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{formatDateTime(order.assignedDate)}</Typography>
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="body2" noWrap>{formatDateTime(order.assignedDate)}</Typography>
                             </TableCell>
-                            <TableCell>
-                              <Typography variant="body2">{formatDateTime(order.expectedDoneDate)}</Typography>
+                            <TableCell sx={{ overflow: 'hidden' }}>
+                              <Typography variant="body2" noWrap>{formatDateTime(order.expectedDoneDate)}</Typography>
                             </TableCell>
-                            <TableCell align="right">
-                              <Typography variant="body2">
+                            <TableCell align="right" sx={{ overflow: 'hidden' }}>
+                              <Typography variant="body2" noWrap>
                                 {order.totalAmount != null ? Number(order.totalAmount).toFixed(2) : '—'}
                               </Typography>
                             </TableCell>
