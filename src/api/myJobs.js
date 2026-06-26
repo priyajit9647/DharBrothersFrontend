@@ -143,3 +143,19 @@ export async function completeMyJob(id, remark) {
 
 // Backward-compatible alias
 export const completeJob = completeMyJob;
+
+/**
+ * Fetch Printing Dashboard job list
+ * Endpoint: GET /api/v1/my-jobs/printing-dashboard
+ * @returns {Promise<Array>}
+ */
+export async function getPrintingDashboardJobs() {
+  const response = await authorizedFetch('/api/v1/my-jobs/printing-dashboard', {
+    method: 'GET'
+  });
+
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.items)) return response.items;
+  if (Array.isArray(response?.data)) return response.data;
+  return [];
+}

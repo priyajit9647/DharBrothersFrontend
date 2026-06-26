@@ -19,7 +19,6 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
 import Paper from '@mui/material/Paper';
@@ -28,18 +27,15 @@ import Alert from '@mui/material/Alert';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import CloseIcon from '@mui/icons-material/Close';
-import { getJobList, completeMyJob } from 'api/myJobs';
+import { getPrintingDashboardJobs, completeMyJob } from 'api/myJobs';
 import { getDocumentVersionListFromOrderId, uploadDocumentVersionFormData } from 'api/document';
 import { authorizedFetchRaw } from 'api/auth';
-import { useAuth } from 'hooks/useAuth';
 import useAccess from 'hooks/useAccess';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
-import DownloadDocumentButton from 'components/DownloadDocumentButton';
 
 // ==============================|| MY JOBS ||============================== //
 
 export default function MyJobs() {
-  const { user, accessToken } = useAuth();
   const { hasAccess } = useAccess();
   const canComplete = hasAccess('MY_JOBS_MGMT') || hasAccess('MYJOBS_VIEW_ORDER');
   const canViewOrder = hasAccess('MYJOBS_VIEW_ORDER') || hasAccess('MY_JOBS_MGMT');
@@ -82,34 +78,12 @@ export default function MyJobs() {
   const fileInputRefs = useRef({});
   // keep a single ref map per slot key
 
-  const loadJobs = useCallback(async (uid) => {
+  const loadJobs = useCallback(async () => {
     setLoading(true);
     setError('');
-
     try {
-      // Determine effective userId to send — backend requires `userId` param
-      let effectiveUid = uid || user?.id || user?.userId || user?.uid || null;
-
-      if (!effectiveUid && accessToken) {
-        try {
-          // Decode token payload for common fields.
-          const { parseJwt } = require('utils/authTokens');
-          const payload = parseJwt(accessToken);
-          if (payload) {
-            effectiveUid = payload.userId || payload.user_id || payload.sub || payload.uid || payload.id || null;
-          }
-        } catch (err) {
-          // ignore token parse errors
-        }
-      }
-
-      if (!effectiveUid) {
-        throw new Error('User ID not available for job list request');
-      }
-
-      const data = await getJobList(effectiveUid);
-      const items = Array.isArray(data) ? data : data?.items || data?.data || [];
-      setJobs(items);
+      const data = await getPrintingDashboardJobs();
+      setJobs(data);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to load jobs', err);
@@ -117,7 +91,7 @@ export default function MyJobs() {
     } finally {
       setLoading(false);
     }
-  }, [user, accessToken]);
+  }, []);
 
   const openCompleteDialog = (id) => {
     if (!id) return;
@@ -141,24 +115,12 @@ export default function MyJobs() {
 
   const handleViewOrder = () => {
     if (!activeJob) return;
-    const id = activeJob.orderId || activeJob.id || activeJob.orderNo || activeJob.code;
+    // Use orderId from the printing-dashboard API response
+    const id = activeJob.orderId;
     if (id) {
-      // Navigate to admin-only order details page
       navigate(`/admin/orders/view/${encodeURIComponent(String(id))}`);
     }
     handleActionsClose();
-  };
-
-  const getJobDocumentIdentifier = (job) => {
-    return job?.documentStageId ?? job?.documentId ?? job?.stageId ?? job?.processStageId;
-  };
-
-  const getJobOrderId = (job) => {
-    return job?.orderId ?? null;
-  }
-
-  const getJobDocumentName = (job) => {
-    return job?.documentFileName ?? '';
   };
 
   const handleDocumentApproval = async () => {
@@ -170,14 +132,16 @@ export default function MyJobs() {
     setSelectedApprovalJob(activeJob);
     setApprovalDialogOpen(true);
     handleActionsClose();
-    const jobOrderId = getJobOrderId(activeJob);
-    if (!jobOrderId) {
-      setApprovalError('Document order ID is not available for this job.');
+
+    // Use orderNumber from the printing-dashboard API for version list lookup
+    const orderNumber = activeJob.orderNumber;
+    if (!orderNumber) {
+      setApprovalError('Order number is not available for this job.');
       return;
     }
     setVersionLoading(true);
     try {
-      const versionList = await getDocumentVersionListFromOrderId(jobOrderId);
+      const versionList = await getDocumentVersionListFromOrderId(orderNumber);
       if (Array.isArray(versionList)) {
         setVersions(versionList);
       } else if (versionList?.data && Array.isArray(versionList.data)) {
@@ -187,7 +151,7 @@ export default function MyJobs() {
       }
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.error('Failed to load document status', err);
+      console.error('Failed to load document versions', err);
       setApprovalError(err?.message || 'Failed to load document version history');
       setVersions([]);
     } finally {
@@ -197,7 +161,8 @@ export default function MyJobs() {
 
   const downloadCurrentDocument = async () => {
     if (!selectedApprovalJob) return;
-    const documentName = getJobDocumentName(selectedApprovalJob);
+    // printingDetails field serves as the document name from the new API
+    const documentName = selectedApprovalJob.printingDetails ?? '';
     const orderId = selectedApprovalJob.orderId ?? '';
     if (!orderId) {
       setApprovalError('Unable to determine order ID for current document download.');
@@ -209,14 +174,10 @@ export default function MyJobs() {
       const res = await authorizedFetchRaw(path, { method: 'GET' });
       const blob = await res.blob();
       const cd = res.headers.get('Content-Disposition') || res.headers.get('content-disposition') || '';
-      let filename = documentName;
+      let filename = documentName || String(orderId);
       const m = /filename\*=UTF-8''([^;\n]+)/i.exec(cd) || /filename="?([^";\n]+)"?/i.exec(cd);
       if (m && m[1]) {
-        try {
-          filename = decodeURIComponent(m[1]);
-        } catch (_e) {
-          filename = m[1];
-        }
+        try { filename = decodeURIComponent(m[1]); } catch (_e) { filename = m[1]; }
       }
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -251,10 +212,11 @@ export default function MyJobs() {
   };
 
   const handleUploadVersion = async () => {
-    const jobId = selectedApprovalJob?.id ?? null;
-    const jobOrderId = selectedApprovalJob?.orderId ?? null;
+    // Use orderId as the documentStageId for upload (new API has no separate stage id)
+    const jobId = selectedApprovalJob?.orderId ?? null;
+    const orderNumber = selectedApprovalJob?.orderNumber ?? null;
     if (!jobId) {
-      setApprovalError('Document job ID is not available for upload.');
+      setApprovalError('Order ID is not available for upload.');
       return;
     }
     if (!uploadFiles.thesisDocument) {
@@ -273,8 +235,11 @@ export default function MyJobs() {
         coverPageDesignFileSoft: uploadFiles.coverPageDesignFileSoft,
         synopsisCoverPageDesignFile: uploadFiles.synopsisCoverPageDesignFile,
       });
-      const versionList = await getDocumentVersionListFromOrderId(jobOrderId);
-      setVersions(Array.isArray(versionList) ? versionList : Array.isArray(versionList?.data) ? versionList.data : []);
+      // Refresh version list using orderNumber
+      if (orderNumber) {
+        const versionList = await getDocumentVersionListFromOrderId(orderNumber);
+        setVersions(Array.isArray(versionList) ? versionList : Array.isArray(versionList?.data) ? versionList.data : []);
+      }
       setUploadFiles(emptyFiles());
       setUploadRemarks('');
       Object.values(fileInputRefs.current).forEach((ref) => { if (ref) ref.value = ''; });
@@ -299,12 +264,6 @@ export default function MyJobs() {
     setUploadFiles(emptyFiles());
     setUploadRemarks('');
     Object.values(fileInputRefs.current).forEach((ref) => { if (ref) ref.value = ''; });
-  };
-
-  const handleReinitiatePayment = () => {
-    if (!activeJob) return;
-    window.alert(`Re-initiate payment clicked for Order ID: ${activeJob.orderId || activeJob.id || 'unknown'}`);
-    handleActionsClose();
   };
 
   const handleCloseCompleteDialog = () => {
@@ -347,38 +306,14 @@ export default function MyJobs() {
   };
 
   useEffect(() => {
-    // Always attempt to load jobs on mount; pass user id when available
-    loadJobs(user?.id);
-  }, [loadJobs, user?.id]);
+    loadJobs();
+  }, [loadJobs]);
 
   const pagedRows = useMemo(() => {
     const start = page * rowsPerPage;
     const end = start + rowsPerPage;
     return jobs.slice(start, end);
   }, [page, rowsPerPage, jobs]);
-
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-
-    const date = new Date(dateString);
-
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = String(date.getFullYear()).slice(-2);
-
-    const time = date.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    }).replace(' ', '');
-
-    return `${day}/${month}/${year} - ${time}`;
-  };
-
-  const getCustomerName = (customer) => {
-    if (!customer) return '';
-    return customer.name || customer.customerName || '';
-  };
 
   return (
     <>
@@ -410,35 +345,29 @@ export default function MyJobs() {
                   </Box>
                 )
               },
-              { id: 'orderNumber', label: 'Order ID ' },
-              { id: 'processStageName', label: 'Stage' },
+              { id: 'orderNumber', label: 'Order ID' },
+              { id: 'customerName', label: 'Customer' },
+              { id: 'noOfCopies', label: 'No. of Copies', align: 'center' },
+              { id: 'coverDesign', label: 'Cover Design' },
+              { id: 'bindingType', label: 'Binding Type' },
               {
-                id: 'customerFullName',
-                label: 'Customer',
-              },
-              {
-                id: 'dueTime',
-                label: 'Due Time',
-                render: (row) => formatDate(row.dueTime)
-              },
-              {
-                id: 'assignedDate',
-                label: 'Assigned at',
-                align: 'center',
-                render: (row) => formatDate(row.assignedDate)
-              },
-              {
-                id: 'documentVersion',
-                label: 'Current Document',
+                id: 'delivery',
+                label: 'Delivery',
                 render: (row) => (
-                  <DownloadDocumentButton
-                    documentVersion={row.documentVersion || row.version || ''}
-                    documentFilePath={row.documentFilePath || row.filePath || row.file_path || ''}
-                    documentFileName={row.documentFileName || row.fileName || row.filename || ''}
-                    accessToken={accessToken}
-                  />
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {row.deliveryBranchName || ''}
+                    </Typography>
+                    {row.deleveryBranchAddress && (
+                      <Typography variant="caption" color="text.secondary">
+                        {row.deleveryBranchAddress}
+                      </Typography>
+                    )}
+                  </Box>
                 )
               },
+              { id: 'deliveryType', label: 'Delivery Type' },
+              { id: 'printingDetails', label: 'Printing Details' },
               {
                 id: 'actions',
                 label: 'Actions',
@@ -449,10 +378,10 @@ export default function MyJobs() {
                       variant="contained"
                       color="primary"
                       size="small"
-                      onClick={() => openCompleteDialog(row.id)}
-                      disabled={loading || completingId === row.id}
+                      onClick={() => openCompleteDialog(row.orderId)}
+                      disabled={loading || completingId === row.orderId}
                     >
-                      {completingId === row.id ? 'Completing...' : 'Complete'}
+                      {completingId === row.orderId ? 'Completing...' : 'Complete'}
                     </Button>
                   ) : null
                 )
