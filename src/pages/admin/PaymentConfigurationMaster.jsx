@@ -342,7 +342,7 @@ export default function PaymentConfigurationMaster() {
           </Stack>
 
           <MasterList
-            title="Payment Configuration"
+            title={<Box component="span" sx={{ display: 'none' }}>Payment Configuration</Box>}
             description={
               <>
                 Configure payment gateway credentials branch-wise, including payment percentage allocation.
@@ -354,7 +354,6 @@ export default function PaymentConfigurationMaster() {
                 )}
               </>
             }
-            title={<Box component="span" sx={{ display: 'none' }}>Payment Configuration</Box>}
             columns={[
               { id: 'branchName', label: 'Branch' },
               {
@@ -415,7 +414,6 @@ export default function PaymentConfigurationMaster() {
             showCreateButton={true}
             createLabel="Create Payment Configuration"
             showActionsColumn={false}
-            showActiveColumn={false}
           />
         </Grid>
       </Grid>

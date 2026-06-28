@@ -227,7 +227,7 @@ export default function MyJobs() {
     setApprovalError('');
     try {
       await uploadDocumentVersionFormData({
-        documentStageId: jobId,
+        orderId: jobId,
         remarks: uploadRemarks,
         thesisDocument: uploadFiles.thesisDocument,
         synopsisDocument: uploadFiles.synopsisDocument,
