@@ -289,7 +289,7 @@ export default function Template() {
             totalCount={rows.length}
             showCreateButton={true}
             showActionsColumn={canEdit}
-            showActiveColumn={canToggle}
+            showActiveColumn={false}
             onPageChange={setPage}
             onRowsPerPageChange={(value) => {
               setRowsPerPage(value);
@@ -297,7 +297,6 @@ export default function Template() {
             }}
             onCreate={openCreateDialog}
             onEdit={(row) => openEditDialog(row)}
-            showActiveColumn={false}
             loading={loading}
           />
         </Grid>

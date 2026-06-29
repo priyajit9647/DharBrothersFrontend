@@ -217,7 +217,7 @@ export default function Binddashboard() {
     setApprovalError('');
     try {
       await uploadDocumentVersionFormData({
-        documentStageId: jobId,
+        orderId: jobId,
         remarks: uploadRemarks,
         thesisDocument: uploadFiles.thesisDocument,
         synopsisDocument: uploadFiles.synopsisDocument,

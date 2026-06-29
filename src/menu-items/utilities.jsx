@@ -25,7 +25,7 @@ const utilities = {
     },
     {
       id: 'my-jobs',
-      title: 'print dashboard',
+      title: 'Print Dashboard',
       type: 'item',
       url: '/print-dashboard',
       icon: icons.ScheduleOutlined

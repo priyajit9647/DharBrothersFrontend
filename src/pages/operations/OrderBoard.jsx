@@ -103,16 +103,6 @@ function formatDateTime(value) {
 }
 
 export default function OrderBoard() {
-  const BOARD_STAGES = [
-    'Order-Created',
-    'Order-Processing',
-    'Document-Edit-Stage',
-    'Printing-Done',
-    'Binding-Done',
-    'Order-Ready-Check',
-    'Ready-To-Dispatch',
-    'Order-Complete'
-  ];
   const [stages, setStages] = useState([]);
   const [ordersByStage, setOrdersByStage] = useState({});
   const [searchByStage, setSearchByStage] = useState({});
@@ -138,7 +128,12 @@ export default function OrderBoard() {
       setError('');
       try {
         // Use fixed board stages (requested by UI) instead of dynamic process stages
-        const normalized = BOARD_STAGES.slice();
+        const stagesData = await getProcessStages();
+        const normalized = (Array.isArray(stagesData) ? stagesData : [])
+          .filter((stage) => stage?.active !== false && stage?.stageName)
+          .sort((a, b) => (a.sequenceNo || 0) - (b.sequenceNo || 0))
+          .map((stage) => stage.stageName);
+
         if (!mounted) return;
         setStages(normalized);
 
@@ -158,7 +153,7 @@ export default function OrderBoard() {
         setPendingLoading(true);
         try {
           // const pending = await getOrdersByStatus('ORDER-PENDING');
-          if (mounted) setPendingOrders(Array.isArray(pending) ? pending : []);
+          if (mounted) setPendingOrders([]);
         } catch (e) {
           console.warn('Failed to load ORDER-PENDING:', e?.message || e);
         } finally {

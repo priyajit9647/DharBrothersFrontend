@@ -32,7 +32,7 @@ export async function uploadDocumentVersionFormData(payload) {
   }
 
   const {
-    documentStageId,
+    orderId,
     documentId,
     remarks,
     thesisDocument,
@@ -47,10 +47,8 @@ export async function uploadDocumentVersionFormData(payload) {
   }
 
   const formData = new FormData();
-  if (documentStageId != null) {
-    formData.append('documentStageId', String(documentStageId));
-  } else if (documentId != null) {
-    formData.append('documentId', String(documentId));
+  if (orderId != null) {
+    formData.append('orderId', String(orderId));
   } else {
     throw new Error('documentStageId or documentId is required');
   }
