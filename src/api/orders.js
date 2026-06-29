@@ -420,3 +420,34 @@ export async function downloadInvoice(orderId) {
 
   return response.blob();
 }
+
+/**
+ * Record a cash payment for an order (admin)
+ * Endpoint: POST /api/v1/payment/admin/cash/{orderId}
+ * @param {string|number} orderId
+ * @param {{ amount: number, remarks: string }} payload
+ * @returns {Promise<object>}
+ */
+export async function adminCashPayment(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  if (!payload || payload.amount == null) throw new Error('amount is required');
+
+  return authorizedFetch(`/api/v1/payment/admin/cash/${encodeURIComponent(String(orderId))}`, {
+    method: 'POST',
+    body: JSON.stringify({ amount: payload.amount, remarks: payload.remarks ?? '' })
+  });
+}
+
+/**
+ * Get payment status for an order
+ * Endpoint: GET /api/customer-portal/orders/{orderId}/payment-status
+ * @param {string} orderId - trackingNumber (UUID)
+ * @returns {Promise<{ paymentStatus: string, dueAmount: number, paymentLink: string }>}
+ */
+export async function getOrderPaymentStatus(orderId) {
+  if (!orderId) throw new Error('orderId is required');
+
+  return authorizedFetch(`/api/customer-portal/orders/${encodeURIComponent(String(orderId))}/payment-status`, {
+    method: 'GET'
+  });
+}
