@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import {
   CheckCircleOutlined,
+  CloseOutlined,
   CloudUploadOutlined,
   DeleteOutlined,
   EnvironmentOutlined,
@@ -3651,29 +3652,58 @@ function BindingStep({
         </Box>
       </Paper>
 
-      <Dialog fullScreen open={previewOpen} onClose={closeImagePreview} sx={{ bgcolor: 'rgba(0,0,0,0.9)' }}>
+      <Dialog
+        fullScreen
+        open={previewOpen}
+        onClose={closeImagePreview}
+        style={{ zIndex: 99999 }}
+        PaperProps={{
+          style: {
+            backgroundColor: 'black',
+            boxShadow: 'none',
+            position: 'relative'
+          }
+        }}
+      >
+        {/* Close button fixed to viewport top-right, always visible above the image */}
         <Box
+          role="button"
+          aria-label="Close image preview"
+          tabIndex={0}
+          onClick={closeImagePreview}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') closeImagePreview();
+          }}
           sx={{
             position: 'fixed',
             top: 16,
-            right: 24,
-            zIndex: 1301,
-            display: 'flex',
-            justifyContent: 'flex-end'
+            right: 16,
+            zIndex: 100000,
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.15)',
+            border: '2px solid rgba(255,255,255,0.5)',
+            color: 'common.white',
+            display: 'grid',
+            placeItems: 'center',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s ease',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' },
+            outline: 'none',
+            '&:focus-visible': { boxShadow: '0 0 0 3px rgba(255,255,255,0.5)' }
           }}
         >
-          <Button variant="contained" color="secondary" size="small" onClick={closeImagePreview}>
-            Close
-          </Button>
+          <CloseOutlined style={{ fontSize: 18 }} />
         </Box>
+
         <Box
           sx={{
             width: '100%',
             height: '100%',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: 'black'
+            justifyContent: 'center'
           }}
         >
           {previewImage ? (
@@ -3682,10 +3712,11 @@ function BindingStep({
               src={previewImage}
               alt="Design full preview"
               sx={{
-                maxWidth: '100%',
-                maxHeight: '100%',
+                maxWidth: '100vw',
+                maxHeight: '100vh',
                 objectFit: 'contain',
-                boxShadow: 24
+                boxShadow: 24,
+                display: 'block'
               }}
             />
           ) : null}

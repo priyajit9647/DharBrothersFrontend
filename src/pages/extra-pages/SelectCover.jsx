@@ -167,7 +167,7 @@ export default function SelectCover() {
 
       <FooterSection />
 
-      <Dialog open={viewerOpen} onClose={handleCloseViewer} maxWidth="lg" fullWidth>
+      <Dialog open={viewerOpen} onClose={handleCloseViewer} maxWidth="lg" fullWidth style={{ zIndex: 99999 }}>
         <DialogContent sx={{ position: 'relative', height: { xs: 400, md: 600 }, display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ position: 'absolute', right: 8, top: 8, zIndex: 10 }}>
             <Stack direction="row" spacing={1} alignItems="center">
