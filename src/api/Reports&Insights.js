@@ -232,6 +232,31 @@ export async function exportSalesReport(params = {}) {
 }
 
 /**
+ * Fetch company cash collection report.
+ * Endpoint: GET /api/v1/admin/reports/company-cash-collection
+ * Supports filters: paymentMode, startDate, endDate, pageable
+ */
+export async function getCompanyCashCollection(params = {}) {
+  const { paymentMode, startDate, endDate, page = 0, size = 10, sort } = params;
+
+  const pageableParams = {
+    paymentMode: paymentMode || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    page,
+    size,
+    sort
+  };
+
+  const qs = buildQueryString(pageableParams);
+  const url = `/api/v1/admin/reports/company-cash-collection${qs}`;
+
+  const response = await authorizedFetch(url, { method: 'GET' });
+
+  return response;
+}
+
+/**
  * Fetch GST reports from CA data endpoint.
  * Endpoint: GET /api/ca-data/report
  * Supports filters: startDate, endDate, branch, gstType, search, page, size, sort
