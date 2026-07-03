@@ -38,6 +38,13 @@ const utilities = {
       icon: icons.ScheduleOutlined
     },
     {
+      id: 'extra-tasks',
+      title: 'Extra Tasks',
+      type: 'item',
+      url: '/extra-tasks',
+      icon: icons.ProjectOutlined
+    },
+    {
       id: 'whatsapp',
       title: 'WhatsApp',
       type: 'item',

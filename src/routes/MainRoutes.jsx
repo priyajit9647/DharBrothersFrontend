@@ -16,6 +16,7 @@ const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')
 const OrderDetails = Loadable(lazy(() => import('pages/operations/OrderDetails')));
 const Whatsapp = Loadable(lazy(() => import('pages/operations/Whatsapp')));
 const Email = Loadable(lazy(() => import('pages/operations/Email')));
+const ExtraTask = Loadable(lazy(() => import('pages/operations/ExtraTask')));
 
 
 // render - BMS Admin & Insights
@@ -93,6 +94,10 @@ const MainRoutes = {
     {
       path: 'bind-dashboard',
       element: <Binddashboard/>
+    },
+    {
+      path: 'extra-tasks',
+      element: <ExtraTask />
     },
     {
       path: 'orders/view/:orderId',
