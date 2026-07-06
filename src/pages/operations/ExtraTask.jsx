@@ -38,6 +38,7 @@ import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 
 // API
 import { getJobList, completeMyJob } from 'api/myJobs';
+import { getDocumentVersionListFromOrderId, uploadDocumentVersionFormData } from 'api/document';
 
 // ==============================|| TABLE HEAD COMPONENT ||============================== //
 const headCells = [
@@ -154,7 +155,7 @@ export default function ExtraTask() {
     handleActionsClose();
   };
 
-  const handleDocumentApproval = () => {
+  const handleDocumentApproval = async () => {
     if (!activeRow) return;
     setApprovalError('');
     setVersions([]);
@@ -163,20 +164,29 @@ export default function ExtraTask() {
     setSelectedApprovalJob(activeRow);
     setApprovalDialogOpen(true);
     handleActionsClose();
+
+    const orderNumber = activeRow.orderNumber || activeRow.orderId || activeRow.orderId;
+    if (!orderNumber) {
+      setApprovalError('Order number is not available for this job.');
+      return;
+    }
+
     setVersionLoading(true);
-    setTimeout(() => {
-      setVersions([
-        {
-          id: '1',
-          versionNo: 1,
-          fileName: 'thesis-v1.pdf',
-          approvalStatus: 'Approved',
-          remarks: 'First version submitted',
-          customerName: activeRow.customer
-        }
-      ]);
+    try {
+      const response = await getDocumentVersionListFromOrderId(orderNumber);
+      const versionData = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+          ? response.data
+          : [];
+      setVersions(versionData);
+    } catch (err) {
+      console.error('Failed to load document versions', err);
+      setApprovalError(err?.message || 'Failed to load document version history');
+      setVersions([]);
+    } finally {
       setVersionLoading(false);
-    }, 500);
+    }
   };
 
   const handleCloseCompleteDialog = () => {
@@ -243,11 +253,37 @@ export default function ExtraTask() {
       setApprovalError('Thesis Document is required.');
       return;
     }
+
+    const orderId = selectedApprovalJob.orderId || selectedApprovalJob.orderNumber;
+    const orderNumber = selectedApprovalJob.orderNumber || selectedApprovalJob.orderId;
+    if (!orderId) {
+      setApprovalError('Order ID is required to upload a new document version.');
+      return;
+    }
+
     setUploading(true);
     setApprovalError('');
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await uploadDocumentVersionFormData({
+        orderId,
+        remarks: uploadRemarks,
+        thesisDocument: uploadFiles.thesisDocument,
+        synopsisDocument: uploadFiles.synopsisDocument,
+        coverPageDesignFileHard: uploadFiles.coverPageDesignFileHard,
+        coverPageDesignFileSoft: uploadFiles.coverPageDesignFileSoft,
+        synopsisCoverPageDesignFile: uploadFiles.synopsisCoverPageDesignFile
+      });
+
+      if (orderNumber) {
+        const response = await getDocumentVersionListFromOrderId(orderNumber);
+        const updatedVersions = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
+        setVersions(updatedVersions);
+      }
+
       setUploadFiles(emptyFiles());
       setUploadRemarks('');
       Object.values(fileInputRefs.current).forEach((ref) => {
