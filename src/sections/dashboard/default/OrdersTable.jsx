@@ -217,9 +217,9 @@ export default function OrderTable() {
 
   const handleCloseStatusDialog = () => setStatusDialog({ open: false, loading: false, data: null, error: '' });
 
-  const handleOpenCashDialog = (trackingNumber) => {
+  const handleOpenCashDialog = (trackingNumber, amount) => {
     setCashDialog({ open: true, orderId: trackingNumber, loading: false });
-    setCashAmount('');
+    setCashAmount(amount != null ? String(amount) : '');
     setCashRemarks('');
     setCashError('');
   };
@@ -393,7 +393,8 @@ export default function OrderTable() {
                             color="success"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOpenCashDialog(orderApiId);
+                              const defaultAmount = row.totalAmount ?? row.amount ?? row.netAmount;
+                              handleOpenCashDialog(orderApiId, defaultAmount);
                             }}
                           >
                             Cash
