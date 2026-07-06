@@ -33,20 +33,21 @@ import CloseIcon from '@mui/icons-material/Close';
 
 import MainCard from 'components/MainCard';
 
-// API
-import { getJobList, completeMyJob } from 'api/myJobs';
-
 // icons
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 
+// API
+import { getJobList, completeMyJob } from 'api/myJobs';
+
 // ==============================|| TABLE HEAD COMPONENT ||============================== //
 const headCells = [
-  { id: 'rowActions', align: 'center', label: 'Action', width: '80px' },
+  { id: 'rowActions', align: 'center', label: '', width: '80px' },
   { id: 'orderNumber', align: 'left', label: 'Order #', width: '120px' },
   { id: 'customerFullName', align: 'left', label: 'Customer', width: '140px' },
   { id: 'processStageName', align: 'left', label: 'Stage', width: '160px' },
   { id: 'assignedStuffName', align: 'left', label: 'Assigned To', width: '140px' },
-  { id: 'dueTime', align: 'left', label: 'Due Date', width: '160px' }
+  { id: 'dueTime', align: 'left', label: 'Due Date', width: '160px' },
+  { id: 'actions', align: 'center', label: 'Actions', width: '120px' }
 ];
 
 function JobsTableHead() {
@@ -132,7 +133,6 @@ export default function ExtraTask() {
     setRemark('');
     setRemarkError('');
     setCompleteDialogOpen(true);
-    handleActionsClose();
   };
 
   const handleActionsOpen = (event, row) => {
@@ -152,6 +152,31 @@ export default function ExtraTask() {
       navigate(`/admin/orders/view/${encodeURIComponent(String(id))}`);
     }
     handleActionsClose();
+  };
+
+  const handleDocumentApproval = () => {
+    if (!activeRow) return;
+    setApprovalError('');
+    setVersions([]);
+    setUploadFiles(emptyFiles());
+    setUploadRemarks('');
+    setSelectedApprovalJob(activeRow);
+    setApprovalDialogOpen(true);
+    handleActionsClose();
+    setVersionLoading(true);
+    setTimeout(() => {
+      setVersions([
+        {
+          id: '1',
+          versionNo: 1,
+          fileName: 'thesis-v1.pdf',
+          approvalStatus: 'Approved',
+          remarks: 'First version submitted',
+          customerName: activeRow.customer
+        }
+      ]);
+      setVersionLoading(false);
+    }, 500);
   };
 
   const handleCloseCompleteDialog = () => {
@@ -187,31 +212,6 @@ export default function ExtraTask() {
     }
   };
 
-  const handleDocumentApproval = () => {
-    if (!activeRow) return;
-    setApprovalError('');
-    setVersions([]);
-    setUploadFiles(emptyFiles());
-    setUploadRemarks('');
-    setSelectedApprovalJob(activeRow);
-    setApprovalDialogOpen(true);
-    handleActionsClose();
-    // Simulate loading versions
-    setVersionLoading(true);
-    setTimeout(() => {
-      setVersions([
-        {
-          id: '1',
-          versionNo: 1,
-          fileName: 'thesis-v1.pdf',
-          approvalStatus: 'Approved',
-          remarks: 'First version submitted',
-          customerName: activeRow.customer
-        }
-      ]);
-      setVersionLoading(false);
-    }, 500);
-  };
 
   const handleCloseApprovalDialog = () => {
     if (uploading || downloadLoading) return;
@@ -312,13 +312,9 @@ export default function ExtraTask() {
                   ) : (
                     jobs.map((row) => (
                       <TableRow hover tabIndex={-1} key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                          <TableCell align="center" sx={{ width: '80px' }}>
+                        <TableCell align="center" sx={{ width: '80px' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                            <IconButton
-                              size="small"
-                              onClick={(event) => handleActionsOpen(event, row)}
-                              aria-label="Job actions"
-                            >
+                            <IconButton size="small" onClick={(event) => handleActionsOpen(event, row)} aria-label="Job actions">
                               <EllipsisOutlined style={{ fontSize: 18 }} />
                             </IconButton>
                           </Box>
@@ -347,6 +343,17 @@ export default function ExtraTask() {
                             {row.dueTime ? new Date(row.dueTime).toLocaleDateString() : 'N/A'}
                           </Typography>
                         </TableCell>
+                        <TableCell align="center" sx={{ width: '120px' }}>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            onClick={() => openCompleteDialog(row)}
+                            disabled={loading || completingOrderId === row.orderId}
+                          >
+                            {completingOrderId === row.orderId ? 'Completing...' : 'Complete'}
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -354,7 +361,6 @@ export default function ExtraTask() {
               </Table>
             </TableContainer>
           </Box>
-
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
@@ -365,6 +371,7 @@ export default function ExtraTask() {
             {activeRow && <MenuItem onClick={handleViewOrder}>View Order</MenuItem>}
             {activeRow && <MenuItem onClick={handleDocumentApproval}>Document Version Approval</MenuItem>}
           </Menu>
+
         </MainCard>
       </Grid>
 
