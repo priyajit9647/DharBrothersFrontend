@@ -41,13 +41,12 @@ import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
 
 // ==============================|| TABLE HEAD COMPONENT ||============================== //
 const headCells = [
-  { id: 'rowActions', align: 'center', label: '', width: '80px' },
+  { id: 'rowActions', align: 'center', label: 'Action', width: '80px' },
   { id: 'orderNumber', align: 'left', label: 'Order #', width: '120px' },
-  { id: 'customerFullName', align: 'left', label: 'Customer' },
+  { id: 'customerFullName', align: 'left', label: 'Customer', width: '140px' },
   { id: 'processStageName', align: 'left', label: 'Stage', width: '160px' },
   { id: 'assignedStuffName', align: 'left', label: 'Assigned To', width: '140px' },
-  { id: 'dueTime', align: 'left', label: 'Due Date', width: '160px' },
-  { id: 'actions', align: 'center', label: 'Actions' }
+  { id: 'dueTime', align: 'left', label: 'Due Date', width: '160px' }
 ];
 
 function JobsTableHead() {
@@ -270,10 +269,6 @@ export default function ExtraTask() {
       <Grid item xs={12}>
         <Grid container alignItems="center" spacing={2}>
           <Grid item xs={12}>
-            <Typography variant="h5">Extra Tasks</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Manage extra tasks with document approval and job completion.
-            </Typography>
             {error && (
               <Typography variant="body2" color="error" sx={{ mt: 1 }}>
                 {error}
@@ -284,7 +279,7 @@ export default function ExtraTask() {
       </Grid>
 
       <Grid item xs={12}>
-        <MainCard sx={{ mt: 3 }} content={false}>
+        <MainCard content={false}>
           <Box sx={{ p: 0 }}>
             <TableContainer
               sx={{
@@ -317,9 +312,13 @@ export default function ExtraTask() {
                   ) : (
                     jobs.map((row) => (
                       <TableRow hover tabIndex={-1} key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                        <TableCell align="center" sx={{ width: '80px' }}>
+                          <TableCell align="center" sx={{ width: '80px' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                            <IconButton size="small" onClick={(e) => handleActionClick(e, row)} aria-label="Job actions">
+                            <IconButton
+                              size="small"
+                              onClick={(event) => handleActionsOpen(event, row)}
+                              aria-label="Job actions"
+                            >
                               <EllipsisOutlined style={{ fontSize: 18 }} />
                             </IconButton>
                           </Box>
@@ -347,15 +346,6 @@ export default function ExtraTask() {
                           <Typography variant="caption" color="text.secondary">
                             {row.dueTime ? new Date(row.dueTime).toLocaleDateString() : 'N/A'}
                           </Typography>
-                        </TableCell>
-                        <TableCell align="center">
-                          <IconButton
-                            size="small"
-                            onClick={(event) => handleActionsOpen(event, row)}
-                            aria-label="Job actions"
-                          >
-                            <EllipsisOutlined style={{ fontSize: 18 }} />
-                          </IconButton>
                         </TableCell>
                       </TableRow>
                     ))
