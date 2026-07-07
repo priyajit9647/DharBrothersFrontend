@@ -1,4 +1,4 @@
-import { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext, useRef } from 'react';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
@@ -20,7 +20,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 
-import { getActiveUsersByBranch } from 'api/user';
+import { authorizedFetch } from 'api/auth';
 import { initDocument } from 'api/document';
 import { reassignOrderStaff } from 'api/orders';
 import { AuthContext } from 'contexts/AuthContext';
@@ -39,20 +39,18 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [branches, setBranches] = useState([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+  
+  // Track loaded branches to prevent duplicate API calls
+  const loadedBranchesRef = useRef(new Set());
 
   // Try to auto-detect branch from order or logged-in user
-  const autoBranchId = order?.branchId ?? order?.branch?.id ?? auth?.user?.branchId ?? auth?.user?.branch?.id;
+  const autoBranchId = String(order?.branchId ?? order?.branch?.id ?? auth?.user?.branchId ?? auth?.user?.branch?.id ?? '');
   const hasAutoBranch = !!autoBranchId;
 
   // Fetch all branches if no auto branch (so admin can pick)
   const fetchAllBranches = async () => {
     try {
       setLoadingBranches(true);
-      // TODO: Replace with your actual branch list API
-      // const data = await getAllBranches();
-      // const branchList = Array.isArray(data) ? data : data?.data || data?.items || [];
-      // setBranches(branchList);
-      // if (branchList.length > 0) setSelectedBranchId(branchList[0].id);
       console.warn('Implement branch list API (e.g., getAllBranches)');
       // Temporary mock – remove after real implementation
       setBranches([{ id: '1', name: 'Branch 1' }]);
@@ -77,18 +75,23 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
     } else {
       fetchAllBranches();
     }
-  }, [open, hasAutoBranch, autoBranchId]);
+  }, [open]);
 
-  // Fetch users when branch changes
+  // Fetch users when branch changes – only call API once per branch
   useEffect(() => {
     if (!open) return;
     if (!selectedBranchId) return;
+
+    // Skip if already loaded
+    if (loadedBranchesRef.current.has(selectedBranchId)) return;
 
     const loadUsers = async () => {
       setLoading(true);
       setError('');
       try {
-        const data = await getActiveUsersByBranch(selectedBranchId);
+        const data = await authorizedFetch(`/api/v1/user/branch/active/manufacturer?branchId=${encodeURIComponent(String(selectedBranchId))}`, {
+          method: 'GET'
+        });
         let extractedUsers = [];
         if (Array.isArray(data)) extractedUsers = data;
         else if (data?.data && Array.isArray(data.data)) extractedUsers = data.data;
@@ -96,6 +99,7 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
         else if (data?.content && Array.isArray(data.content)) extractedUsers = data.content;
         else console.warn('Unexpected response shape', data);
         setUsers(extractedUsers);
+        loadedBranchesRef.current.add(selectedBranchId);
         if (extractedUsers.length === 0) setError('No active users found in this branch.');
       } catch (err) {
         console.error(err);

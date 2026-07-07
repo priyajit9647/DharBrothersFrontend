@@ -698,11 +698,11 @@ export default function OrderBoard() {
                   </Dialog>
 
                   {qrOrder && <ShippingQrModal open={Boolean(qrOrder)} onClose={handleCloseQr} order={qrOrder} />}
-                  <AssignUserDialog open={assignOpen} onClose={() => { setAssignOpen(false); setAssignTarget(null); }} order={assignTarget} onAssigned={handleAssigned} />
                 </MainCard>
               </Grid>
             );
           })}
+          <AssignUserDialog open={assignOpen} onClose={() => { setAssignOpen(false); setAssignTarget(null); }} order={assignTarget} onAssigned={handleAssigned} />
         </>
       )}
     </Grid>
