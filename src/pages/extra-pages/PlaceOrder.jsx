@@ -3748,7 +3748,7 @@ function HardBindingStep({
       masterError={masterError}
       a4PocketsLabel="A4 Pockets"
       cdPocketsLabel="CD Pockets"
-      showCdPockets={false}
+      showCdPockets={true}
       bindingConfig={bindingConfig}
       onBindingConfigChange={onBindingConfigChange}
       validationErrors={validationErrors}
