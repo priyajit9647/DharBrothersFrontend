@@ -272,7 +272,9 @@ export default function AssignUserDialog({ open, onClose, order, onAssigned }) {
                   filteredUsers.map((user) => {
                     const fullName =
                       `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.userName || user.email || `User ${user.id}`;
-                    const secondaryText = [user.email, user.mobile || user.phone].filter(Boolean).join(' • ');
+                    const secondaryText = [order?.orderId || order?.id || 'Order ID unavailable', user.mobile || user.phone]
+                      .filter(Boolean)
+                      .join(' • ');
                     return (
                       <div key={user.id}>
                         <ListItemButton selected={String(user.id) === selectedUserId} onClick={() => setSelectedUserId(String(user.id))}>

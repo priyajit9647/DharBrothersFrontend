@@ -175,10 +175,77 @@ export async function getOrderById(orderId) {
   }
 }
 
+const SERVER_FILES_BASE = '/home/ubuntu/dharBrothers/files';
+
+/**
+ * Normalize stored document paths for the download API.
+ * Some responses return only the filename or a partial path.
+ */
+export function normalizeOrderDownloadPath(filePath, fileName) {
+  if (!filePath || typeof filePath !== 'string') return null;
+
+  let normalized = filePath.trim().replace(/\\/g, '/');
+  if (normalized.startsWith('file://')) {
+    normalized = normalized.slice(7);
+  }
+
+  if (normalized.startsWith('/home/') || /^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  const filesMarker = '/files/';
+  const filesIndex = normalized.toLowerCase().indexOf(filesMarker);
+  if (filesIndex >= 0) {
+    return `/home/ubuntu/dharBrothers${normalized.slice(filesIndex)}`;
+  }
+
+  const filePart = normalized.includes('/') ? normalized.split('/').pop() : normalized;
+  const resolvedName = (fileName || filePart || '').trim();
+  if (resolvedName) {
+    return `${SERVER_FILES_BASE}/${resolvedName}`;
+  }
+
+  return normalized;
+}
+
+async function downloadOrderFileViaPost(fetchRaw, { filePath, fileName, orderId }) {
+  const normalizedPath = normalizeOrderDownloadPath(filePath, fileName);
+  if (!normalizedPath) {
+    throw new Error('filePath is required');
+  }
+
+  const body = {
+    filePath: normalizedPath,
+    ...(fileName ? { fileName } : {}),
+    ...(orderId ? { orderId } : {})
+  };
+
+  const response = await fetchRaw('/api/v1/orders/admin/download', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  });
+
+  return response.blob();
+}
+
+async function downloadOrderFileViaGet(fetchRaw, { documentKey, orderId }) {
+  if (!documentKey || !orderId) {
+    throw new Error('documentKey and orderId are required for GET download');
+  }
+
+  const response = await fetchRaw(
+    `/api/v1/orders/admin/download/${encodeURIComponent(String(documentKey))}/${encodeURIComponent(String(orderId))}`,
+    { method: 'GET' }
+  );
+
+  return response.blob();
+}
+
 /**
  * Download a file from server (admin)
  * Endpoint: POST /api/v1/orders/admin/download
- * Body: { filePath: string, fileName?: string }
+ * Body: { filePath: string, fileName?: string, orderId?: string }
+ * Fallback: GET /api/v1/orders/admin/download/{documentKey}/{orderId}
  * Returns a Blob representing the file content.
  */
 export async function downloadOrderFile(payload) {
@@ -186,30 +253,31 @@ export async function downloadOrderFile(payload) {
     throw new Error('payload is required and must be an object');
   }
 
-  const { filePath, fileName } = payload;
-  if (!filePath) {
-    throw new Error('filePath is required');
+  const { filePath, fileName, orderId, documentKey } = payload;
+  if (!filePath && !(documentKey && orderId)) {
+    throw new Error('filePath or documentKey + orderId is required');
   }
 
   const session = getCustomerPortalSession();
   const isCustomerPortal = Boolean(session);
+  const fetchRaw = isCustomerPortal ? authorizedCustomerFetchRaw : authorizedFetchRaw;
 
-  if(isCustomerPortal) {
-    const response = await authorizedCustomerFetchRaw('/api/v1/orders/admin/download', {
-      method: 'POST',
-      body: JSON.stringify({ filePath, fileName })
-    });
-
-    return response.blob();
+  if (filePath) {
+    try {
+      return await downloadOrderFileViaPost(fetchRaw, { filePath, fileName, orderId });
+    } catch (postError) {
+      if (documentKey && orderId) {
+        try {
+          return await downloadOrderFileViaGet(fetchRaw, { documentKey, orderId });
+        } catch {
+          throw postError;
+        }
+      }
+      throw postError;
+    }
   }
-  else {
-    const response = await authorizedFetchRaw('/api/v1/orders/admin/download', {
-      method: 'POST',
-      body: JSON.stringify({ filePath, fileName })
-    });
 
-    return response.blob();
-  }
+  return downloadOrderFileViaGet(fetchRaw, { documentKey, orderId });
 }
 
 /**

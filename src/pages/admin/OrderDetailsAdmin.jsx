@@ -17,10 +17,12 @@ import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
+import CircularProgress from '@mui/material/CircularProgress';
 
-import { Download, User, Truck, Receipt, FileText, Copy } from 'lucide-react';
+import { Download, User, Truck, Receipt, FileText, Copy, Package, Settings, Printer, BookOpen, CheckCircle } from 'lucide-react';
 
 import { getOrderById, downloadOrderFile, downloadInvoice } from 'api/orders';
+import { getCustomerPortalOrderTimeline } from 'api/customerPortal';
 
 function pickFirst(source, keys) {
   if (!source) return null;
@@ -373,6 +375,9 @@ function PagePanel({ title, titleColor, headerBg, headerBorder, borderColor, hov
 export default function OrderDetailsAdmin() {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
+  const [timeline, setTimeline] = useState(null);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [timelineError, setTimelineError] = useState(null);
 
   const formatDate = (d) => {
     if (!d) return '—';
@@ -384,13 +389,35 @@ export default function OrderDetailsAdmin() {
 
     const load = async () => {
       if (!orderId) return;
+
+      setTimelineLoading(true);
+      setTimelineError(null);
+
       try {
-        const resp = await getOrderById(orderId);
+        const [orderResp, timelineResp] = await Promise.allSettled([
+          getOrderById(orderId),
+          getCustomerPortalOrderTimeline(orderId)
+        ]);
+
         if (!mounted) return;
 
-        setOrder(normalizeOrderResponse(resp));
+        if (orderResp.status === 'fulfilled') {
+          setOrder(normalizeOrderResponse(orderResp.value));
+        } else {
+          console.log(orderResp.reason);
+        }
+
+        if (timelineResp.status === 'fulfilled') {
+          setTimeline(timelineResp.value || null);
+        } else {
+          setTimelineError(timelineResp.reason?.message || 'Unable to load order timeline.');
+        }
       } catch (e) {
         console.log(e);
+      } finally {
+        if (mounted) {
+          setTimelineLoading(false);
+        }
       }
     };
 
@@ -404,7 +431,7 @@ export default function OrderDetailsAdmin() {
       const blob = await downloadOrderFile({ filePath: file.filePath, fileName: file.fileName });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {
       console.error('Download failed', e);
       try { window.open(file.filePath, '_blank', 'noopener'); } catch {}
@@ -417,7 +444,7 @@ export default function OrderDetailsAdmin() {
       const blob = await downloadInvoice(order.orderId);
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (e) {
       console.error('Invoice download failed', e);
       try {
@@ -830,6 +857,98 @@ export default function OrderDetailsAdmin() {
             </Grid>
           </Grid>
         </CardContent>
+        </Card>
+
+        <Card sx={CARD_SX}>
+          <CardContent sx={CARD_CONTENT_SX}>
+            <SectionHeader icon={<Receipt size={15} />} title="Order Timeline" subtitle="Track complete workflow" />
+
+            {timelineLoading ? (
+              <Box sx={{ py: 4, textAlign: 'center' }}>
+                <CircularProgress size={24} />
+              </Box>
+            ) : timelineError ? (
+              <Typography color="error">{timelineError}</Typography>
+            ) : timeline ? (
+              <>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} sx={{ mb: 3, flexWrap: 'wrap' }}>
+                  <Chip label={`Stage: ${timeline.currentStage || '—'}`} color="primary" size="small" sx={{ fontWeight: 600, borderRadius: '8px' }} />
+                  <Chip label={`Payment: ${timeline.paymentStatus || '—'}`} color="success" size="small" sx={{ fontWeight: 600, borderRadius: '8px' }} />
+                </Stack>
+
+                <Box sx={{ display: 'flex', alignItems: 'stretch', width: '100%', position: 'relative', gap: { xs: 1, md: 1.5 }, overflowX: { xs: 'auto', md: 'visible' }, pb: { xs: 1, md: 0 } }}>
+                  {timeline.stages?.map((s, idx) => {
+                    const active = Boolean(s.isCompleted);
+                    const icons = {
+                      'Order-Created': <Package color="#fff" size={20} />,
+                      'Order-Processing': <Settings color="#fff" size={20} />,
+                      'Document-Edit-Stage': <FileText color="#fff" size={20} />,
+                      'Printing-Done': <Printer color="#fff" size={20} />,
+                      'Binding-Done': <BookOpen color="#fff" size={20} />,
+                      'Order-Ready-Check': <CheckCircle color="#fff" size={20} />,
+                      'Ready-To-Dispatch': <Truck color="#fff" size={20} />
+                    };
+
+                    return (
+                      <Box
+                        key={`${s.stageName || s.name || 'stage'}-${idx}`}
+                        sx={{
+                          flex: '1 1 0',
+                          minWidth: { xs: 140, sm: 150, md: 0 },
+                          position: 'relative',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          textAlign: 'center'
+                        }}
+                      >
+                        {idx !== (timeline.stages?.length || 0) - 1 && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 24,
+                              left: '50%',
+                              width: '100%',
+                              borderTop: active ? '2px dashed #1976d2' : '2px dashed #d1d5db',
+                              zIndex: 0
+                            }}
+                          />
+                        )}
+
+                        <Box
+                          sx={{
+                            zIndex: 2,
+                            width: 48,
+                            height: 48,
+                            flexShrink: 0,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: active ? 'linear-gradient(135deg,#1976d2,#42a5f5)' : '#d1d5db',
+                            color: '#fff',
+                            fontSize: '22px',
+                            boxShadow: active ? '0 6px 18px rgba(25,118,210,0.28)' : 'none'
+                          }}
+                        >
+                          {icons[s.stageName] || <CheckCircle color="#fff" size={20} />}
+                        </Box>
+
+                        <Typography variant="subtitle2" sx={{ mt: 1.5, fontWeight: 700, color: active ? '#111827' : '#6b7280' }}>
+                          {s.stageName || s.name || 'Stage'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {s.completedAt ? formatDate(s.completedAt) : (active ? 'In progress' : 'Pending')}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </>
+            ) : (
+              <Typography color="text.secondary">No timeline data available.</Typography>
+            )}
+          </CardContent>
         </Card>
       </Stack>
     </Box>

@@ -21,7 +21,6 @@ import DialogActions from '@mui/material/DialogActions';
 import MainCard from 'components/MainCard';
 
 import { getOrderById } from 'api/orders';
-import { authorizedFetchRaw } from 'api/auth';
 import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline, editCustomerFeedbackForOrder } from 'api/customerPortal';
 import { approveDocument } from 'api/document';
 import { getDocumentVersionListForOrder, downloadOrderFile } from 'api/orders';
@@ -46,6 +45,271 @@ function getDownloadHref(path) {
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('/')) {
     return path;
   }
+  return null;
+}
+
+function getFirstStringValue(obj, keys) {
+  if (!obj || typeof obj !== 'object') return null;
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function getVersionDownloadTarget(version) {
+  if (!version || typeof version !== 'object') return null;
+
+  const directCandidates = [
+    version.filePath,
+    version.path,
+    version.file,
+    version.fileUrl,
+    version.url,
+    version.documentFilePath,
+    version.documentPath,
+    version.documentUrl,
+    version.downloadUrl,
+    version.downloadPath,
+    version.file_path,
+    version.file_url,
+    version.document_file_path,
+    version.document_path
+  ];
+
+  for (const candidate of directCandidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim().replace(/\\/g, '/');
+    }
+  }
+
+  if (version.file && typeof version.file === 'object') {
+    const nested = getFirstStringValue(version.file, ['filePath', 'path', 'url', 'fileUrl', 'downloadUrl', 'documentPath', 'documentFilePath']);
+    if (nested) return nested.replace(/\\/g, '/');
+  }
+
+  const deepPath = findPathLikeString(version);
+  if (deepPath) return deepPath;
+
+  return null;
+}
+
+function findPathLikeString(value, depth = 0) {
+  if (depth > 5 || value == null) return null;
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim().replace(/\\/g, '/');
+    if (
+      trimmed.startsWith('/home/')
+      || /\/(files|temp_uploads)\/.+\.(pdf|docx?|zip|png|jpe?g|xlsx?)$/i.test(trimmed)
+      || /^https?:\/\/.+\/(files|temp_uploads)\//i.test(trimmed)
+    ) {
+      return trimmed;
+    }
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findPathLikeString(item, depth + 1);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  if (typeof value === 'object') {
+    for (const key of Object.keys(value)) {
+      const found = findPathLikeString(value[key], depth + 1);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+const VERSION_API_FILE_FIELDS = [
+  {
+    label: 'Thesis Document',
+    documentKey: 'thesis',
+    nameKeys: ['thesisfileName', 'thesisFileName', 'thesisDocumentName'],
+    pathKeys: ['thesisfilePath', 'thesisFilePath', 'thesisDocumentPath']
+  },
+  {
+    label: 'Synopsis Document',
+    documentKey: 'synopsis',
+    nameKeys: ['synopsisfileName', 'synopsisFileName', 'synopsisDocumentName'],
+    pathKeys: ['synopsisfilePath', 'synopsisFilePath', 'synopsisDocumentPath']
+  },
+  {
+    label: 'Hard Cover Design',
+    documentKey: 'hardcoverdesign',
+    nameKeys: ['thesisCoverfileNameHard', 'hardCoverDesignName'],
+    pathKeys: ['thesisCoverfilePathHard', 'hardCoverDesignPath']
+  },
+  {
+    label: 'Soft Cover Design',
+    documentKey: 'softcoverdesign',
+    nameKeys: ['thesisCoverfileNameSoft', 'softCoverDesignName'],
+    pathKeys: ['thesisCoverfilePathSoft', 'softCoverDesignPath']
+  },
+  {
+    label: 'Synopsis Cover Design',
+    documentKey: 'synopsiscover',
+    nameKeys: ['sysnopsisCoverfileName', 'synopsisCoverfileName', 'synopsisCoverDesignName'],
+    pathKeys: ['synopsisCoverfilePath', 'synopsisCoverDesignPath']
+  }
+];
+
+const ORDER_DOCUMENT_ENTRIES = [
+  { match: /thesis/i, key: 'thesis', nameKey: 'thesisDocumentName', pathKey: 'thesisDocumentPath' },
+  { match: /synopsis/i, key: 'synopsis', nameKey: 'synopsisDocumentName', pathKey: 'synopsisDocumentPath' },
+  { match: /hard\s*cover|hardcover/i, key: 'hardcoverdesign', nameKey: 'hardCoverDesignName', pathKey: 'hardCoverDesignPath' },
+  { match: /soft\s*cover|softcover/i, key: 'softcoverdesign', nameKey: 'softCoverDesignName', pathKey: 'softCoverDesignPath' }
+];
+
+const ORDER_DOCUMENT_FALLBACKS = [
+  { key: 'thesis', pathKey: 'thesisDocumentPath', nameKey: 'thesisDocumentName' },
+  { key: 'synopsis', pathKey: 'synopsisDocumentPath', nameKey: 'synopsisDocumentName' },
+  { key: 'hardcoverdesign', pathKey: 'hardCoverDesignPath', nameKey: 'hardCoverDesignName' },
+  { key: 'softcoverdesign', pathKey: 'softCoverDesignPath', nameKey: 'softCoverDesignName' }
+];
+
+function resolveOrderDocumentForVersion(version, documents) {
+  if (!documents || typeof documents !== 'object') return null;
+
+  const masterName = String(version?.documentMasterName || version?.documentName || '').trim();
+
+  for (const entry of ORDER_DOCUMENT_ENTRIES) {
+    if (entry.match.test(masterName)) {
+      const filePath = documents[entry.pathKey];
+      if (typeof filePath === 'string' && filePath.trim()) {
+        return {
+          filePath: filePath.trim().replace(/\\/g, '/'),
+          fileName: documents[entry.nameKey] || null,
+          documentKey: entry.key
+        };
+      }
+    }
+  }
+
+  // Workflow stages like "Order-Created" do not carry file paths — use order documents (same as admin view).
+  for (const entry of ORDER_DOCUMENT_FALLBACKS) {
+    const filePath = documents[entry.pathKey];
+    if (typeof filePath === 'string' && filePath.trim()) {
+      return {
+        filePath: filePath.trim().replace(/\\/g, '/'),
+        fileName: documents[entry.nameKey] || null,
+        documentKey: entry.key
+      };
+    }
+  }
+
+  return null;
+}
+
+function getVersionStaffRemarks(version) {
+  if (!version || typeof version !== 'object') return null;
+  return getFirstStringValue(version, ['staffRemarks', 'remarks', 'customerRemarks']);
+}
+
+function getVersionDownloadFiles(version, documents) {
+  if (!version || typeof version !== 'object') return [];
+
+  const files = [];
+
+  for (const entry of VERSION_API_FILE_FIELDS) {
+    const filePath = getFirstStringValue(version, entry.pathKeys);
+    if (!filePath) continue;
+
+    const fileName = getFirstStringValue(version, entry.nameKeys) || filePath.split('/').pop();
+    files.push({
+      id: entry.documentKey,
+      label: entry.label,
+      fileName,
+      filePath: filePath.replace(/\\/g, '/'),
+      documentKey: entry.documentKey
+    });
+  }
+
+  if (files.length > 0) return files;
+
+  const resolved = resolveVersionDownload(version, documents);
+  if (resolved?.filePath) {
+    files.push({
+      id: resolved.documentKey || 'document',
+      label: 'Document',
+      fileName: resolved.fileName || resolved.filePath.split('/').pop(),
+      filePath: resolved.filePath,
+      documentKey: resolved.documentKey || 'thesis'
+    });
+  }
+
+  return files;
+}
+
+function resolveVersionDownload(version, documents) {
+  const filePath = getVersionDownloadTarget(version);
+  if (filePath) {
+    return {
+      filePath,
+      fileName: getVersionDownloadName(version)
+    };
+  }
+
+  return resolveOrderDocumentForVersion(version, documents);
+}
+
+function getVersionDownloadName(version) {
+  if (!version || typeof version !== 'object') return 'version-download';
+
+  const nameCandidates = [
+    version.fileName,
+    version.name,
+    version.documentName,
+    version.documentFileName,
+    version.file_name,
+    version.fileName || version.name || version.documentName || version.documentFileName
+  ];
+
+  for (const candidate of nameCandidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
+  const target = getVersionDownloadTarget(version);
+  if (target) {
+    const sliced = target.split('/').pop();
+    if (sliced) return sliced;
+  }
+
+  return `version-${version.versionNo || 'download'}`;
+}
+
+function getVersionApprovalStatus(version) {
+  if (!version || typeof version !== 'object') return null;
+
+  if (version.approved === true) return 'Approved';
+  if (version.approved === false) return 'Rejected';
+
+  const statusCandidates = [
+    version.approvalStatus,
+    version.status,
+    version.documentStatus,
+    version.versionStatus,
+    version.decision,
+    version.approval_status,
+    version.document_status
+  ];
+
+  for (const candidate of statusCandidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+
   return null;
 }
 
@@ -140,6 +404,20 @@ export default function OrderDetails() {
       else if (Array.isArray(resp?.content)) list = resp.content;
 
       setAllDocVersionsList(list);
+
+      // eslint-disable-next-line no-console
+      console.log('[OrderDetails] Document versions response:', resp);
+      // eslint-disable-next-line no-console
+      console.log('[OrderDetails] Document versions status fields:', list.map((v) => ({
+        versionNo: v.versionNo,
+        approvalStatus: v.approvalStatus,
+        status: v.status,
+        documentStatus: v.documentStatus,
+        approved: v.approved,
+        active: v.active,
+        resolvedStatus: getVersionApprovalStatus(v),
+        files: getVersionDownloadFiles(v, null)
+      })));
 
       // Filter by selected document key where possible (match documentMasterId or name)
       const stageId = DOC_STAGE_ID_BY_KEY[approvalDocumentKey];
@@ -265,33 +543,27 @@ export default function OrderDetails() {
   const isFeedbackSubmitted = feedback && feedback.length > 0;
   const feedbackErrorMessage = normalizeFeedbackErrorMessage(feedbackError);
 
-  const downloadDocument = async (documentName, suggestedFileName, fallbackPath) => {
+  const downloadDocument = async (documentName, suggestedFileName, filePath, documentKey = documentName) => {
     if (!order) return;
+    if (!filePath && !documentKey) {
+      // eslint-disable-next-line no-console
+      console.warn('[OrderDetails.downloadDocument] No filePath for document:', documentName);
+      return;
+    }
+
     setDownloading((s) => ({ ...s, [documentName]: true }));
     try {
-      const path = `/api/v1/orders/admin/download/${encodeURIComponent(String(documentName))}/${encodeURIComponent(String(orderId))}`;
-
-      const res = await authorizedFetchRaw(path, { method: 'GET' });
-
-      // prefer filename from Content-Disposition header
-      let filename = suggestedFileName || `${orderId}-${documentName}`;
-      const cd = res.headers.get('Content-Disposition') || res.headers.get('content-disposition');
-      if (cd) {
-        const m = /filename\*=?UTF-8''([^;\n\r]+)/i.exec(cd) || /filename="?([^";]+)"?/i.exec(cd);
-        if (m && m[1]) {
-          try {
-            filename = decodeURIComponent(m[1]);
-          } catch (e) {
-            filename = m[1];
-          }
-        }
-      }
-
-      const blob = await res.blob();
+      const fileName = suggestedFileName || (filePath ? filePath.split('/').pop() : null) || `${orderId}-${documentName}`;
+      const blob = await downloadOrderFile({
+        filePath,
+        fileName,
+        orderId,
+        documentKey
+      });
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = filename;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -299,14 +571,13 @@ export default function OrderDetails() {
     } catch (e) {
       // eslint-disable-next-line no-console
       console.error('[OrderDetails.downloadDocument] Error', e);
-      // Do not auto-open fallbackPath — prefer API download. Log fallback for debugging.
-      if (fallbackPath) {
-        // eslint-disable-next-line no-console
-        console.warn('[OrderDetails.downloadDocument] Fallback path available, not auto-opening:', fallbackPath);
-      }
     } finally {
       setDownloading((s) => ({ ...s, [documentName]: false }));
     }
+  };
+
+  const downloadResolvedFile = async (key, filePath, fileName, documentKey) => {
+    await downloadDocument(key, fileName, filePath, documentKey);
   };
 
   const copyText = async (text, setCopied) => {
@@ -807,24 +1078,71 @@ export default function OrderDetails() {
 
                   const sorted = [...filteredVersions].sort((a, b) => Number(b.versionNo ?? 0) - Number(a.versionNo ?? 0));
                   const latestVer = sorted[0];
+                  const latestStatus = getVersionApprovalStatus(latestVer);
                   const historyVers = sorted.slice(1);
 
-                  const handleDownloadVersion = async (v) => {
-                    if (!v?.filePath) return;
-                    try {
-                      const blob = await downloadOrderFile({ filePath: v?.filePath ?? '', fileName: v?.fileName ?? '' });
-                      const url = URL.createObjectURL(blob);
-                      window.open(url, '_blank', 'noopener');
-                      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
-                    } catch (e) {
-                      // eslint-disable-next-line no-console
-                      console.error('Download failed', e);
-                      // lightweight fallback: try opening raw path
-                      try {
-                        window.open(file.filePath, '_blank', 'noopener');
-                      } catch {}
+                  const handleDownloadVersionFile = async (version, file) => {
+                    if (!file?.filePath) return;
+                    await downloadResolvedFile(
+                      `version-${version.versionNo ?? version.id ?? 'download'}-${file.id}`,
+                      file.filePath,
+                      file.fileName,
+                      file.documentKey
+                    );
+                  };
+
+                  const renderVersionFiles = (version, compact = false) => {
+                    const files = getVersionDownloadFiles(version, documentData);
+                    if (files.length === 0) {
+                      return (
+                        <Typography variant="caption" color="text.secondary">
+                          No files attached to this version
+                        </Typography>
+                      );
                     }
-                  }
+
+                    return (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: compact ? 0.5 : 0.75 }}>
+                        {files.map((file) => {
+                          const downloadKey = `version-${version.versionNo ?? version.id ?? 'download'}-${file.id}`;
+                          const isFileDownloading = Boolean(downloading[downloadKey]);
+                          return (
+                            <Box
+                              key={downloadKey}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: 1.5,
+                                py: compact ? 0.75 : 1,
+                                px: compact ? 0 : 0.5,
+                                borderBottom: '1px solid rgba(0,0,0,0.05)',
+                                '&:last-child': { borderBottom: 'none' }
+                              }}
+                            >
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography variant="caption" sx={{ fontWeight: 700, color: '#475569', display: 'block' }}>
+                                  {file.label}
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'primary.main', wordBreak: 'break-word' }}>
+                                  {file.fileName}
+                                </Typography>
+                              </Box>
+                              <IconButton
+                                size="small"
+                                disabled={isFileDownloading}
+                                onClick={() => handleDownloadVersionFile(version, file)}
+                                aria-label={`download-${file.label}`}
+                                sx={{ border: '1px solid #eef2f7', flexShrink: 0 }}
+                              >
+                                {isFileDownloading ? <CircularProgress size={16} /> : <DownloadCloud size={16} />}
+                              </IconButton>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    );
+                  };
 
                   const statusChipSx = (status) => ({
                     bgcolor: /approve/i.test(status) ? '#dcfce7' : /reject/i.test(status) ? '#fee2e2' : '#f1f5f9',
@@ -850,8 +1168,8 @@ export default function OrderDetails() {
                                   Version {latestVer.versionNo ?? '-'}
                                 </Typography>
                                 <Chip label="Latest" size="small" sx={{ bgcolor: '#0ea5e9', color: '#fff', fontWeight: 700, fontSize: '11px', height: 20, borderRadius: '6px' }} />
-                                {latestVer.approvalStatus && (
-                                  <Chip label={latestVer.approvalStatus} size="small" sx={statusChipSx(latestVer.approvalStatus)} />
+                                {latestStatus && (
+                                  <Chip label={latestStatus} size="small" sx={statusChipSx(latestStatus)} />
                                 )}
                               </Box>
                               {(latestVer.documentMasterName || latestVer.documentName) && (
@@ -859,7 +1177,12 @@ export default function OrderDetails() {
                                   {latestVer.documentMasterName || latestVer.documentName}
                                 </Typography>
                               )}
-                              {latestVer.remarks && (
+                              {getVersionStaffRemarks(latestVer) && (
+                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mt: 0.5 }}>
+                                  Staff remarks: {getVersionStaffRemarks(latestVer)}
+                                </Typography>
+                              )}
+                              {latestVer.remarks && latestVer.remarks !== getVersionStaffRemarks(latestVer) && (
                                 <Typography variant="caption" sx={{ color: '#64748b', display: 'block' }}>{latestVer.remarks}</Typography>
                               )}
                               {latestVer.createdAt && (
@@ -867,21 +1190,19 @@ export default function OrderDetails() {
                               )}
                             </Box>
                           </Box>
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<DownloadCloud size={15} />}
-                            onClick={() => handleDownloadVersion(latestVer)}
-                            sx={{ textTransform: 'none', color: '#0ea5e9', borderColor: '#7dd3fc', '&:hover': { bgcolor: '#f0f9ff', borderColor: '#0ea5e9' }, borderRadius: '999px', whiteSpace: 'nowrap', flexShrink: 0 }}
-                          >
-                            Download
-                          </Button>
+                        </Box>
+
+                        <Box sx={{ mt: 2, p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.7)', border: '1px solid rgba(125,211,252,0.35)' }}>
+                          <Typography variant="caption" sx={{ fontWeight: 700, color: '#0369a1', display: 'block', mb: 1, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            Files for review
+                          </Typography>
+                          {renderVersionFiles(latestVer)}
                         </Box>
 
                         <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid rgba(125,211,252,0.4)' }}>
                           {versionActionMode === null ? (
                             <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
-                              {(!latestVer.approvalStatus || /pending/i.test(latestVer.approvalStatus)) && (
+                              {(!latestStatus || /pending/i.test(latestStatus)) && (
                                 <>
                                   <Button
                                     variant="contained"
@@ -1008,25 +1329,37 @@ export default function OrderDetails() {
                             Previous Versions
                           </Typography>
                           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            {historyVers.map((v, i) => (
-                              <Box key={v.versionNo ?? v.id ?? i} sx={{ p: 2, borderRadius: 2, border: '1px solid #eef2f7', background: '#fafbff', display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ width: 36, height: 36, borderRadius: 1.5, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                  <FileText size={15} color="#94a3b8" />
+                            {historyVers.map((v, i) => {
+                              const historyStatus = getVersionApprovalStatus(v);
+                              return (
+                              <Box key={v.versionNo ?? v.id ?? i} sx={{ p: 2, borderRadius: 2, border: '1px solid #eef2f7', background: '#fafbff' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 1.5 }}>
+                                  <Box sx={{ width: 36, height: 36, borderRadius: 1.5, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <FileText size={15} color="#94a3b8" />
+                                  </Box>
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                      <Typography variant="body2" sx={{ fontWeight: 700, color: '#374151' }}>
+                                        Version {v.versionNo ?? '—'}
+                                      </Typography>
+                                      {historyStatus && (
+                                        <Chip label={historyStatus} size="small" sx={statusChipSx(historyStatus)} />
+                                      )}
+                                    </Box>
+                                    {getVersionStaffRemarks(v) && (
+                                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        Staff remarks: {getVersionStaffRemarks(v)}
+                                      </Typography>
+                                    )}
+                                    {(v.createdDate || v.createdAt) && (
+                                      <Typography variant="caption" sx={{ display: 'block', color: '#94a3b8' }}>{formatDateTime(v.createdDate || v.createdAt)}</Typography>
+                                    )}
+                                  </Box>
                                 </Box>
-                                <Box sx={{ flex: 1 }}>
-                                  <Typography variant="body2" sx={{ fontWeight: 700, color: '#374151' }}>
-                                    Version {v.versionNo ?? '—'}
-                                  </Typography>
-                                  {v.remarks && <Typography variant="caption" color="text.secondary">{v.remarks ?? ''}</Typography>}
-                                  {v.createdDate && (
-                                    <Typography variant="caption" sx={{ display: 'block', color: '#94a3b8' }}>{formatDateTime(v.createdDate)}</Typography>
-                                  )}
-                                </Box>
-                                {v.approvalStatus && (
-                                  <Chip label={v.approvalStatus} size="small" sx={statusChipSx(v.approvalStatus)} />
-                                )}
+                                {renderVersionFiles(v, true)}
                               </Box>
-                            ))}
+                            );
+                            })}
                           </Box>
                         </Box>
                       )}
