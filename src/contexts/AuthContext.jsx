@@ -14,6 +14,27 @@ const defaultAuthState = {
   user: null
 };
 
+// All localStorage keys used by the app that must be cleared on logout
+const LOCAL_STORAGE_KEYS_TO_CLEAR = [
+  'dharbrothers-auth',
+  'dharbrothers-auth-customer',
+  'dharbrothers-customer-portal-session',
+  'mantis-react-free-config',
+  'pushToken',
+  'pushPrompted',
+];
+
+function clearAllLocalStorage() {
+  if (typeof window === 'undefined') return;
+  LOCAL_STORAGE_KEYS_TO_CLEAR.forEach((key) => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch (_e) {
+      // ignore
+    }
+  });
+}
+
 export function AuthProvider({ children }) {
   const { state, setState, resetState } = useLocalStorage('dharbrothers-auth', defaultAuthState);
 
@@ -34,6 +55,7 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     clearAuthCookies();
+    clearAllLocalStorage();
     resetState();
   }, [resetState]);
 

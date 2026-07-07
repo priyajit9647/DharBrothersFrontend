@@ -1,7 +1,3 @@
-// ==========================
-// UPDATED ORDERDETAILSADMIN.JSX
-// ==========================
-
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -22,46 +18,353 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 
-import {
-  Download,
-  User,
-  Truck,
-  Receipt,
-  FileText,
-  Copy
-} from 'lucide-react';
+import { Download, User, Truck, Receipt, FileText, Copy } from 'lucide-react';
 
 import { getOrderById, downloadOrderFile, downloadInvoice } from 'api/orders';
+
+function pickFirst(source, keys) {
+  if (!source) return null;
+  for (const key of keys) {
+    const value = source[key];
+    if (value != null && value !== '') return value;
+  }
+  return null;
+}
+
+function normalizeOrderResponse(raw) {
+  const resp = raw?.data && typeof raw.data === 'object' && !Array.isArray(raw.data) ? raw.data : raw;
+
+  const billingAddress = {
+    address1: pickFirst(resp?.billingAddress, ['address1', 'addressLine1', 'line1', 'street'])
+      ?? pickFirst(resp, ['customerAddress1', 'billingAddress1', 'addressLine1', 'address1']),
+    address2: pickFirst(resp?.billingAddress, ['address2', 'addressLine2', 'line2'])
+      ?? pickFirst(resp, ['customerAddress2', 'billingAddress2', 'addressLine2', 'address2']),
+    city: pickFirst(resp?.billingAddress, ['city'])
+      ?? pickFirst(resp, ['customerCity', 'billingCity', 'city']),
+    state: pickFirst(resp?.billingAddress, ['state'])
+      ?? pickFirst(resp, ['state', 'billingState']),
+    country: pickFirst(resp?.billingAddress, ['country'])
+      ?? pickFirst(resp, ['country', 'billingCountry']),
+    pincode: pickFirst(resp?.billingAddress, ['pincode', 'pinCode', 'zip', 'postalCode'])
+      ?? pickFirst(resp, ['pincode', 'billingPincode', 'customerPincode'])
+  };
+
+  const shippingAddress = {
+    address1: pickFirst(resp?.shippingAddress, ['address1', 'addressLine1', 'line1', 'street'])
+      ?? pickFirst(resp, ['shippingAddress1', 'address1']),
+    address2: pickFirst(resp?.shippingAddress, ['address2', 'addressLine2', 'line2'])
+      ?? pickFirst(resp, ['shippingAddress2', 'address2']),
+    city: pickFirst(resp?.shippingAddress, ['city'])
+      ?? pickFirst(resp, ['shippingCity', 'city']),
+    state: pickFirst(resp?.shippingAddress, ['state'])
+      ?? pickFirst(resp, ['shippingState', 'state']),
+    country: pickFirst(resp?.shippingAddress, ['country'])
+      ?? pickFirst(resp, ['shippingCountry', 'country']),
+    pincode: pickFirst(resp?.shippingAddress, ['pincode', 'pinCode', 'zip', 'postalCode'])
+      ?? pickFirst(resp, ['shippingPincode', 'pincode'])
+  };
+
+  const customerSource = resp?.customer && typeof resp.customer === 'object' ? resp.customer : resp;
+  const customer = {
+    name: `${customerSource?.firstName || ''} ${customerSource?.lastName || ''}`.trim()
+      || pickFirst(resp, ['customerName', 'fullName', 'name'])
+      || '—',
+    email: pickFirst(customerSource, ['email', 'customerEmail']) ?? pickFirst(resp, ['customerEmail', 'email']),
+    phone: pickFirst(customerSource, ['mobile', 'phone', 'whatsapp']) ?? pickFirst(resp, ['mobile', 'phone', 'whatsapp'])
+  };
+
+  const documents = resp?.documents && typeof resp.documents === 'object' ? resp.documents : resp;
+  const approvedDocumentsSource = resp?.approvedDocuments && typeof resp.approvedDocuments === 'object' ? resp.approvedDocuments : null;
+  const fileMap = [
+    ['thesisDocumentName', 'thesisDocumentPath', 'Thesis Document'],
+    ['synopsisDocumentName', 'synopsisDocumentPath', 'Synopsis Document'],
+    ['hardCoverDesignName', 'hardCoverDesignPath', 'Hard Cover Design'],
+    ['softCoverDesignName', 'softCoverDesignPath', 'Soft Cover Design'],
+    ['synopsisCoverDesignName', 'synopsisCoverDesignPath', 'Synopsis Cover Design']
+  ];
+  const files = [];
+  const approvedFiles = [];
+  for (const [nameKey, pathKey, label] of fileMap) {
+    files.push({
+      label,
+      fileName: documents?.[nameKey] || null,
+      filePath: documents?.[pathKey] || null
+    });
+    approvedFiles.push({
+      label,
+      fileName: approvedDocumentsSource?.[nameKey] || null,
+      filePath: approvedDocumentsSource?.[pathKey] || null
+    });
+  }
+
+  const printingDetails = [];
+  if (Array.isArray(resp?.bindings)) {
+    resp.bindings.forEach((b) => {
+      const items = b.bindingItems || [];
+      const base = {
+        desc: `${b.bindingType} Binding`,
+        bindingType: b.bindingType,
+        spinePrintingRequired: b.spinePrintingRequired,
+        topContentArea: b.topContentArea,
+        middleContentArea: b.middleContentArea,
+        bottomContentArea: b.bottomContentArea,
+        coverPageDesign: b.coverPageDesign,
+        coverMaterial: b.coverMaterial,
+        coverPageDesignFileName: b.coverPageDesignFileName
+      };
+      if (items.length) {
+        items.forEach((item) => printingDetails.push({
+          ...base,
+          size: item.paperSize,
+          paper: item.paper,
+          color: item.printColour || item.printColor,
+          printingType: item.printingType,
+          noOfCopies: item.noOfCopies ?? item.noOfCopies === 0 ? item.noOfCopies : null,
+          a4Pockets: item.a4Pockets,
+          cdPockets: item.cdPockets,
+          additionalInformation: item.additionalInformation || ''
+        }));
+      } else {
+        printingDetails.push({
+          ...base,
+          size: null,
+          paper: null,
+          color: null,
+          printingType: null,
+          noOfCopies: null,
+          a4Pockets: null,
+          cdPockets: null,
+          additionalInformation: ''
+        });
+      }
+    });
+  }
+
+  return {
+    ...resp,
+    files,
+    approvedFiles,
+    printingDetails,
+    billingAddress,
+    shippingAddress,
+    customer,
+    amount: resp?.totalAmount ?? resp?.amount,
+    orderNumber: resp?.orderNumber ?? resp?.orderNo
+  };
+}
+
+const CARD_SHADOW = '0 1px 3px rgba(0,0,0,0.04), 0 6px 20px rgba(0,0,0,0.06)';
+const CARD_SX = {
+  borderRadius: '16px',
+  boxShadow: CARD_SHADOW,
+  border: '1px solid #edf2f7',
+  width: '100%'
+};
+const CARD_CONTENT_SX = { p: { xs: 2, sm: 3 }, '&:last-child': { pb: { xs: 2, sm: 3 } } };
 
 function DetailsRow({ label, value }) {
   return (
     <Box
       sx={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
         py: 1.5,
-        borderBottom: '1px solid #edf2f7'
+        borderBottom: '1px solid #f1f5f9',
+        '&:last-child': { borderBottom: 'none', pb: 0 }
       }}
     >
-      <Typography
-        sx={{
-          fontWeight: 600,
-          fontSize: 14,
-          color: '#111827'
-        }}
-      >
+      <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.4px', mb: 0.5 }}>
         {label}
       </Typography>
+      <Box sx={{ color: '#111827', fontSize: 14, fontWeight: 500, lineHeight: 1.5, wordBreak: 'break-word' }}>
+        {value ?? '—'}
+      </Box>
+    </Box>
+  );
+}
 
+function InfoField({ label, value, action }) {
+  return (
+    <Box
+      sx={{
+        p: 2,
+        borderRadius: '10px',
+        border: '1px solid #edf2f7',
+        background: '#fff',
+        height: '100%',
+        minWidth: 0,
+        width: '100%'
+      }}
+    >
+      <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.4px', mb: 0.75 }}>
+        {label}
+      </Typography>
+      {action || (
+        <Typography
+          component="div"
+          sx={{
+            fontSize: 14,
+            color: '#111827',
+            fontWeight: 500,
+            lineHeight: 1.55,
+            whiteSpace: 'pre-line',
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
+            minWidth: 0
+          }}
+        >
+          {value ?? '—'}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+function CardTitle({ children, color = '#2563eb' }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2.5 }}>
+      <Box sx={{ width: 3, height: 20, borderRadius: '2px', background: color, flexShrink: 0 }} />
+      <Typography fontWeight={700} fontSize={15} lineHeight={1}>
+        {children}
+      </Typography>
+    </Box>
+  );
+}
+
+function SectionHeader({ icon, title, subtitle, iconBg = '#eff6ff', iconColor = '#2563eb' }) {
+  return (
+    <Stack direction="row" spacing={1.5} alignItems="center" mb={2.5}>
       <Box
         sx={{
-          color: '#6b7280',
-          fontSize: 14,
-          textAlign: 'right'
+          width: 34,
+          height: 34,
+          borderRadius: '10px',
+          background: iconBg,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: iconColor,
+          flexShrink: 0
         }}
       >
-        {value ?? '—'}
+        {icon}
+      </Box>
+      <Box>
+        <Typography fontWeight={700} fontSize={15} lineHeight={1.2}>
+          {title}
+        </Typography>
+        {subtitle && (
+          <Typography fontSize={12} color="text.secondary" mt={0.3}>
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
+    </Stack>
+  );
+}
+
+function SubPanel({ label, labelColor, bg, border, children }) {
+  return (
+    <Box sx={{ p: 2.5, borderRadius: '12px', background: bg, border: `1px solid ${border}` }}>
+      <Typography sx={{ fontSize: 11, fontWeight: 700, color: labelColor, mb: 2, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {label}
+      </Typography>
+      {children}
+    </Box>
+  );
+}
+
+function PageCountBox({ label, value, borderColor, hoverBg, iconColor }) {
+  const pageNumbers = String(value ?? '0')
+    .split(/[,\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const displayText = pageNumbers.length ? pageNumbers.join(',') : '0';
+
+  return (
+    <Box sx={{ minWidth: 0, width: '100%' }}>
+      <Typography sx={{ fontSize: 11, color: '#9ca3af', mb: 0.5, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+        {label}
+      </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 0.5,
+          background: '#fff',
+          borderRadius: '8px',
+          pl: 1.5,
+          pr: 0.5,
+          py: 1,
+          border: `1px solid ${borderColor}`,
+          minWidth: 0,
+          width: '100%'
+        }}
+      >
+        <Typography
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: 13,
+            fontWeight: 600,
+            color: '#111827',
+            lineHeight: 1.6,
+            wordBreak: 'break-word',
+            pr: 0.5
+          }}
+        >
+          {displayText}
+        </Typography>
+        <IconButton
+          size="small"
+          onClick={async () => {
+            try { await navigator.clipboard.writeText(displayText); } catch {}
+          }}
+          sx={{ width: 26, height: 26, borderRadius: '6px', flexShrink: 0, mt: 0.25, '&:hover': { background: hoverBg } }}
+        >
+          <Copy size={12} color={iconColor} />
+        </IconButton>
+      </Box>
+    </Box>
+  );
+}
+
+function PagePanel({ title, titleColor, headerBg, headerBorder, borderColor, hoverBg, iconColor, colorMap }) {
+  const SECTIONS = [
+    { label: 'Black & White', keys: ['BLACK & WHITE'] },
+    { label: 'Colour', keys: ['COLOUR', 'COLOR'] }
+  ];
+
+  const getVal = (map, keys) => {
+    if (!map) return '0';
+    for (const k of keys) {
+      if (map[k] != null && map[k] !== '') return String(map[k]);
+    }
+    const mk = Object.keys(map);
+    for (const k of keys) {
+      const m = mk.find((x) => x.toLowerCase() === k.toLowerCase());
+      if (m && map[m] != null && map[m] !== '') return String(map[m]);
+    }
+    return '0';
+  };
+
+  return (
+    <Box sx={{ borderRadius: '12px', border: `1px solid ${headerBorder}`, width: '100%', minWidth: 0, height: '100%' }}>
+      <Box sx={{ px: 1.5, py: 1, background: headerBg, borderBottom: `1px solid ${headerBorder}` }}>
+        <Typography fontSize={12} fontWeight={700} color={titleColor}>{title}</Typography>
+      </Box>
+      <Box sx={{ p: 2, minWidth: 0 }}>
+        <Stack spacing={2}>
+          {SECTIONS.map(({ label, keys }) => (
+            <PageCountBox
+              key={label}
+              label={label}
+              value={getVal(colorMap, keys)}
+              borderColor={borderColor}
+              hoverBg={hoverBg}
+              iconColor={iconColor}
+            />
+          ))}
+        </Stack>
       </Box>
     </Box>
   );
@@ -69,17 +372,11 @@ function DetailsRow({ label, value }) {
 
 export default function OrderDetailsAdmin() {
   const { orderId } = useParams();
-
   const [order, setOrder] = useState(null);
 
   const formatDate = (d) => {
     if (!d) return '—';
-    try {
-      const date = new Date(d);
-      return date.toLocaleString();
-    } catch (e) {
-      return d;
-    }
+    try { return new Date(d).toLocaleString(); } catch { return d; }
   };
 
   useEffect(() => {
@@ -87,104 +384,18 @@ export default function OrderDetailsAdmin() {
 
     const load = async () => {
       if (!orderId) return;
-
       try {
         const resp = await getOrderById(orderId);
-
         if (!mounted) return;
 
-        const files = [];
-
-        if (resp.documents && typeof resp.documents === 'object') {
-          const map = [
-            ['thesisDocumentName', 'thesisDocumentPath', 'Thesis Document'],
-            ['synopsisDocumentName', 'synopsisDocumentPath', 'Synopsis Document'],
-            ['hardCoverDesignName', 'hardCoverDesignPath', 'Hard Cover Design'],
-            ['softCoverDesignName', 'softCoverDesignPath', 'Soft Cover Design']
-          ];
-
-          for (const [nameKey, pathKey, label] of map) {
-            files.push({
-              label,
-              fileName: resp.documents?.[nameKey] || null,
-              filePath: resp.documents?.[pathKey] || null
-            });
-          }
-        }
-
-        const printingDetails = [];
-
-        if (Array.isArray(resp.bindings)) {
-          resp.bindings.forEach((b) => {
-            const items = b.bindingItems || [];
-            if (items.length) {
-              items.forEach((item) => {
-                printingDetails.push({
-                  desc: `${b.bindingType} Binding`,
-                  size: item.paperSize,
-                  paper: item.paper,
-                  color: item.printColour || item.printColor,
-                  printingType: item.printingType,
-                  a4Pockets: item.a4Pockets,
-                  cdPockets: item.cdPockets,
-                  additionalInformation: item.additionalInformation || '',
-                  bindingType: b.bindingType,
-                  spinePrintingRequired: b.spinePrintingRequired,
-                  topContentArea: b.topContentArea,
-                  middleContentArea: b.middleContentArea,
-                  bottomContentArea: b.bottomContentArea,
-                  coverPageDesign: b.coverPageDesign,
-                  coverMaterial: b.coverMaterial,
-                  coverPageDesignFileName: b.coverPageDesignFileName
-                });
-              });
-            } else {
-              // Bindings without bindingItems: push a summary row so spine fields are preserved
-              printingDetails.push({
-                desc: `${b.bindingType} Binding`,
-                size: null,
-                paper: null,
-                color: null,
-                printingType: null,
-                a4Pockets: null,
-                cdPockets: null,
-                additionalInformation: '',
-                bindingType: b.bindingType,
-                spinePrintingRequired: b.spinePrintingRequired,
-                topContentArea: b.topContentArea,
-                middleContentArea: b.middleContentArea,
-                bottomContentArea: b.bottomContentArea,
-                coverPageDesign: b.coverPageDesign,
-                coverMaterial: b.coverMaterial,
-                coverPageDesignFileName: b.coverPageDesignFileName
-              });
-            }
-          });
-        }
-
-        setOrder({
-          ...resp,
-          files,
-          printingDetails,
-          amount: resp.totalAmount,
-          customer: {
-            name: `${resp.customer?.firstName || ''} ${
-              resp.customer?.lastName || ''
-            }`,
-            email: resp.customer?.email,
-            phone: resp.customer?.mobile
-          }
-        });
+        setOrder(normalizeOrderResponse(resp));
       } catch (e) {
         console.log(e);
       }
     };
 
     load();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [orderId]);
 
   const handleDownloadFile = async (file) => {
@@ -193,14 +404,10 @@ export default function OrderDetailsAdmin() {
       const blob = await downloadOrderFile({ filePath: file.filePath, fileName: file.fileName });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Download failed', e);
-      // lightweight fallback: try opening raw path
-      try {
-        window.open(file.filePath, '_blank', 'noopener');
-      } catch {}
+      try { window.open(file.filePath, '_blank', 'noopener'); } catch {}
     }
   };
 
@@ -210,46 +417,37 @@ export default function OrderDetailsAdmin() {
       const blob = await downloadInvoice(order.orderId);
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank', 'noopener');
-      setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error('Invoice download failed', e);
-      // fallback: open the raw endpoint in a new tab (may work if server supports direct GET)
       try {
-        window.open(`${import.meta.env.VITE_API_BASE_URL}/api/v1/order/invoice/get/${encodeURIComponent(String(order.orderId))}`, '_blank', 'noopener');
+        window.open(
+          `${import.meta.env.VITE_API_BASE_URL}/api/v1/order/invoice/get/${encodeURIComponent(String(order.orderId))}`,
+          '_blank', 'noopener'
+        );
       } catch {}
     }
   };
 
   if (!order) return null;
 
-  const hardBinding = order.printingDetails?.find((p) => (p.bindingType || '').toLowerCase().includes('hard')) || order.printingDetails?.find((p) => p.topContentArea || p.middleContentArea || p.bottomContentArea) || {};
+  const hardBinding =
+    order.printingDetails?.find((p) => (p.bindingType || '').toLowerCase().includes('hard')) ||
+    order.printingDetails?.find((p) => p.topContentArea || p.middleContentArea || p.bottomContentArea) ||
+    {};
 
   const hasShipping = Boolean(
-    order.shippingAddress && (
-      order.shippingAddress.address1 ||
-      order.shippingAddress.city ||
-      order.shippingAddress.pincode
-    )
+    order.shippingAddress &&
+    (order.shippingAddress.address1 || order.shippingAddress.address2 || order.shippingAddress.city || order.shippingAddress.pincode)
   );
 
-  const getPagesDisplay = (map, key) => {
-    const raw = map?.[key] || '';
-    if (!raw) return '0';
-    // if multiple pages provided as CSV, show the list, otherwise show single page or count
-    return raw.includes(',') ? raw : raw;
-  };
+  const billingStreet = [order.billingAddress?.address1, order.billingAddress?.address2].filter(Boolean).join(', ') || null;
+  const shippingStreet = [order.shippingAddress?.address1, order.shippingAddress?.address2].filter(Boolean).join(', ') || null;
+
+  const thesisFile = order.files?.find((f) => f.label === 'Thesis Document');
 
   return (
-    <Box
-      sx={{
-        p: 3,
-        background: '#f4f7fb',
-        minHeight: '100vh'
-      }}
-    >
-      {/* ================= HEADER ================= */}
-
+    <Box sx={{ py: 3, background: '#f4f7fb', minHeight: '100vh', width: '100%' }}>
       <Box
         sx={{
           display: 'flex',
@@ -261,763 +459,379 @@ export default function OrderDetailsAdmin() {
         }}
       >
         <Box>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Typography variant="h4" fontWeight={700}>
+          <Stack direction="row" spacing={1.5} alignItems="center" mb={0.5}>
+            <Typography variant="h5" fontWeight={800} letterSpacing="-0.3px">
               Order #{order?.orderNumber || order?.orderId}
             </Typography>
-
             {order.orderStatus && (
               <Chip
                 label={order.orderStatus}
                 size="small"
                 color="primary"
-                sx={{ height: 26 }}
+                sx={{ height: 22, fontWeight: 600, fontSize: 11 }}
               />
             )}
           </Stack>
-
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" fontSize={13}>
             Manage and track order details
           </Typography>
         </Box>
 
         <Button
           variant="contained"
-          startIcon={<Download size={18} />}
-          onClick={async () => {
-            await handleDownloadInvoice();
-          }}
+          startIcon={<Download size={16} />}
+          onClick={handleDownloadInvoice}
           disabled={!order?.orderId}
           sx={{
-            borderRadius: 3,
-            px: 3,
+            borderRadius: '10px',
+            px: 2.5,
             py: 1,
             textTransform: 'none',
             fontWeight: 600,
-            boxShadow: 'none'
+            fontSize: 13,
+            boxShadow: '0 2px 8px rgba(37,99,235,0.22)',
+            '&:hover': { boxShadow: '0 4px 14px rgba(37,99,235,0.32)' }
           }}
         >
           Download Invoice
         </Button>
       </Box>
 
-      {/* ================= MAIN GRID ================= */}
-
-      <Grid container spacing={3}>
-        {/* ================= LEFT SECTION ================= */}
-
-        <Grid item xs={12} lg={8.5}>
-          <Stack spacing={3}>
-            {/* ================= PRINTING TABLE ================= */}
-
-            <Card
-              sx={{
-                borderRadius: 5,
-                boxShadow: '0 6px 20px rgba(0,0,0,0.06)'
-              }}
+      <Stack spacing={3}>
+        {/* Printing table — full width */}
+        <Card sx={CARD_SX}>
+          <CardContent sx={CARD_CONTENT_SX}>
+            <CardTitle>Hard Printing & Binding Details </CardTitle>
+            <TableContainer
+              component={Paper}
+              sx={{ borderRadius: '10px', overflowX: 'auto', border: '1px solid #edf2f7', boxShadow: 'none' }}
             >
-              <CardContent>
-                <Typography
-                  fontWeight={700}
-                  fontSize={18}
-                  mb={2}
-                >
-                  Hard Printing & Binding Details
-                </Typography>
-
-                <TableContainer
-                  component={Paper}
-                  sx={{
-                    borderRadius: 3,
-                    overflowX: 'auto',
-                    border: '1px solid #edf2f7',
-                    boxShadow: 'none'
-                  }}
-                >
-                  <Table sx={{ minWidth: 1300 }}>
-                    <TableBody>
-                      <TableRow
+              <Table sx={{ minWidth: 900, tableLayout: 'fixed', width: '100%' }}>
+                <colgroup>
+                  <col style={{ width: '130px' }} /> {/* Description */}
+                  <col style={{ width: '90px' }}  /> {/* Paper Size */}
+                  <col style={{ width: '110px' }} /> {/* Paper Type */}
+                  <col style={{ width: '90px' }}  /> {/* Colour */}
+                  <col style={{ width: '80px' }}  /> {/* No. Copies */}
+                  <col style={{ width: '100px' }} /> {/* Printing */}
+                  <col style={{ width: '60px' }}  /> {/* A4 */}
+                  <col style={{ width: '60px' }}  /> {/* CD */}
+                  <col style={{ width: '160px' }} /> {/* Information */}
+                  <col style={{ width: '110px' }} /> {/* Top Content */}
+                  <col style={{ width: '120px' }} /> {/* Middle Content */}
+                  <col style={{ width: '120px' }} /> {/* Bottom Content */}
+                </colgroup>
+                <TableBody>
+                  <TableRow sx={{ background: '#f8fafc' }}>
+                    {['Description', 'Paper Size', 'Paper Type', 'Colour', 'No. Copies', 'Printing', 'A4', 'CD', 'Information', 'Top Content', 'Middle Content', 'Bottom Content'].map((h) => (
+                      <TableCell
+                        key={h}
                         sx={{
-                          background: '#f8fafc'
+                          fontWeight: 700,
+                          fontSize: 11,
+                          color: '#374151',
+                          py: 1.5,
+                          px: 1.5,
+                          whiteSpace: 'nowrap',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.3px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
                         }}
                       >
-                        <TableCell><b>Description</b></TableCell>
-                        <TableCell><b>Paper Size</b></TableCell>
-                        <TableCell><b>Paper Type</b></TableCell>
-                        <TableCell><b>Colour</b></TableCell>
-                        <TableCell><b>Printing</b></TableCell>
-                        <TableCell><b>A4</b></TableCell>
-                        <TableCell><b>CD</b></TableCell>
-                        <TableCell><b>Information</b></TableCell>
-                      </TableRow>
+                        {h}
+                      </TableCell>
+                    ))}
+                  </TableRow>
 
-                      {order.printingDetails?.map((r, index) => (
-                        <TableRow key={index} hover>
-                          <TableCell>{r.desc}</TableCell>
-                          <TableCell>{r.size}</TableCell>
-                          <TableCell>{r.paper}</TableCell>
-                          <TableCell>{r.color}</TableCell>
-                          <TableCell>{r.printingType}</TableCell>
-                          <TableCell>{r.a4Pockets}</TableCell>
-                          <TableCell>{r.cdPockets}</TableCell>
-                          <TableCell>{r.additionalInformation || '—'}</TableCell>
-                        </TableRow>
+                  {order.printingDetails?.map((r, i) => (
+                    <TableRow
+                      key={i}
+                      hover
+                      sx={{ '&:last-child td': { borderBottom: 'none' }, '&:hover': { background: '#f8fafc' } }}
+                    >
+                      {[r.desc, r.size, r.paper, r.color, (r.noOfCopies != null ? String(r.noOfCopies) : '—'), r.printingType, r.a4Pockets, r.cdPockets, r.additionalInformation || '—', r.topContentArea || '—', r.middleContentArea || '—', r.bottomContentArea || '—'].map((v, ci) => (
+                        <TableCell
+                          key={ci}
+                          sx={{
+                            fontSize: 13,
+                            color: '#374151',
+                            py: 1.5,
+                            px: 1.5,
+                            verticalAlign: 'top',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: ci === 8 ? 'normal' : 'nowrap',
+                            wordBreak: ci === 8 ? 'break-word' : 'normal'
+                          }}
+                        >
+                          {v ?? '—'}
+                        </TableCell>
                       ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
 
-            {/* ================= BOTTOM SECTION ================= */}
+        {/* Binding info — full width */}
+        <Card sx={CARD_SX}>
+          <CardContent sx={CARD_CONTENT_SX}>
+            <CardTitle>Binding Info & Page Counts</CardTitle>
 
-            <Grid container spacing={3}>
-              {/* ================= DETAIL TABLE CARD ================= */}
-
-              <Grid item xs={12} md={6.2}>
-                <Card
-                  sx={{
-                    borderRadius: 5,
-                    minHeight: 420,
-                    boxShadow:
-                      '0 6px 20px rgba(0,0,0,0.06)'
-                  }}
-                >
-                  <CardContent>
-                    <Grid container spacing={4}>
-                      {/* LEFT TABLE */}
-
-                      <Grid item xs={12} md={6}>
-                        <Table size="small">
-                          <TableBody>
-                            <TableRow>
-                              <TableCell>
-                                <b>Detail</b>
-                              </TableCell>
-
-                              <TableCell>
-                                <b>Value</b>
-                              </TableCell>
-                            </TableRow>
-
-                            <TableRow>
-                              <TableCell>Thesis File</TableCell>
-
-                              <TableCell>
-                                {order.files?.find((f) => f.label === 'Thesis Document')?.filePath ? (
-                                  <Button
-                                    size="small"
-                                    variant="contained"
-                                    onClick={async () => {
-                                      const f = order.files.find((x) => x.label === 'Thesis Document');
-                                      await handleDownloadFile(f);
-                                    }}
-                                    sx={{ minWidth: 70, borderRadius: 2, textTransform: 'none' }}
-                                  >
-                                    View
-                                  </Button>
-                                ) : (
-                                  <Typography sx={{ color: '#9ca3af' }}>Not available</Typography>
-                                )}
-                              </TableCell>
-                            </TableRow>
-
-                            <TableRow>
-                              <TableCell>Cover DB</TableCell>
-
-                              <TableCell>{hardBinding.coverMaterial || '—'}</TableCell>
-                            </TableRow>
-
-                            <TableRow>
-                              <TableCell>Spine Printing</TableCell>
-
-                              <TableCell>{hardBinding.spinePrintingRequired ? 'Print Required' : 'Print Not Required'}</TableCell>
-                            </TableRow>
-
-                            <TableRow>
-                              <TableCell>Spine Top Content</TableCell>
-
-                              <TableCell>
-                                <Typography sx={{ whiteSpace: 'pre-line', color: '#6b7280', fontSize: 14 }}>
-                                  {hardBinding.topContentArea || '—'}
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-
-                            <TableRow>
-                              <TableCell>Spine Middle Content</TableCell>
-
-                              <TableCell>
-                                <Typography sx={{ whiteSpace: 'pre-line', color: '#6b7280', fontSize: 14 }}>
-                                  {hardBinding.middleContentArea || '—'}
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-
-                            <TableRow>
-                              <TableCell>Spine Bottom Content</TableCell>
-
-                              <TableCell>
-                                <Typography sx={{ whiteSpace: 'pre-line', color: '#6b7280', fontSize: 14 }}>
-                                  {hardBinding.bottomContentArea || '—'}
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-                          </TableBody>
-                        </Table>
-                      </Grid>
-
-                      {/* RIGHT TABLE */}
-
-                      <Grid item xs={12} md={6}>
-                        <Stack spacing={2}>
-                          <Box
-                            sx={{
-                              p: 2,
-                              borderRadius: 2,
-                              border: '1px solid #e6f2ff',
-                              background: '#f7fbff'
-                            }}
-                          >
-                            <Typography fontWeight={700} mb={1}>
-                              Thesis Page
-                            </Typography>
-
-                            <Stack spacing={1}>
-                              {['BLACK & WHITE', 'COLOR'].map((ct) => {
-                                const val = getPagesDisplay(order.pageColorMap, ct);
-                                return (
-                                  <Box key={ct} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                    <Typography sx={{ fontSize: 12, color: '#6b7280' }}>{ct}</Typography>
-
-                                    <Box
-                                      sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        background: '#fff',
-                                        borderRadius: 2,
-                                        p: 1,
-                                        border: '1px solid #e6f2ff',
-                                        width: '100%',
-                                        boxSizing: 'border-box'
-                                      }}
-                                    >
-                                      <Typography sx={{ color: '#111827', flex: 1, wordBreak: 'break-all' }}>{val}</Typography>
-
-                                      <IconButton
-                                        size="small"
-                                        onClick={async () => {
-                                          try {
-                                            await navigator.clipboard.writeText(String(val ?? ''));
-                                          } catch (e) {
-                                            // ignore
-                                          }
-                                        }}
-                                        sx={{
-                                          ml: 1,
-                                          width: 36,
-                                          height: 36,
-                                          borderRadius: 1.2,
-                                          border: '1px solid #e6f2ff',
-                                          background: '#ffffff',
-                                          flex: '0 0 auto'
-                                        }}
-                                      >
-                                        <Copy size={16} color="#2563eb" />
-                                      </IconButton>
-                                    </Box>
-                                  </Box>
-                                );
-                              })}
-                            </Stack>
-                          </Box>
-
-                          <Box
-                            sx={{
-                              p: 2,
-                              borderRadius: 2,
-                              border: '1px solid #e9fff0',
-                              background: '#f7fff5'
-                            }}
-                          >
-                            <Typography fontWeight={700} mb={1}>
-                              Synopsis Page
-                            </Typography>
-
-                            <Stack spacing={1}>
-                              {['BLACK & WHITE', 'COLOR'].map((ct) => {
-                                const val = getPagesDisplay(order.pageColorMapSynopsis, ct);
-                                return (
-                                  <Box key={ct} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                    <Typography sx={{ fontSize: 12, color: '#6b7280' }}>{ct}</Typography>
-
-                                    <Box
-                                      sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1,
-                                        background: '#fff',
-                                        borderRadius: 2,
-                                        p: 1,
-                                        border: '1px solid #d1fae5',
-                                        width: '100%',
-                                        boxSizing: 'border-box'
-                                      }}
-                                    >
-                                      <Typography sx={{ color: '#111827', flex: 1, wordBreak: 'break-all' }}>{val}</Typography>
-
-                                      <IconButton
-                                        size="small"
-                                        onClick={async () => {
-                                          try {
-                                            await navigator.clipboard.writeText(String(val ?? ''));
-                                          } catch (e) {
-                                            // ignore
-                                          }
-                                        }}
-                                        sx={{
-                                          ml: 1,
-                                          width: 36,
-                                          height: 36,
-                                          borderRadius: 1.2,
-                                          border: '1px solid #d1fae5',
-                                          background: '#ffffff',
-                                          flex: '0 0 auto'
-                                        }}
-                                      >
-                                        <Copy size={16} color="#10b981" />
-                                      </IconButton>
-                                    </Box>
-                                  </Box>
-                                );
-                              })}
-                            </Stack>
-                          </Box>
-                        </Stack>
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* ================= DOCUMENT CARD ================= */}
-
-              <Grid item xs={12} md={5.8}>
-                <Card
-                  sx={{
-                    borderRadius: 5,
-                    minHeight: 338,
-                    width: '100%',
-                    height: '100%',
-                    boxShadow:
-                      '0 6px 20px rgba(0,0,0,0.06)'
-                  }}
-                >
-                  <CardContent>
-                    <Typography
-                      fontWeight={700}
-                      fontSize={22}
-                      mb={3}
+          <Grid container spacing={2} sx={{ mb: 3, width: '100%' }}>
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} sx={{ minWidth: 0 }}>
+              <InfoField
+                label="Thesis File"
+                action={
+                  thesisFile?.filePath ? (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => handleDownloadFile(thesisFile)}
+                      sx={{ borderRadius: '8px', textTransform: 'none', fontSize: 12, py: 0.6, px: 2, boxShadow: 'none' }}
                     >
-                      Documents
-                    </Typography>
-
-                    <Stack spacing={3}>
-                      {order.files?.map(
-                        (file, index) => (
-                          <Box key={index}>
-                            <Stack
-                              direction="row"
-                              spacing={2}
-                              alignItems="center"
-                            >
-                              <FileText
-                                size={18}
-                                color="#2563eb"
-                              />
-
-                              <Box>
-                                <Typography
-                                  fontWeight={600}
-                                  mb={0.5}
-                                >
-                                  {file.label}
-                                </Typography>
-
-                                {file.fileName ? (
-                                  <Typography
-                                    sx={{
-                                      color: '#2563eb',
-                                      cursor: file.filePath ? 'pointer' : 'default',
-                                      fontSize: 14,
-                                      textDecoration: file.filePath ? 'underline' : 'none'
-                                    }}
-                                    onClick={async () => {
-                                      await handleDownloadFile(file);
-                                    }}
-                                  >
-                                    {file.fileName}
-                                  </Typography>
-                                ) : (
-                                  <Typography sx={{ color: '#9ca3af' }}>Not available</Typography>
-                                )}
-                              </Box>
-                            </Stack>
-
-                            {index !==
-                              order.files
-                                .length -
-                                1 && (
-                              <Divider
-                                sx={{ mt: 2 }}
-                              />
-                            )}
-                          </Box>
-                        )
-                      )}
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-          </Stack>
-        </Grid>
-
-        {/* ================= ORDER + CUSTOMER + SHIPPING SECTION ================= */}
-
-        <Grid item xs={12} lg={3.5}>
-          <Grid container spacing={2.2}>
-            {/* ================= ORDER DETAILS ================= */}
-
-            <Grid item xs={12} md={4}>
-              <Card
-                sx={{
-                  borderRadius: 4,
-                  height: '100%',
-                  boxShadow:
-                    '0 6px 20px rgba(0,0,0,0.06)',
-                  border: '1px solid #edf2f7'
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 2.5,
-                    '&:last-child': {
-                      pb: 2.5
-                    }
-                  }}
-                >
-                  {/* HEADER */}
-
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    mb={3}
-                  >
-                    <Receipt size={18} />
-
-                    <Typography
-                      fontWeight={700}
-                      fontSize={17}
-                    >
-                      Order Details
-                    </Typography>
-                  </Stack>
-
-                  <DetailsRow
-                    label="Order ID"
-                    value={order.orderId}
-                  />
-
-                  <DetailsRow
-                    label="Order Number"
-                    value={order.orderNumber}
-                  />
-
-                  <DetailsRow
-                    label="Amount"
-                    value={`₹${Number(order.amount ?? 0).toFixed(2)}`}
-                  />
-
-                  <DetailsRow
-                    label="Payment"
-                    value={
-                      <Chip
-                        label={order.paymentStatus || order.paymentOrderId || '—'}
-                        color={
-                          (order.paymentStatus || '').toLowerCase() === 'success'
-                            ? 'success'
-                            : (order.paymentStatus || '').toLowerCase() === 'pending'
-                            ? 'warning'
-                            : (order.paymentStatus || '').toLowerCase() === 'failed'
-                            ? 'error'
-                            : 'default'
-                        }
-                        size="small"
-                      />
-                    }
-                  />
-
-                  <DetailsRow
-                    label="Placement"
-                    value={order.placementType}
-                  />
-
-                  <DetailsRow
-                    label="Branch"
-                    value={order.branchName}
-                  />
-
-                  <DetailsRow
-                    label="Expected Delivery"
-                    value={formatDate(order.expectedDeliveryDate)}
-                  />
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* ================= CUSTOMER + BILLING ================= */}
-
-            <Grid item xs={12} md={5}>
-              <Card
-                sx={{
-                  borderRadius: 4,
-                  height: '100%',
-                  overflow: 'hidden',
-                  boxShadow:
-                    '0 6px 20px rgba(0,0,0,0.06)',
-                  border: '1px solid #edf2f7'
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 2.5,
-                    '&:last-child': {
-                      pb: 2.5
-                    }
-                  }}
-                >
-                  {/* HEADER */}
-
-                  <Stack
-                    direction="row"
-                    spacing={1.5}
-                    alignItems="center"
-                    mb={3}
-                  >
-                    <Box
-                      sx={{
-                        width: 42,
-                        height: 42,
-                        borderRadius: 2.5,
-                        background:
-                          'linear-gradient(135deg,#2563eb,#3b82f6)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#fff'
-                      }}
-                    >
-                      <User size={18} />
-                    </Box>
-
-                    <Box>
-                      <Typography
-                        fontWeight={700}
-                        fontSize={17}
-                      >
-                        Customer & Billing Details
-                      </Typography>
-
-                      <Typography
-                        fontSize={13}
-                        color="text.secondary"
-                      >
-                        Customer profile & address
-                      </Typography>
-                    </Box>
-                  </Stack>
-
-                  {/* DETAILS GRID */}
-
-                  <Grid container spacing={2}>
-                    {/* CUSTOMER */}
-
-                    <Grid item xs={12} md={6}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: 3,
-                          background: '#f8fbff',
-                          border: '1px solid #dbeafe',
-                          height: '100%'
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: '#2563eb',
-                            mb: 2
-                          }}
-                        >
-                          Customer Details
-                        </Typography>
-
-                        <DetailsRow
-                          label="Name"
-                          value={order.customer?.name}
-                        />
-
-                        <DetailsRow
-                          label="Email"
-                          value={order.customer?.email}
-                        />
-
-                        <DetailsRow
-                          label="Phone"
-                          value={order.customer?.phone}
-                        />
-
-                        <DetailsRow
-                          label="WhatsApp"
-                          value={order.customer?.phone}
-                        />
-                      </Box>
-                    </Grid>
-
-                    {/* BILLING */}
-
-                    <Grid item xs={12} md={6}>
-                      <Box
-                        sx={{
-                          p: 2,
-                          borderRadius: 3,
-                          background: '#fafafa',
-                          border: '1px solid #eeeeee',
-                          height: '100%'
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: 14,
-                            fontWeight: 700,
-                            color: '#111827',
-                            mb: 2
-                          }}
-                        >
-                          Billing Details
-                        </Typography>
-
-                        <DetailsRow
-                          label="Address"
-                          value={
-                            order.billingAddress
-                              ?.address1
-                          }
-                        />
-
-                        <DetailsRow
-                          label="City"
-                          value={
-                            order.billingAddress?.city
-                          }
-                        />
-
-                        <DetailsRow
-                          label="State"
-                          value={
-                            order.billingAddress
-                              ?.state
-                          }
-                        />
-
-                        <DetailsRow
-                          label="PIN"
-                          value={
-                            order.billingAddress
-                              ?.pincode
-                          }
-                        />
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* ================= SHIPPING ================= */}
-
-            <Grid item xs={12} md={12}>
-              <Card
-                sx={{
-                  borderRadius: 4,
-                  height: '100%',
-                  boxShadow:
-                    '0 6px 20px rgba(0,0,0,0.06)',
-                  border: '1px solid #edf2f7'
-                }}
-              >
-                <CardContent
-                  sx={{
-                    p: 2.5,
-                    '&:last-child': {
-                      pb: 2.5
-                    }
-                  }}
-                >
-                  {/* HEADER */}
-
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    mb={3}
-                  >
-                    <Truck size={18} />
-
-                    <Typography
-                      fontWeight={700}
-                      fontSize={17}
-                    >
-                      {hasShipping ? 'Shipping Details' : 'Branch Details'}
-                    </Typography>
-                  </Stack>
-
-                  {hasShipping ? (
-                    <>
-                      <DetailsRow
-                        label="Address"
-                        value={
-                          [
-                            order.shippingAddress?.address1,
-                            order.shippingAddress?.address2
-                          ]
-                            .filter(Boolean)
-                            .join(', ') || '—'
-                        }
-                      />
-
-                      <DetailsRow label="City" value={order.shippingAddress?.city} />
-
-                      <DetailsRow label="State" value={order.shippingAddress?.state} />
-
-                      <DetailsRow label="PIN" value={order.shippingAddress?.pincode} />
-                    </>
+                      View File
+                    </Button>
                   ) : (
-                    <>
-                      <DetailsRow label="Branch" value={order.branchName || '—'} />
-                      <DetailsRow label="Placement" value={order.placementType || '—'} />
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+                    <Typography sx={{ color: '#9ca3af', fontSize: 14 }}>Not available</Typography>
+                  )
+                }
+              />
+            </Grid>
+            {[
+              ['Cover Material', hardBinding.coverMaterial || '—'],
+              ['Spine Print', hardBinding.spinePrintingRequired ? 'Required' : 'Not Required'],
+              ['Top Content', hardBinding.topContentArea || '—'],
+              ['Middle Content', hardBinding.middleContentArea || '—'],
+              ['Bottom Content', hardBinding.bottomContentArea || '—']
+            ].map(([lbl, val]) => (
+              <Grid key={lbl} size={{ xs: 12, sm: 6, md: 4, lg: 2 }} sx={{ minWidth: 0 }}>
+                <InfoField label={lbl} value={val} />
+              </Grid>
+            ))}
+          </Grid>
+
+          <Divider sx={{ mb: 2.5, borderColor: '#edf2f7' }} />
+
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, lg: 6 }} sx={{ minWidth: 0 }}>
+              <PagePanel
+                title="Thesis Pages"
+                titleColor="#1d4ed8"
+                headerBg="#eff6ff"
+                headerBorder="#dbeafe"
+                borderColor="#dbeafe"
+                hoverBg="#eff6ff"
+                iconColor="#2563eb"
+                colorMap={order.pageColorMap}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, lg: 6 }} sx={{ minWidth: 0 }}>
+              <PagePanel
+                title="Synopsis Pages"
+                titleColor="#065f46"
+                headerBg="#f0fdf4"
+                headerBorder="#d1fae5"
+                borderColor="#d1fae5"
+                hoverBg="#f0fdf4"
+                iconColor="#10b981"
+                colorMap={order.pageColorMapSynopsis}
+              />
             </Grid>
           </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Order Details — full width */}
+        <Card sx={CARD_SX}>
+          <CardContent sx={CARD_CONTENT_SX}>
+            <SectionHeader icon={<Receipt size={15} />} title="Order Details" />
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <DetailsRow label="Order ID" value={order.orderId} />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <DetailsRow label="Order Number" value={order.orderNumber} />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <DetailsRow
+                  label="Amount"
+                  value={
+                    <Typography sx={{ fontWeight: 700, fontSize: 16, color: '#111827' }}>
+                      ₹{Number(order.amount ?? 0).toFixed(2)}
+                    </Typography>
+                  }
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <DetailsRow
+                  label="Payment"
+                  value={
+                    <Chip
+                      label={order.paymentStatus || order.paymentOrderId || '—'}
+                      color={
+                        (order.paymentStatus || '').toLowerCase() === 'success' ? 'success' :
+                        (order.paymentStatus || '').toLowerCase() === 'pending' ? 'warning' :
+                        (order.paymentStatus || '').toLowerCase() === 'failed' ? 'error' : 'default'
+                      }
+                      size="small"
+                      sx={{ height: 24, fontWeight: 600, fontSize: 12 }}
+                    />
+                  }
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <DetailsRow label="Placement" value={order.placementType} />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <DetailsRow label="Branch" value={order.branchName} />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
+                <DetailsRow label="Expected Delivery" value={formatDate(order.expectedDeliveryDate)} />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Documents | Approved Documents | Customer — equal width */}
+        <Grid container spacing={3} alignItems="stretch">
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
+            <Card sx={{ ...CARD_SX, flex: 1 }}>
+              <CardContent sx={CARD_CONTENT_SX}>
+                <CardTitle>Documents</CardTitle>
+                <Stack spacing={1.5} divider={<Divider sx={{ borderColor: '#f1f5f9' }} />}>
+                  {order.files?.map((file, i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 0.5 }}>
+                      <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: file.fileName ? '#eff6ff' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FileText size={18} color={file.fileName ? '#2563eb' : '#9ca3af'} />
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography fontWeight={600} fontSize={14} color="#111827">{file.label}</Typography>
+                        {file.fileName ? (
+                          <Typography sx={{ color: '#2563eb', cursor: 'pointer', fontSize: 13, textDecoration: 'underline', wordBreak: 'break-word', lineHeight: 1.5, mt: 0.25 }} onClick={() => handleDownloadFile(file)}>
+                            {file.fileName}
+                          </Typography>
+                        ) : (
+                          <Typography sx={{ color: '#9ca3af', fontSize: 13, mt: 0.25 }}>Not uploaded</Typography>
+                        )}
+                      </Box>
+                      {file.filePath && (
+                        <IconButton size="small" onClick={() => handleDownloadFile(file)} sx={{ width: 32, height: 32, borderRadius: '8px', bgcolor: '#eff6ff', flexShrink: 0 }}>
+                          <Download size={14} color="#2563eb" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
+            <Card sx={{ ...CARD_SX, flex: 1 }}>
+              <CardContent sx={CARD_CONTENT_SX}>
+                <CardTitle color="#16a34a">Approved Documents</CardTitle>
+                <Stack spacing={1.5} divider={<Divider sx={{ borderColor: '#f1f5f9' }} />}>
+                  {order.approvedFiles?.map((file, i) => (
+                    <Box key={i} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 0.5 }}>
+                      <Box sx={{ width: 40, height: 40, borderRadius: '10px', bgcolor: file.fileName ? '#f0fdf4' : '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <FileText size={18} color={file.fileName ? '#16a34a' : '#9ca3af'} />
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography fontWeight={600} fontSize={14} color="#111827">{file.label}</Typography>
+                        {file.fileName ? (
+                          <Typography sx={{ color: '#16a34a', cursor: 'pointer', fontSize: 13, textDecoration: 'underline', wordBreak: 'break-word', lineHeight: 1.5, mt: 0.25 }} onClick={() => handleDownloadFile(file)}>
+                            {file.fileName}
+                          </Typography>
+                        ) : (
+                          <Typography sx={{ color: '#9ca3af', fontSize: 13, mt: 0.25 }}>Not uploaded</Typography>
+                        )}
+                      </Box>
+                      {file.filePath && (
+                        <IconButton size="small" onClick={() => handleDownloadFile(file)} sx={{ width: 32, height: 32, borderRadius: '8px', bgcolor: '#f0fdf4', flexShrink: 0 }}>
+                          <Download size={14} color="#16a34a" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', minWidth: 0 }}>
+            <Card sx={{ ...CARD_SX, flex: 1 }}>
+              <CardContent sx={CARD_CONTENT_SX}>
+                <SectionHeader icon={<User size={15} />} title="Customer" subtitle="Contact information" />
+                <SubPanel label="Profile" labelColor="#2563eb" bg="#f8fbff" border="#dbeafe">
+                  <DetailsRow label="Name" value={order.customer?.name} />
+                  <DetailsRow label="Email" value={order.customer?.email} />
+                  <DetailsRow label="Phone" value={order.customer?.phone} />
+                  <DetailsRow label="WhatsApp" value={order.customer?.phone} />
+                </SubPanel>
+              </CardContent>
+            </Card>
+          </Grid>
         </Grid>
-      </Grid>
+
+        {/* Billing | Shipping — equal width */}
+        <Card sx={CARD_SX}>
+        <CardContent sx={CARD_CONTENT_SX}>
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex' }}>
+              <Box sx={{ width: '100%' }}>
+                <SectionHeader
+                  icon={<Receipt size={15} />}
+                  title="Billing Address"
+                  iconBg="#fafafa"
+                  iconColor="#374151"
+                />
+                <SubPanel label="Address" labelColor="#374151" bg="#fafafa" border="#e5e7eb">
+                  <DetailsRow label="Street" value={billingStreet} />
+                  <DetailsRow label="City" value={order.billingAddress?.city} />
+                  <DetailsRow label="State" value={order.billingAddress?.state} />
+                  <DetailsRow label="Country" value={order.billingAddress?.country} />
+                  <DetailsRow label="PIN Code" value={order.billingAddress?.pincode} />
+                </SubPanel>
+              </Box>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex' }}>
+              <Box sx={{ width: '100%' }}>
+                <SectionHeader
+                  icon={<Truck size={15} />}
+                  title={hasShipping ? 'Shipping Details' : 'Branch Details'}
+                  iconBg={hasShipping ? '#f0fdf4' : '#f5f3ff'}
+                  iconColor={hasShipping ? '#16a34a' : '#7c3aed'}
+                />
+                {hasShipping ? (
+                  <SubPanel
+                    label="Delivery Address"
+                    labelColor={hasShipping ? '#16a34a' : '#7c3aed'}
+                    bg={hasShipping ? '#f0fdf4' : '#f5f3ff'}
+                    border={hasShipping ? '#d1fae5' : '#ede9fe'}
+                  >
+                    <DetailsRow label="Street" value={shippingStreet} />
+                    <DetailsRow label="City" value={order.shippingAddress?.city} />
+                    <DetailsRow label="State" value={order.shippingAddress?.state} />
+                    <DetailsRow label="Country" value={order.shippingAddress?.country} />
+                    <DetailsRow label="PIN Code" value={order.shippingAddress?.pincode} />
+                  </SubPanel>
+                ) : (
+                  <SubPanel label="Branch" labelColor="#7c3aed" bg="#f5f3ff" border="#ede9fe">
+                    <DetailsRow label="Branch" value={order.branchName || '—'} />
+                    <DetailsRow label="Placement" value={order.placementType || '—'} />
+                  </SubPanel>
+                )}
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+        </Card>
+      </Stack>
     </Box>
   );
 }

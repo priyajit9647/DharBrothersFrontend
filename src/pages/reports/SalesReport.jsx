@@ -12,13 +12,13 @@ import { getSalesReport, exportSalesReport } from 'api/Reports&Insights';
 
 const COLUMNS = [
   { key: 'customerId', label: 'Customer ID', width: 120 },
-  { key: 'orderId', label: 'Order ID', width: 160 },
+  { key: 'orderId', label: 'Order Number', width: 160 },
   { key: 'month', label: 'Month', width: 120 },
   { key: 'year', label: 'Year', width: 90 },
   { key: 'state', label: 'State', width: 160 },
   { key: 'pincode', label: 'Pincode', width: 120 },
-  { key: 'university', label: 'University', width: 300 },
-  { key: 'orderAmount', label: 'Order Amount', width: 140 },
+  { key: 'university', label: 'University', width: 200 },
+  { key: 'orderAmount', label: 'Order Amount', width: 120 },
   { key: 'totalTime', label: 'Total Time Taken', width: 160 },
   { key: 'customerRating', label: 'Customer Rating', width: 120 }
 ];

@@ -1,505 +1,343 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react'
-import getPlacementTypeAnalytics from 'api/placementType';
+import { useState, useEffect, useRef } from 'react'
+import getPlacementTypeAnalytics from 'api/placementType'
+import MainCard from 'components/MainCard'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
-import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
 import CircularProgress from '@mui/material/CircularProgress'
-import TextField from '@mui/material/TextField'
 import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
 
-const defaultData = [
-  { key: 'whatsapp', label: 'WhatsApp Order Count', count: 24, percent: 60, color: '#22c55e' },
-  { key: 'email', label: 'Email Order Count', count: 16, percent: 40, color: '#2563eb' },
-  { key: 'website', label: 'Website Order Count', count: 0, percent: 0, color: '#9333ea' }
+// ─── Channel config ───────────────────────────────────────────────────────────
+const CHANNELS = [
+  { key: 'whatsapp', label: 'WhatsApp', icon: '💬', color: '#16a34a', light: '#dcfce7' },
+  { key: 'email',   label: 'Email',    icon: '📧', color: '#2563eb', light: '#dbeafe' },
+  { key: 'website', label: 'Website',  icon: '🌐', color: '#7c3aed', light: '#ede9fe' }
 ]
 
-export default function PlacementTypeAnalytics({ data = defaultData }) {
+const R = 68, STROKE = 16, C = 2 * Math.PI * R
 
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
-  const [itemsData, setItemsData] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-
-  const colorFallbacks = ['#2563eb', '#22c55e', '#9333ea', '#f97316', '#ef4444', '#06b6d4'];
-
-  function normalizePlacementResponse(resp) {
-    if (!resp) return [];
-
-    // If response is array of items
-    if (Array.isArray(resp)) {
-      return resp.map((it, idx) => {
-        const key = String(it.key ?? it.id ?? it.type ?? `item-${idx}`);
-        const label = String(it.label ?? it.name ?? key);
-        const count = Number(it.count ?? it.value ?? it.total ?? 0) || 0;
-        return { key, label, count };
-      });
-    }
-
-    // If response is an object map { whatsapp: 12, email: 5 }
-    if (typeof resp === 'object') {
-      return Object.entries(resp).map(([k, v]) => ({ key: k, label: String(k), count: Number(v) || 0 }));
-    }
-
-    return [];
-  }
-
-  // Auto-fetch analytics when both dates are available.
-  const lastQueryRef = useRef('');
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchAnalytics() {
-      if (!startDate || !endDate) return;
-
-      const q = `${startDate}|${endDate}`;
-      if (q === lastQueryRef.current) return; // Prevent duplicate calls for same range
-
-      const s = new Date(startDate);
-      const e = new Date(endDate);
-      if (isNaN(s.getTime()) || isNaN(e.getTime())) return;
-      if (s > e) {
-        setError('Start date cannot be after End date');
-        return;
-      }
-
-      setError(null);
-      setLoading(true);
-      const reqId = ++requestIdRef.current;
-
-      try {
-        const payload = { startDate: s.toISOString(), endDate: e.toISOString() };
-        const resp = await getPlacementTypeAnalytics(payload);
-
-        if (!mounted || requestIdRef.current !== reqId) return; // ignore stale responses
-
-        const normalized = [
-          {
-            key: 'whatsapp',
-            label: 'WhatsApp Order Count',
-            count: Number(resp?.whatsapp?.count || 0),
-            percent: Number(resp?.whatsapp?.percentage || 0),
-            color: '#22c55e'
-          },
-          {
-            key: 'email',
-            label: 'Email Order Count',
-            count: Number(resp?.email?.count || 0),
-            percent: Number(resp?.email?.percentage || 0),
-            color: '#2563eb'
-          },
-          {
-            key: 'website',
-            label: 'Website Order Count',
-            count: Number(resp?.website?.count || 0),
-            percent: Number(resp?.website?.percentage || 0),
-            color: '#9333ea'
-          }
-        ];
-
-        setItemsData({ items: normalized, totalOrders: Number(resp?.totalOrders || 0) });
-        lastQueryRef.current = q;
-      } catch (err) {
-        if (!mounted || requestIdRef.current !== reqId) return;
-        setError(err?.message || String(err));
-      } finally {
-        if (!mounted || requestIdRef.current !== reqId) return;
-        setLoading(false);
-      }
-    }
-
-    fetchAnalytics();
-
-    return () => {
-      mounted = false;
-    };
-  }, [startDate, endDate]);
-
- const items = Array.isArray(itemsData?.items)
-  ? itemsData.items
-  : defaultData;
-
-  const total = useMemo(() => {
-  return Number(
-    itemsData?.totalOrders ||
-    data?.totalOrders ||
-    0
-  );
-}, [itemsData, data]);
-
-  // Donut Chart Geometry
-  const R = 72
-  const STROKE = 18
-  const C = 2 * Math.PI * R
-
+// ─── Donut ────────────────────────────────────────────────────────────────────
+function DonutChart({ items, total }) {
   let offset = 0
-
   return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 3,
-        borderRadius: 5,
-        background: '#ffffff',
-        border: '1px solid #edf2f7',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.05)'
-      }}
-    >
-
-      {/* HEADER */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        flexWrap="wrap"
-        gap={2}
-        mb={3}
-      >
-
-        <Box>
-          <Typography
-            variant="h5"
-            sx={{
-              fontWeight: 800,
-              color: '#111827'
-            }}
-          >
-            Placement Type Analytics
-          </Typography>
-
-          <Typography
-            variant="body2"
-            sx={{
-              color: '#6b7280',
-              mt: 0.5
-            }}
-          >
-            Track all placement channels with date-wise analytics
-          </Typography>
-        </Box>
-
-        {/* FILTERS */}
-        <Box
-          display="flex"
-          gap={1.5}
-          alignItems="center"
-          flexWrap="wrap"
-        >
-
-          <TextField
-            size="small"
-            type="date"
-            label="Start Date"
-            InputLabelProps={{ shrink: true }}
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            sx={{
-              minWidth: 160,
-              bgcolor: '#fff'
-            }}
-          />
-
-          <TextField
-            size="small"
-            type="date"
-            label="End Date"
-            InputLabelProps={{ shrink: true }}
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            sx={{
-              minWidth: 160,
-              bgcolor: '#fff'
-            }}
-          />
-
-          {loading ? (
-            <Box sx={{ display: 'flex', alignItems: 'center', px: 1 }}>
-              <CircularProgress size={24} />
-            </Box>
-          ) : null}
-
-        </Box>
-
-        {error ? (
-          <Typography color="error" sx={{ mt: 1 }}>
-            {error}
-          </Typography>
-        ) : null}
-
+    <Box sx={{ position: 'relative', width: 200, height: 200, mx: 'auto' }}>
+      <svg viewBox="0 0 280 280" width="200" height="200">
+        <g transform="translate(140,140) rotate(-90)">
+          <circle r={R} fill="none" stroke="#f1f5f9" strokeWidth={STROKE} />
+          {items.map((ch) => {
+            const len  = total > 0 ? (ch.count / total) * C : 0
+            const gap  = len > 6 ? 3 : 0
+            const dash = `${Math.max(len - gap, 0)} ${C}`
+            const el   = (
+              <circle key={ch.key} r={R} fill="none"
+                stroke={ch.color} strokeWidth={STROKE}
+                strokeLinecap="round"
+                strokeDasharray={dash}
+                strokeDashoffset={-offset}
+                style={{ transition: 'stroke-dasharray .5s ease' }}
+              />
+            )
+            offset += len
+            return el
+          })}
+          <circle r={R - STROKE / 2 - 2} fill="#fff" />
+        </g>
+      </svg>
+      <Box sx={{
+        position: 'absolute', inset: 0,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center'
+      }}>
+        <Typography sx={{ fontSize: 36, fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>
+          {total}
+        </Typography>
+        <Typography sx={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, mt: 0.3, letterSpacing: 0.5 }}>
+          TOTAL
+        </Typography>
       </Box>
-
-      <Divider sx={{ mb: 3 }} />
-
-      <Grid container spacing={3}>
-
-        {/* DONUT CHART */}
-        <Grid item xs={12} md={5}>
-
-          <Paper
-            elevation={0}
-            sx={{
-              p: 3,
-              borderRadius: 4,
-              bgcolor: '#f8fafc',
-              border: '1px solid #edf2f7',
-              height: '100%'
-            }}
-          >
-
-            <Box display="flex" justifyContent="center">
-
-              <Box sx={{ position: 'relative', width: 240, height: 240 }}>
-
-                <svg viewBox="0 0 320 320" width="240" height="240">
-
-                  <g transform="translate(160,160) rotate(-90)">
-
-                    <circle
-                      r={R}
-                      fill="transparent"
-                      stroke="#e5e7eb"
-                      strokeWidth={STROKE}
-                    />
-
-                    {items.map((it) => {
-
-                      const frac =
-                        total === 0
-                          ? 0
-                          : (Number(it.count) || 0) / total
-
-                      const len = frac * C
-
-                      const dash = `${Math.max(len - 4, 0)}
-                      ${Math.max(C - (len - 4), 0)}`
-
-                      const circle = (
-                        <circle
-                          key={it.key}
-                          r={R}
-                          fill="transparent"
-                          stroke={it.color}
-                          strokeWidth={STROKE}
-                          strokeLinecap="round"
-                          strokeDasharray={dash}
-                          strokeDashoffset={-offset}
-                        />
-                      )
-
-                      offset += len
-
-                      return circle
-                    })}
-
-                    <circle
-                      r={R - STROKE / 2 - 6}
-                      fill="#fff"
-                    />
-
-                  </g>
-
-                </svg>
-
-                {/* CENTER */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-
-                  <Typography
-                    sx={{
-                      fontSize: 42,
-                      fontWeight: 800,
-                      color: '#111827'
-                    }}
-                  >
-                    {total}
-                  </Typography>
-
-                  <Typography
-                    sx={{
-                      color: '#6b7280',
-                      fontWeight: 500
-                    }}
-                  >
-                    Total Orders
-                  </Typography>
-
-                </Box>
-
-              </Box>
-
-            </Box>
-
-          </Paper>
-
-        </Grid>
-
-        {/* RIGHT ANALYTICS */}
-        <Grid item xs={12} md={7}>
-
-          <Grid container spacing={2}>
-
-            {items.map((it) => (
-
-              <Grid item xs={12} sm={6} key={it.key}>
-
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 2,
-                    borderRadius: 4,
-                    border: '1px solid #edf2f7',
-                    transition: '0.3s',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 10px 20px rgba(0,0,0,0.06)'
-                    }
-                  }}
-                >
-
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-
-                    <Box>
-
-                      <Typography
-                        sx={{
-                          fontSize: 14,
-                          color: '#6b7280',
-                          mb: 1
-                        }}
-                      >
-                        {it.label}
-                      </Typography>
-
-                      <Typography
-                        sx={{
-                          fontSize: 32,
-                          fontWeight: 800,
-                          color: it.color
-                        }}
-                      >
-                        {it.count}
-                      </Typography>
-
-                    </Box>
-
-                    <Box
-                      sx={{
-                        width: 58,
-                        height: 58,
-                        borderRadius: 3,
-                        bgcolor: `${it.color}15`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-
-                      <Typography
-                        sx={{
-                          fontWeight: 800,
-                          color: it.color
-                        }}
-                      >
-                        {it.percent}%
-                      </Typography>
-
-                    </Box>
-
-                  </Box>
-
-                </Paper>
-
-              </Grid>
-
-            ))}
-
-            {/* TOTAL CARD */}
-            <Grid item xs={12}>
-
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 3,
-                  borderRadius: 4,
-                  background:
-                    'linear-gradient(135deg,#2563eb,#1e40af)',
-                  color: '#fff'
-                }}
-              >
-
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
-                  alignItems="center"
-                >
-
-                  <Box>
-
-                    <Typography
-                      sx={{
-                        fontSize: 16,
-                        opacity: 0.9
-                      }}
-                    >
-                      Total Orders Across All Channels
-                    </Typography>
-
-                    <Typography
-                      sx={{
-                        fontSize: 38,
-                        fontWeight: 800,
-                        mt: 1
-                      }}
-                    >
-                      {total}
-                    </Typography>
-
-                  </Box>
-
-                  <Box
-                    sx={{
-                      width: 70,
-                      height: 70,
-                      borderRadius: '50%',
-                      bgcolor: 'rgba(255,255,255,0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 30
-                    }}
-                  >
-                    📊
-                  </Box>
-
-                </Box>
-
-              </Paper>
-
-            </Grid>
-
-          </Grid>
-
-        </Grid>
-
-      </Grid>
-
-    </Paper>
+    </Box>
   )
 }
 
-export { defaultData }
+// ─── Stat card ────────────────────────────────────────────────────────────────
+function StatCard({ ch, total }) {
+  const pct = total > 0 ? Math.round((ch.count / total) * 100) : 0
+
+  return (
+    <Box sx={{
+      p: 1.5, borderRadius: 3,
+      border: '1.5px solid', borderColor: `${ch.color}25`,
+      bgcolor: ch.light,
+      height: '100%',
+      transition: 'box-shadow .2s',
+      '&:hover': { boxShadow: `0 4px 16px ${ch.color}20` }
+    }}>
+      {/* icon + % badge */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Box sx={{
+          width: 32, height: 32, borderRadius: 2,
+          bgcolor: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.08)'
+        }}>
+          {ch.icon}
+        </Box>
+        <Box sx={{ px: 1, py: 0.2, borderRadius: 99, bgcolor: `${ch.color}18` }}>
+          <Typography sx={{ fontSize: 11, fontWeight: 700, color: ch.color }}>
+            {pct}%
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* count */}
+      <Typography sx={{ fontSize: 28, fontWeight: 800, color: ch.color, lineHeight: 1, mb: 0.4 }}>
+        {ch.count}
+      </Typography>
+
+      {/* label */}
+      <Typography sx={{ fontSize: 11, fontWeight: 600, color: '#64748b' }}>
+        {ch.label}
+      </Typography>
+
+      {/* bar */}
+      <Box sx={{ mt: 1.2, height: 3, borderRadius: 99, bgcolor: `${ch.color}20`, overflow: 'hidden' }}>
+        <Box sx={{
+          height: '100%', borderRadius: 99, bgcolor: ch.color,
+          width: `${Math.min(pct, 100)}%`, transition: 'width .5s ease'
+        }} />
+      </Box>
+    </Box>
+  )
+}
+
+// ─── Date input ───────────────────────────────────────────────────────────────
+function DateInput({ label, value, onChange, max }) {
+  return (
+    <Box sx={{ flex: 1, minWidth: 130 }}>
+      <Typography sx={{
+        fontSize: 11, fontWeight: 700, color: '#94a3b8',
+        letterSpacing: 0.8, textTransform: 'uppercase', mb: 0.6
+      }}>
+        {label}
+      </Typography>
+      <Box sx={{
+        display: 'flex', alignItems: 'center', gap: 1,
+        px: 1.5, height: 38,
+        bgcolor: '#f8fafc',
+        border: '1.5px solid', borderColor: value ? '#2563eb' : '#e2e8f0',
+        borderRadius: 2,
+        transition: 'border-color .15s',
+        '&:focus-within': { borderColor: '#2563eb', bgcolor: '#fff', boxShadow: '0 0 0 3px #dbeafe' }
+      }}>
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+          <rect x="1" y="2" width="14" height="13" rx="2" stroke="#94a3b8" strokeWidth="1.4"/>
+          <path d="M5 1v2M11 1v2M1 6h14" stroke="#94a3b8" strokeWidth="1.4" strokeLinecap="round"/>
+        </svg>
+        <input
+          type="date"
+          value={value}
+          max={max}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            border: 'none', outline: 'none', background: 'transparent',
+            fontSize: 13, fontWeight: 500, color: '#0f172a',
+            width: '100%', cursor: 'pointer', fontFamily: 'inherit'
+          }}
+        />
+      </Box>
+    </Box>
+  )
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function EmptyState() {
+  return (
+    <Box sx={{ py: 6, textAlign: 'center' }}>
+      <Typography sx={{ fontSize: 40, mb: 1.5 }}>📅</Typography>
+      <Typography sx={{ fontWeight: 700, color: '#475569', fontSize: 15 }}>
+        Select a date range
+      </Typography>
+      <Typography sx={{ color: '#94a3b8', fontSize: 13, mt: 0.5 }}>
+        Pick start and end dates to load placement analytics
+      </Typography>
+    </Box>
+  )
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export default function PlacementTypeAnalytics() {
+  const today = new Date().toISOString().slice(0, 10)
+
+  const [startDate, setStartDate] = useState('')
+  const [endDate,   setEndDate]   = useState('')
+  const [data,      setData]      = useState(null)
+  const [loading,   setLoading]   = useState(false)
+  const [error,     setError]     = useState(null)
+
+  const lastQuery  = useRef('')
+  const reqIdRef   = useRef(0)
+
+  useEffect(() => {
+    let alive = true
+
+    async function load() {
+      if (!startDate || !endDate) return
+
+      const s = new Date(startDate), e = new Date(endDate)
+      if (isNaN(s) || isNaN(e)) return
+      if (s > e) { setError('Start date cannot be after end date'); return }
+
+      const q = `${startDate}|${endDate}`
+      if (q === lastQuery.current) return
+
+      setError(null)
+      setLoading(true)
+      const id = ++reqIdRef.current
+
+      try {
+        const resp = await getPlacementTypeAnalytics({
+          startDate: s.toISOString(),
+          endDate:   e.toISOString()
+        })
+        if (!alive || reqIdRef.current !== id) return
+
+        const total = Number(resp?.totalOrders ?? 0)
+        const items = CHANNELS.map((ch) => ({
+          ...ch,
+          count:   Number(resp?.[ch.key]?.count      ?? 0),
+          percent: Number(resp?.[ch.key]?.percentage ?? 0)
+        }))
+
+        setData({ items, total })
+        lastQuery.current = q
+      } catch (err) {
+        if (!alive || reqIdRef.current !== id) return
+        setError(err?.message || 'Something went wrong')
+      } finally {
+        if (alive && reqIdRef.current === id) setLoading(false)
+      }
+    }
+
+    load()
+    return () => { alive = false }
+  }, [startDate, endDate])
+
+  const items = data?.items ?? []
+  const total = data?.total ?? 0
+
+  return (
+    <MainCard content={false}>
+      <Box sx={{ p: { xs: 2, md: 3 } }}>
+
+        {/* ── Header row ── */}
+        <Box sx={{
+          display: 'flex', alignItems: 'flex-start',
+          justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 2.5
+        }}>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 700, color: '#0f172a' }}>
+              Placement Type Analytics
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#94a3b8', mt: 0.3 }}>
+              Orders by channel — WhatsApp · Email · Website
+            </Typography>
+          </Box>
+
+          {/* ── Date range ── */}
+          <Stack direction="row" alignItems="flex-end" spacing={1} flexWrap="wrap">
+            <DateInput
+              label="From"
+              value={startDate}
+              max={today}
+              onChange={(v) => { setStartDate(v); lastQuery.current = '' }}
+            />
+            <Box sx={{ pb: 0.5, color: '#cbd5e1', fontSize: 18, fontWeight: 300 }}>—</Box>
+            <DateInput
+              label="To"
+              value={endDate}
+              max={today}
+              onChange={(v) => { setEndDate(v); lastQuery.current = '' }}
+            />
+            {loading && (
+              <Box sx={{ pb: 0.8, pl: 0.5 }}>
+                <CircularProgress size={20} thickness={4} />
+              </Box>
+            )}
+          </Stack>
+        </Box>
+
+        {/* error */}
+        {error && (
+          <Box sx={{
+            mb: 2, px: 2, py: 1.2, borderRadius: 2,
+            bgcolor: '#fef2f2', border: '1px solid #fecaca'
+          }}>
+            <Typography sx={{ fontSize: 13, color: '#dc2626', fontWeight: 500 }}>
+              ⚠ {error}
+            </Typography>
+          </Box>
+        )}
+
+        <Divider sx={{ mb: 3 }} />
+
+        {/* ── Content ── */}
+        {!data ? (
+          <EmptyState />
+        ) : (
+          <Grid container spacing={3} alignItems="center">
+
+            {/* Donut + legend */}
+            <Grid item xs={12} sm={5}>
+              <DonutChart items={items} total={total} />
+
+              <Stack spacing={0.8} sx={{ mt: 2.5, px: 1 }}>
+                {items.map((ch) => (
+                  <Box key={ch.key} sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: 99, bgcolor: ch.color, flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: 12, color: '#64748b', flex: 1 }}>{ch.label}</Typography>
+                    <Typography sx={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>{ch.count}</Typography>
+                    <Typography sx={{ fontSize: 11, color: '#94a3b8', minWidth: 32, textAlign: 'right' }}>
+                      {total > 0 ? Math.round((ch.count / total) * 100) : 0}%
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Grid>
+
+            {/* Stat cards */}
+            <Grid item xs={12} sm={7}>
+              {/* 3 cards in one row */}
+              <Grid container spacing={1.5} sx={{ mb: 1.5 }}>
+                {items.map((ch) => (
+                  <Grid item xs={4} key={ch.key}>
+                    <StatCard ch={ch} total={total} />
+                  </Grid>
+                ))}
+              </Grid>
+
+              {/* total banner — full width below */}
+              <Box sx={{
+                p: 2, borderRadius: 3,
+                background: 'linear-gradient(120deg, #1e40af 0%, #2563eb 100%)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+              }}>
+                <Box>
+                  <Typography sx={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 500, mb: 0.3 }}>
+                    All Channels Combined
+                  </Typography>
+                  <Typography sx={{ fontSize: 30, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
+                    {total}
+                  </Typography>
+                </Box>
+                <Typography sx={{ fontSize: 28 }}>📊</Typography>
+              </Box>
+            </Grid>
+
+          </Grid>
+        )}
+
+      </Box>
+    </MainCard>
+  )
+}

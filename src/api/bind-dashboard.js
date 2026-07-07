@@ -145,12 +145,12 @@ export async function completeMyJob(id, remark) {
 export const completeJob = completeMyJob;
 
 /**
- * Fetch Printing Dashboard job list
- * Endpoint: GET /api/v1/my-jobs/printing-dashboard
+ * Fetch Binding Dashboard job list
+ * Endpoint: GET /api/v1/my-jobs/binding-dashboard
  * @returns {Promise<Array>}
  */
-export async function getPrintingDashboardJobs() {
-  const response = await authorizedFetch('/api/v1/my-jobs/printing-dashboard', {
+export async function getBindingDashboardJobs() {
+  const response = await authorizedFetch('/api/v1/my-jobs/binding-dashboard', {
     method: 'GET'
   });
 

@@ -11,10 +11,12 @@ const DashboardDefault = Loadable(lazy(() => import('pages/dashboard/default')))
 // render - BMS Operations
 const OrderBoard = Loadable(lazy(() => import('pages/operations/OrderBoard')));
 const MyJobs = Loadable(lazy(() => import('pages/operations/MyJobs')));
+const Binddashboard = Loadable(lazy(() => import('pages/operations/Binddashboard')));
 const DeliveryDispatch = Loadable(lazy(() => import('pages/operations/Delivery')));
 const OrderDetails = Loadable(lazy(() => import('pages/operations/OrderDetails')));
 const Whatsapp = Loadable(lazy(() => import('pages/operations/Whatsapp')));
 const Email = Loadable(lazy(() => import('pages/operations/Email')));
+const ExtraTask = Loadable(lazy(() => import('pages/operations/ExtraTask')));
 
 
 // render - BMS Admin & Insights
@@ -26,6 +28,7 @@ const CompleteJobsReport = Loadable(lazy(() => import('pages/reports/CompleteJob
 const SalesReport = Loadable(lazy(() => import('pages/reports/SalesReport')));
 // TaskReports removed
 const GstReports = Loadable(lazy(() => import('pages/reports/GstReports')));
+const CompanyCashCollection = Loadable(lazy(() => import('pages/reports/CompanyCashCollection')));
 const Branches = Loadable(lazy(() => import('pages/admin/Branches')));
 const Teams = Loadable(lazy(() => import('pages/admin/Teams')));
 const DocumentVersionController = Loadable(lazy(() => import('pages/admin/DocumentVersionController')));
@@ -85,8 +88,16 @@ const MainRoutes = {
       element: <OrderBoard />
     },
     {
-      path: 'my-jobs',
+      path: 'print-dashboard',
       element: <MyJobs />
+    },
+    {
+      path: 'bind-dashboard',
+      element: <Binddashboard/>
+    },
+    {
+      path: 'extra-tasks',
+      element: <ExtraTask />
     },
     {
       path: 'orders/view/:orderId',
@@ -135,6 +146,10 @@ const MainRoutes = {
         {
           path: 'gst-reports',
           element: <GstReports />
+        },
+        {
+          path: 'company-cash-collection',
+          element: <CompanyCashCollection />
         },
         {
           path: 'notifications',

@@ -2,7 +2,6 @@ import { lazy } from 'react';
 
 // project imports
 import Loadable from 'components/Loadable';
-import RequireAuth from './RequireAuth';
 
 // render - Customer Feedback
 const FeedbackPage = Loadable(lazy(() => import('pages/customer/Feedback')));
@@ -12,10 +11,8 @@ const FeedbackPage = Loadable(lazy(() => import('pages/customer/Feedback')));
 const FeedbackRoutes = {
   path: '/',
   element: (
-    <RequireAuth>
-      {/* No specific layout here, FeedbackPage will handle its own minimal layout */}
-      <FeedbackPage />
-    </RequireAuth>
+    /* No auth guard here — feedback is reachable from the customer portal */
+    <FeedbackPage />
   ),
   children: [
     {

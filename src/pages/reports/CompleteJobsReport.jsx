@@ -23,7 +23,6 @@ const COLUMNS = [
   { key: 'department',     label: 'Department',      width: 130 },
   { key: 'completedBy',    label: 'Completed By',    width: 150 },
   { key: 'completedDate',  label: 'Completed Date',  width: 140 },
-  { key: 'turnaroundTime', label: 'Turnaround',      width: 120 },
   { key: 'totalAmount',    label: 'Revenue',         width: 110 },
   { key: 'status',         label: 'Status',          width: 120 },
 ];
@@ -310,27 +309,32 @@ const CompleteJobsReport = () => {
                     onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
                     onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? '#fff' : '#fafbfc'}
                   >
-                    <td style={cellStyle(COLUMNS[0].width)}>
-                      <span style={{ color: '#2f6df6', fontWeight: 600 }}>{row.jobId ?? '-'}</span>
-                    </td>
-                    <td style={cellStyle(COLUMNS[1].width)} title={row.client}>{row.client ?? '-'}</td>
-                    <td style={cellStyle(COLUMNS[2].width)}>{row.branch ?? '-'}</td>
-                    <td style={cellStyle(COLUMNS[3].width)} title={row.department}>{row.department ?? '-'}</td>
-                    <td style={cellStyle(COLUMNS[4].width)} title={row.completedBy}>{row.completedBy ?? '-'}</td>
-                    <td style={cellStyle(COLUMNS[5].width)}>
-                      {row.completedDate ? new Date(row.completedDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                    </td>
-                    <td style={cellStyle(COLUMNS[6].width)}>
-                      {row.turnaroundTime
-                        ? <span style={{ background: '#eef2ff', color: '#1e40af', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700 }}>{row.turnaroundTime}</span>
-                        : '-'}
-                    </td>
-                    <td style={{ ...cellStyle(COLUMNS[7].width), fontWeight: 700, color: '#16a34a' }}>
-                      {row.totalAmount != null ? `₹${Number(row.totalAmount).toLocaleString('en-IN')}` : '-'}
-                    </td>
-                    <td style={cellStyle(COLUMNS[8].width)}>
-                      {row.status ? <span style={statusStyle(row.status)}>{row.status}</span> : '-'}
-                    </td>
+                    {COLUMNS.map((col) => {
+                      const v = row[col.key];
+                      let content = v ?? '-';
+                      let title = typeof v === 'string' ? v : undefined;
+                      let style = cellStyle(col.width);
+
+                      if (col.key === 'jobId') {
+                        content = <span style={{ color: '#2f6df6', fontWeight: 600 }}>{v ?? '-'}</span>;
+                        title = undefined;
+                      } else if (col.key === 'completedDate') {
+                        content = v ? new Date(v).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
+                        title = undefined;
+                      } else if (col.key === 'totalAmount') {
+                        content = v != null ? `₹${Number(v).toLocaleString('en-IN')}` : '-';
+                        style = { ...style, fontWeight: 700, color: '#16a34a' };
+                      } else if (col.key === 'status') {
+                        content = v ? <span style={statusStyle(v)}>{v}</span> : '-';
+                        title = undefined;
+                      }
+
+                      return (
+                        <td key={col.key} style={style} title={title}>
+                          {content}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

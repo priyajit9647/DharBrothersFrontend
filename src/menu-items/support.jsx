@@ -60,6 +60,12 @@ const support = {
           title: 'GST Reports',
           type: 'item',
           url: '/reports/gst-reports'
+        },
+        {
+          id: 'company-cash-collection',
+          title: 'Cash Collection',
+          type: 'item',
+          url: '/reports/company-cash-collection'
         }
       ]
     },

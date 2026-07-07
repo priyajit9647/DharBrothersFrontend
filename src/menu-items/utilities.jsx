@@ -25,10 +25,24 @@ const utilities = {
     },
     {
       id: 'my-jobs',
-      title: 'My Jobs',
+      title: 'Print Dashboard',
       type: 'item',
-      url: '/my-jobs',
+      url: '/print-dashboard',
       icon: icons.ScheduleOutlined
+    },
+    {
+      id: 'bind-dashboard',
+      title: 'Bind Dashboard',
+      type: 'item',
+      url: '/bind-dashboard',
+      icon: icons.ScheduleOutlined
+    },
+    {
+      id: 'extra-tasks',
+      title: 'Extra Tasks',
+      type: 'item',
+      url: '/extra-tasks',
+      icon: icons.ProjectOutlined
     },
     {
       id: 'whatsapp',
