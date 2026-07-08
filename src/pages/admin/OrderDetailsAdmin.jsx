@@ -606,9 +606,9 @@ export default function OrderDetailsAdmin() {
         {/* Binding info — full width */}
         <Card sx={CARD_SX}>
           <CardContent sx={CARD_CONTENT_SX}>
-            <CardTitle>Binding Info & Page Counts</CardTitle>
+            {/* <CardTitle>Binding Info & Page Counts</CardTitle> */}
 
-          <Grid container spacing={2} sx={{ mb: 3, width: '100%' }}>
+          {/* <Grid container spacing={2} sx={{ mb: 3, width: '100%' }}>
             <Grid size={{ xs: 12, sm: 6, md: 4, lg: 2 }} sx={{ minWidth: 0 }}>
               <InfoField
                 label="Thesis File"
@@ -641,7 +641,7 @@ export default function OrderDetailsAdmin() {
             ))}
           </Grid>
 
-          <Divider sx={{ mb: 2.5, borderColor: '#edf2f7' }} />
+          <Divider sx={{ mb: 2.5, borderColor: '#edf2f7' }} /> */}
 
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, lg: 6 }} sx={{ minWidth: 0 }}>

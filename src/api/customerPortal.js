@@ -1,4 +1,4 @@
-import { authorizedCustomerFetch, publicFetch, setCustomerAuthState } from 'api/auth';
+import { authorizedCustomerFetch, authorizedFetch, publicFetch, setCustomerAuthState, getCustomerPortalSession } from 'api/auth';
 
 // ==============================|| CUSTOMER PORTAL API CLIENT (PLACEHOLDER) ||============================== //
 // These helpers describe the intended backend contract for the one-time customer portal.
@@ -305,7 +305,15 @@ export async function getCustomerPortalOrderPaymentStatus(orderId) {
  */
 export async function getCustomerPortalOrderTimeline(orderId) {
   if (!orderId) throw new Error('orderId is required');
-  return authorizedCustomerFetch(`/api/customer-portal/orders/${encodeURIComponent(String(orderId))}/timeline`, {
+
+  const path = `/api/customer-portal/orders/${encodeURIComponent(String(orderId))}/timeline`;
+
+  // Use admin authentication when there is no active customer portal session
+  // (e.g. the admin order details page), otherwise use the customer token.
+  const isCustomerPortal = Boolean(getCustomerPortalSession());
+  const fetcher = isCustomerPortal ? authorizedCustomerFetch : authorizedFetch;
+
+  return fetcher(path, {
     method: 'GET'
   });
 }
