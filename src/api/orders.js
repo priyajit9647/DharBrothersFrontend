@@ -519,3 +519,68 @@ export async function getOrderPaymentStatus(orderId) {
     method: 'GET'
   });
 }
+
+/**
+ * Update a binding on an admin order
+ * Endpoint: PUT /api/v1/orders/admin/{orderId}/bindings/{bindingType}
+ */
+export async function updateAdminOrderBinding(orderId, bindingType, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  if (!bindingType) throw new Error('bindingType is required');
+
+  const path = `/api/v1/orders/admin/${encodeURIComponent(String(orderId))}/bindings/${encodeURIComponent(String(bindingType))}`;
+
+  const response = await authorizedFetchRaw(path, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || data?.detail || `Request failed (${response.status})`;
+    const validationErrors = Array.isArray(data?.errors)
+      ? data.errors.map((item) => (typeof item === 'string' ? item : item?.defaultMessage || item?.message || JSON.stringify(item))).join(', ')
+      : '';
+    throw new Error(validationErrors ? `${message}: ${validationErrors}` : message);
+  }
+
+  return data;
+}
+
+/**
+ * Update shipping details on an admin order
+ * Endpoint: PUT /api/v1/orders/admin/{orderId}/shipping
+ */
+export async function updateAdminOrderShipping(orderId, payload) {
+  if (!orderId) throw new Error('orderId is required');
+  if (!payload || typeof payload !== 'object') throw new Error('payload is required');
+
+  const path = `/api/v1/orders/admin/${encodeURIComponent(String(orderId))}/shipping`;
+  const response = await authorizedFetchRaw(path, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    const message = data?.message || data?.error || data?.detail || `Request failed (${response.status})`;
+    const validationErrors = Array.isArray(data?.errors)
+      ? data.errors.map((item) => (typeof item === 'string' ? item : item?.defaultMessage || item?.message || JSON.stringify(item))).join(', ')
+      : '';
+    throw new Error(validationErrors ? `${message}: ${validationErrors}` : message);
+  }
+
+  return data;
+}

@@ -5,7 +5,7 @@ const TOKEN_KEY = 'pushToken';
 
 async function initFirebase() {
   if (typeof window === 'undefined') {
-    throw new Error('Not in browser');
+    return null;
   }
 
   const firebaseConfig = {
@@ -19,16 +19,21 @@ async function initFirebase() {
 };
 
   if (!firebaseConfig.apiKey) {
-    throw new Error('Firebase ENV variables missing');
+    return null;
   }
 
   // Resilient dynamic imports to support different bundlers/SDK shapes
-  const firebaseAppModule = await import('firebase/app');
+  let firebaseAppModule;
+  let firebaseMessagingModule;
+  try {
+    firebaseAppModule = await import('firebase/app');
+    firebaseMessagingModule = await import('firebase/messaging');
+  } catch {
+    return null;
+  }
   const initializeApp = firebaseAppModule.initializeApp || firebaseAppModule.default?.initializeApp;
   const getApps = firebaseAppModule.getApps || firebaseAppModule.default?.getApps;
   const getApp = firebaseAppModule.getApp || firebaseAppModule.default?.getApp;
-
-  const firebaseMessagingModule = await import('firebase/messaging');
   const getMessaging = firebaseMessagingModule.getMessaging || firebaseMessagingModule.default?.getMessaging;
   const isSupportedFn = firebaseMessagingModule.isSupported || firebaseMessagingModule.default?.isSupported;
 
@@ -45,11 +50,11 @@ async function initFirebase() {
   }
 
   if (!supported) {
-    throw new Error('Firebase messaging not supported in this browser');
+    return null;
   }
 
   if (typeof initializeApp !== 'function' || typeof getMessaging !== 'function') {
-    throw new Error('Firebase SDK is not available or has unexpected exports');
+    return null;
   }
 
   // Prevent duplicate initialization — be tolerant if getApps/getApp are missing
@@ -147,6 +152,7 @@ export async function listenForMessages() {
 
   try {
     const messaging = await initFirebase();
+    if (!messaging) return;
 
     const messagingModuleForListener = await import('firebase/messaging');
     const onMessage = messagingModuleForListener.onMessage || messagingModuleForListener.default?.onMessage;
@@ -189,7 +195,8 @@ export async function listenForMessages() {
       );
     });
   } catch (err) {
-    console.error('listenForMessages failed:', err);
+    // Best-effort foreground listener: skip noisy startup errors.
+    console.warn('listenForMessages skipped:', err?.message || err);
   }
 }
 

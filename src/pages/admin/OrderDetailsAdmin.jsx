@@ -13,15 +13,23 @@ import TableContainer from '@mui/material/TableContainer';
 import TableRow from '@mui/material/TableRow';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Paper from '@mui/material/Paper';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Divider from '@mui/material/Divider';
 import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Checkbox from '@mui/material/Checkbox';
 
-import { Download, User, Truck, Receipt, FileText, Copy, Package, Settings, Printer, BookOpen, CheckCircle } from 'lucide-react';
+import { Download, User, Truck, Receipt, FileText, Copy, Package, Settings, Printer, BookOpen, CheckCircle, Pencil } from 'lucide-react';
 
-import { getOrderById, downloadOrderFile, downloadInvoice } from 'api/orders';
+import { getOrderById, downloadOrderFile, downloadInvoice, updateAdminOrderBinding, updateAdminOrderShipping } from 'api/orders';
 import { getCustomerPortalOrderTimeline } from 'api/customerPortal';
 
 function pickFirst(source, keys) {
@@ -33,8 +41,44 @@ function pickFirst(source, keys) {
   return null;
 }
 
+function unwrapOrderResponse(raw) {
+  return raw?.data && typeof raw.data === 'object' && !Array.isArray(raw.data) ? raw.data : raw;
+}
+
+function parseApiError(err) {
+  if (!err) return 'Failed to update binding';
+  if (typeof err === 'string') return err;
+  if (err.message) return err.message;
+  return 'Failed to update binding';
+}
+
+function toNumberOrNull(value) {
+  if (value === '' || value == null) return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function findBindingLocation(bindings, row) {
+  if (!Array.isArray(bindings) || !row) return null;
+
+  if (
+    row.bindingIndex != null
+    && bindings[row.bindingIndex]
+    && String(bindings[row.bindingIndex].bindingType || '').toUpperCase() === String(row.bindingType || '').toUpperCase()
+  ) {
+    return { bindingIndex: row.bindingIndex, binding: bindings[row.bindingIndex] };
+  }
+
+  const bindingIndex = bindings.findIndex(
+    (binding) => String(binding?.bindingType || '').toUpperCase() === String(row.bindingType || '').toUpperCase()
+  );
+
+  if (bindingIndex < 0) return null;
+  return { bindingIndex, binding: bindings[bindingIndex] };
+}
+
 function normalizeOrderResponse(raw) {
-  const resp = raw?.data && typeof raw.data === 'object' && !Array.isArray(raw.data) ? raw.data : raw;
+  const resp = unwrapOrderResponse(raw);
 
   const billingAddress = {
     address1: pickFirst(resp?.billingAddress, ['address1', 'addressLine1', 'line1', 'street'])
@@ -101,11 +145,12 @@ function normalizeOrderResponse(raw) {
 
   const printingDetails = [];
   if (Array.isArray(resp?.bindings)) {
-    resp.bindings.forEach((b) => {
+    resp.bindings.forEach((b, bindingIndex) => {
       const items = b.bindingItems || [];
       const base = {
         desc: `${b.bindingType} Binding`,
         bindingType: b.bindingType,
+        bindingIndex,
         spinePrintingRequired: b.spinePrintingRequired,
         topContentArea: b.topContentArea,
         middleContentArea: b.middleContentArea,
@@ -115,8 +160,9 @@ function normalizeOrderResponse(raw) {
         coverPageDesignFileName: b.coverPageDesignFileName
       };
       if (items.length) {
-        items.forEach((item) => printingDetails.push({
+        items.forEach((item, itemIndex) => printingDetails.push({
           ...base,
+          itemIndex,
           size: item.paperSize,
           paper: item.paper,
           color: item.printColour || item.printColor,
@@ -129,6 +175,7 @@ function normalizeOrderResponse(raw) {
       } else {
         printingDetails.push({
           ...base,
+          itemIndex: 0,
           size: null,
           paper: null,
           color: null,
@@ -375,13 +422,39 @@ function PagePanel({ title, titleColor, headerBg, headerBorder, borderColor, hov
 export default function OrderDetailsAdmin() {
   const { orderId } = useParams();
   const [order, setOrder] = useState(null);
+  const [apiOrder, setApiOrder] = useState(null);
   const [timeline, setTimeline] = useState(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [timelineError, setTimelineError] = useState(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [shippingEditOpen, setShippingEditOpen] = useState(false);
+  const [shippingForm, setShippingForm] = useState({
+    address1: '',
+    address2: '',
+    city: '',
+    state: '',
+    country: '',
+    pincode: '',
+    pickup: false,
+    branchId: ''
+  });
+  const [shippingSaving, setShippingSaving] = useState(false);
+  const [shippingError, setShippingError] = useState('');
 
   const formatDate = (d) => {
     if (!d) return '—';
     try { return new Date(d).toLocaleString(); } catch { return d; }
+  };
+
+  const reloadOrder = async () => {
+    const orderResp = await getOrderById(orderId);
+    const raw = unwrapOrderResponse(orderResp);
+    setApiOrder(raw ? JSON.parse(JSON.stringify(raw)) : null);
+    setOrder(normalizeOrderResponse(orderResp));
   };
 
   useEffect(() => {
@@ -402,6 +475,8 @@ export default function OrderDetailsAdmin() {
         if (!mounted) return;
 
         if (orderResp.status === 'fulfilled') {
+          const raw = unwrapOrderResponse(orderResp.value);
+          setApiOrder(raw ? JSON.parse(JSON.stringify(raw)) : null);
           setOrder(normalizeOrderResponse(orderResp.value));
         } else {
           console.log(orderResp.reason);
@@ -424,6 +499,97 @@ export default function OrderDetailsAdmin() {
     load();
     return () => { mounted = false; };
   }, [orderId]);
+
+  const handleOpenEdit = (row) => {
+    setEditingRow(row);
+    setEditForm({
+      paperSize: row.size || '',
+      paper: row.paper || '',
+      printColour: row.color || '',
+      printingType: row.printingType || '',
+      noOfCopies: row.noOfCopies ?? '',
+      a4Pockets: row.a4Pockets ?? '',
+      cdPockets: row.cdPockets ?? '',
+      additionalInformation: row.additionalInformation || '',
+      topContentArea: row.topContentArea || '',
+      middleContentArea: row.middleContentArea || '',
+      bottomContentArea: row.bottomContentArea || '',
+      coverMaterial: row.coverMaterial || '',
+      spinePrintingRequired: Boolean(row.spinePrintingRequired)
+    });
+    setEditError('');
+    setEditOpen(true);
+  };
+
+  const handleEditFieldChange = (field) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveBinding = async () => {
+    if (!editingRow) {
+      setEditError('No binding row selected.');
+      return;
+    }
+    if (!orderId) {
+      setEditError('Order ID is missing.');
+      return;
+    }
+
+    const sourceOrder = apiOrder || order;
+    if (!sourceOrder) {
+      setEditError('Order details are not loaded yet.');
+      return;
+    }
+
+    setEditSaving(true);
+    setEditError('');
+
+    try {
+      const bindings = Array.isArray(sourceOrder?.bindings) ? JSON.parse(JSON.stringify(sourceOrder.bindings)) : [];
+      const location = findBindingLocation(bindings, editingRow);
+      if (!location) throw new Error(`Binding "${editingRow.bindingType || 'unknown'}" not found`);
+
+      const { binding } = location;
+      const itemIndex = editingRow.itemIndex ?? 0;
+
+      binding.topContentArea = editForm.topContentArea ?? '';
+      binding.middleContentArea = editForm.middleContentArea ?? '';
+      binding.bottomContentArea = editForm.bottomContentArea ?? '';
+      binding.coverMaterial = editForm.coverMaterial ?? '';
+      binding.spinePrintingRequired = Boolean(editForm.spinePrintingRequired);
+
+      if (!Array.isArray(binding.bindingItems)) binding.bindingItems = [];
+      const existingItem = binding.bindingItems[itemIndex] || {};
+      binding.bindingItems[itemIndex] = {
+        ...existingItem,
+        paperSize: editForm.paperSize ?? '',
+        paper: editForm.paper ?? '',
+        printColour: editForm.printColour ?? '',
+        printingType: editForm.printingType ?? '',
+        noOfCopies: toNumberOrNull(editForm.noOfCopies),
+        a4Pockets: toNumberOrNull(editForm.a4Pockets),
+        cdPockets: toNumberOrNull(editForm.cdPockets),
+        additionalInformation: editForm.additionalInformation ?? ''
+      };
+
+      await updateAdminOrderBinding(orderId, editingRow.bindingType, binding);
+
+      try {
+        await reloadOrder();
+      } catch (reloadErr) {
+        console.error('Binding saved but failed to reload order', reloadErr);
+      }
+
+      setEditOpen(false);
+      setEditingRow(null);
+    } catch (e) {
+      console.error('Failed to update binding', e);
+      setEditError(parseApiError(e));
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   const handleDownloadFile = async (file) => {
     if (!file?.filePath) return;
@@ -453,6 +619,63 @@ export default function OrderDetailsAdmin() {
           '_blank', 'noopener'
         );
       } catch {}
+    }
+  };
+
+  const handleOpenShippingEdit = () => {
+    const source = apiOrder || order || {};
+    const sourceAddress = source.shippingAddress || {};
+    const placement = String(source.placementType || '').toLowerCase();
+    const pickup = placement.includes('pickup') || Boolean(source.pickup);
+
+    setShippingForm({
+      address1: sourceAddress.address1 || '',
+      address2: sourceAddress.address2 || '',
+      city: sourceAddress.city || '',
+      state: sourceAddress.state || '',
+      country: sourceAddress.country || '',
+      pincode: sourceAddress.pincode || '',
+      pickup,
+      branchId: source.branchId != null ? String(source.branchId) : ''
+    });
+    setShippingError('');
+    setShippingEditOpen(true);
+  };
+
+  const handleShippingFieldChange = (field) => (e) => {
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setShippingForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveShipping = async () => {
+    if (!orderId) {
+      setShippingError('Order ID is missing.');
+      return;
+    }
+
+    setShippingSaving(true);
+    setShippingError('');
+    try {
+      const payload = {
+        shippingAddress: {
+          address1: shippingForm.address1 || '',
+          address2: shippingForm.address2 || '',
+          city: shippingForm.city || '',
+          state: shippingForm.state || '',
+          country: shippingForm.country || '',
+          pincode: shippingForm.pincode || ''
+        },
+        pickup: Boolean(shippingForm.pickup),
+        branchId: shippingForm.branchId === '' ? null : toNumberOrNull(shippingForm.branchId)
+      };
+
+      await updateAdminOrderShipping(orderId, payload);
+      await reloadOrder();
+      setShippingEditOpen(false);
+    } catch (e) {
+      setShippingError(parseApiError(e));
+    } finally {
+      setShippingSaving(false);
     }
   };
 
@@ -533,24 +756,15 @@ export default function OrderDetailsAdmin() {
               component={Paper}
               sx={{ borderRadius: '10px', overflowX: 'auto', border: '1px solid #edf2f7', boxShadow: 'none' }}
             >
-              <Table sx={{ minWidth: 900, tableLayout: 'fixed', width: '100%' }}>
+              <Table sx={{ minWidth: 980, tableLayout: 'fixed', width: '100%' }}>
                 <colgroup>
-                  <col style={{ width: '130px' }} /> {/* Description */}
-                  <col style={{ width: '90px' }}  /> {/* Paper Size */}
-                  <col style={{ width: '110px' }} /> {/* Paper Type */}
-                  <col style={{ width: '90px' }}  /> {/* Colour */}
-                  <col style={{ width: '80px' }}  /> {/* No. Copies */}
-                  <col style={{ width: '100px' }} /> {/* Printing */}
-                  <col style={{ width: '60px' }}  /> {/* A4 */}
-                  <col style={{ width: '60px' }}  /> {/* CD */}
-                  <col style={{ width: '160px' }} /> {/* Information */}
-                  <col style={{ width: '110px' }} /> {/* Top Content */}
-                  <col style={{ width: '120px' }} /> {/* Middle Content */}
-                  <col style={{ width: '120px' }} /> {/* Bottom Content */}
+                  {['130px', '90px', '110px', '90px', '80px', '100px', '60px', '60px', '160px', '110px', '120px', '120px', '70px'].map((w, idx) => (
+                    <col key={idx} style={{ width: w }} />
+                  ))}
                 </colgroup>
                 <TableBody>
                   <TableRow sx={{ background: '#f8fafc' }}>
-                    {['Description', 'Paper Size', 'Paper Type', 'Colour', 'No. Copies', 'Printing', 'A4', 'CD', 'Information', 'Top Content', 'Middle Content', 'Bottom Content'].map((h) => (
+                    {['Description', 'Paper Size', 'Paper Type', 'Colour', 'No. Copies', 'Printing', 'A4', 'CD', 'Information', 'Top Content', 'Middle Content', 'Bottom Content', 'Actions'].map((h) => (
                       <TableCell
                         key={h}
                         sx={{
@@ -595,6 +809,24 @@ export default function OrderDetailsAdmin() {
                           {v ?? '—'}
                         </TableCell>
                       ))}
+                      <TableCell align="center" sx={{ py: 1.5, px: 1 }}>
+                        <Tooltip title="Edit binding">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenEdit(r)}
+                            aria-label="Edit binding row"
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: '8px',
+                              border: '1px solid #e5e7eb',
+                              color: '#2563eb'
+                            }}
+                          >
+                            <Pencil size={14} />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -828,12 +1060,23 @@ export default function OrderDetailsAdmin() {
 
             <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex' }}>
               <Box sx={{ width: '100%' }}>
-                <SectionHeader
-                  icon={<Truck size={15} />}
-                  title={hasShipping ? 'Shipping Details' : 'Branch Details'}
-                  iconBg={hasShipping ? '#f0fdf4' : '#f5f3ff'}
-                  iconColor={hasShipping ? '#16a34a' : '#7c3aed'}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                  <SectionHeader
+                    icon={<Truck size={15} />}
+                    title={hasShipping ? 'Shipping Details' : 'Branch Details'}
+                    iconBg={hasShipping ? '#f0fdf4' : '#f5f3ff'}
+                    iconColor={hasShipping ? '#16a34a' : '#7c3aed'}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<Pencil size={14} />}
+                    onClick={handleOpenShippingEdit}
+                    sx={{ textTransform: 'none', borderRadius: '8px', flexShrink: 0, mt: -2 }}
+                  >
+                    Edit
+                  </Button>
+                </Box>
                 {hasShipping ? (
                   <SubPanel
                     label="Delivery Address"
@@ -951,6 +1194,120 @@ export default function OrderDetailsAdmin() {
           </CardContent>
         </Card>
       </Stack>
+
+      <Dialog open={editOpen} onClose={() => !editSaving && setEditOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle>
+          Edit Binding — {editingRow?.desc || editingRow?.bindingType || 'Binding'}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ pt: 1 }}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Paper Size" value={editForm.paperSize ?? ''} onChange={handleEditFieldChange('paperSize')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Paper Type" value={editForm.paper ?? ''} onChange={handleEditFieldChange('paper')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Colour" value={editForm.printColour ?? ''} onChange={handleEditFieldChange('printColour')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Printing Type" value={editForm.printingType ?? ''} onChange={handleEditFieldChange('printingType')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField fullWidth size="small" label="No. Copies" type="number" value={editForm.noOfCopies ?? ''} onChange={handleEditFieldChange('noOfCopies')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField fullWidth size="small" label="A4 Pockets" type="number" value={editForm.a4Pockets ?? ''} onChange={handleEditFieldChange('a4Pockets')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField fullWidth size="small" label="CD Pockets" type="number" value={editForm.cdPockets ?? ''} onChange={handleEditFieldChange('cdPockets')} />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField fullWidth size="small" label="Additional Information" multiline minRows={2} value={editForm.additionalInformation ?? ''} onChange={handleEditFieldChange('additionalInformation')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField fullWidth size="small" label="Top Content" value={editForm.topContentArea ?? ''} onChange={handleEditFieldChange('topContentArea')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField fullWidth size="small" label="Middle Content" value={editForm.middleContentArea ?? ''} onChange={handleEditFieldChange('middleContentArea')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 4 }}>
+              <TextField fullWidth size="small" label="Bottom Content" value={editForm.bottomContentArea ?? ''} onChange={handleEditFieldChange('bottomContentArea')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Cover Material" value={editForm.coverMaterial ?? ''} onChange={handleEditFieldChange('coverMaterial')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }} sx={{ display: 'flex', alignItems: 'center' }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={Boolean(editForm.spinePrintingRequired)}
+                    onChange={handleEditFieldChange('spinePrintingRequired')}
+                  />
+                }
+                label="Spine Printing Required"
+              />
+            </Grid>
+          </Grid>
+          {editError && (
+            <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+              {editError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditOpen(false)} disabled={editSaving}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveBinding} disabled={editSaving}>
+            {editSaving ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={shippingEditOpen} onClose={() => !shippingSaving && setShippingEditOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Shipping Details</DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2} sx={{ pt: 1 }}>
+            <Grid size={{ xs: 12 }}>
+              <TextField fullWidth size="small" label="Address 1" value={shippingForm.address1} onChange={handleShippingFieldChange('address1')} />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField fullWidth size="small" label="Address 2" value={shippingForm.address2} onChange={handleShippingFieldChange('address2')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="City" value={shippingForm.city} onChange={handleShippingFieldChange('city')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="State" value={shippingForm.state} onChange={handleShippingFieldChange('state')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Country" value={shippingForm.country} onChange={handleShippingFieldChange('country')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Pincode" value={shippingForm.pincode} onChange={handleShippingFieldChange('pincode')} />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <FormControlLabel
+                control={<Checkbox checked={Boolean(shippingForm.pickup)} onChange={handleShippingFieldChange('pickup')} />}
+                label="Pickup Order"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField fullWidth size="small" label="Branch ID" type="number" value={shippingForm.branchId} onChange={handleShippingFieldChange('branchId')} />
+            </Grid>
+          </Grid>
+          {shippingError && (
+            <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+              {shippingError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShippingEditOpen(false)} disabled={shippingSaving}>Cancel</Button>
+          <Button variant="contained" onClick={handleSaveShipping} disabled={shippingSaving}>
+            {shippingSaving ? <CircularProgress size={18} sx={{ color: '#fff' }} /> : 'Save Changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
