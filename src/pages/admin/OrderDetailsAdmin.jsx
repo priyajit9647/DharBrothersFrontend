@@ -27,10 +27,11 @@ import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 
-import { Download, User, Truck, Receipt, FileText, Copy, Package, Settings, Printer, BookOpen, CheckCircle, Pencil } from 'lucide-react';
+import { Download, User, Truck, Receipt, FileText, Copy, Pencil } from 'lucide-react';
 
 import { getOrderById, downloadOrderFile, downloadInvoice, updateAdminOrderBinding, updateAdminOrderShipping } from 'api/orders';
 import { getCustomerPortalOrderTimeline } from 'api/customerPortal';
+import { formatTimelineStageStatus, getTimelineStageChipLabel, isTimelineStageActive, renderTimelineStageIcon } from 'utils/orderTimeline';
 
 function pickFirst(source, keys) {
   if (!source) return null;
@@ -1121,28 +1122,24 @@ export default function OrderDetailsAdmin() {
 
                 <Box sx={{ display: 'flex', alignItems: 'stretch', width: '100%', position: 'relative', gap: { xs: 1, md: 1.5 }, overflowX: { xs: 'auto', md: 'visible' }, pb: { xs: 1, md: 0 } }}>
                   {timeline.stages?.map((s, idx) => {
-                    const active = Boolean(s.isCompleted);
-                    const icons = {
-                      'Order-Created': <Package color="#fff" size={20} />,
-                      'Order-Processing': <Settings color="#fff" size={20} />,
-                      'Document-Edit-Stage': <FileText color="#fff" size={20} />,
-                      'Printing-Done': <Printer color="#fff" size={20} />,
-                      'Binding-Done': <BookOpen color="#fff" size={20} />,
-                      'Order-Ready-Check': <CheckCircle color="#fff" size={20} />,
-                      'Ready-To-Dispatch': <Truck color="#fff" size={20} />
+                    const stageName = s.stageName || s.name || 'Stage';
+                    const stageOptions = {
+                      currentStage: timeline.currentStage,
+                      isLastStage: idx === (timeline.stages?.length || 0) - 1
                     };
+                    const active = isTimelineStageActive(s, stageOptions);
+                    const chipLabel = getTimelineStageChipLabel(s, stageOptions);
 
                     return (
                       <Box
-                        key={`${s.stageName || s.name || 'stage'}-${idx}`}
+                        key={`${stageName}-${idx}`}
                         sx={{
                           flex: '1 1 0',
                           minWidth: { xs: 140, sm: 150, md: 0 },
                           position: 'relative',
                           display: 'flex',
                           flexDirection: 'column',
-                          alignItems: 'center',
-                          textAlign: 'center'
+                          alignItems: 'center'
                         }}
                       >
                         {idx !== (timeline.stages?.length || 0) - 1 && (
@@ -1174,14 +1171,82 @@ export default function OrderDetailsAdmin() {
                             boxShadow: active ? '0 6px 18px rgba(25,118,210,0.28)' : 'none'
                           }}
                         >
-                          {icons[s.stageName] || <CheckCircle color="#fff" size={20} />}
+                          {renderTimelineStageIcon(stageName)}
                         </Box>
 
-                        <Typography variant="subtitle2" sx={{ mt: 1.5, fontWeight: 700, color: active ? '#111827' : '#6b7280' }}>
-                          {s.stageName || s.name || 'Stage'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                          {s.completedAt ? formatDate(s.completedAt) : (active ? 'In progress' : 'Pending')}
+                        <Box sx={{ width: 3, height: 24, flexShrink: 0, background: active ? '#1976d2' : '#d1d5db' }} />
+
+                        <Box
+                          sx={{
+                            flex: 1,
+                            width: '100%',
+                            minHeight: 150,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            background: '#fff',
+                            borderRadius: '18px',
+                            p: 2,
+                            textAlign: 'center',
+                            border: '1px solid #edf2f7',
+                            boxShadow: '0 4px 14px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: 700,
+                              mb: 1,
+                              fontSize: '14px',
+                              lineHeight: 1.35,
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              minHeight: 38
+                            }}
+                          >
+                            {stageName}
+                          </Typography>
+
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              flex: 1,
+                              color: '#6b7280',
+                              display: 'block',
+                              mb: 1.5,
+                              fontSize: '12px',
+                              lineHeight: 1.45,
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word'
+                            }}
+                          >
+                            {formatTimelineStageStatus(s)}
+                          </Typography>
+
+                          <Chip
+                            label={chipLabel}
+                            color={chipLabel === 'Pending' ? 'default' : 'primary'}
+                            size="small"
+                            sx={{ borderRadius: '8px', fontWeight: 600, fontSize: '11px', alignSelf: 'center', mt: 'auto' }}
+                          />
+                        </Box>
+
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            mt: 1.5,
+                            flexShrink: 0,
+                            fontWeight: 600,
+                            color: active ? '#1976d2' : '#94a3b8',
+                            textAlign: 'center',
+                            fontSize: '11px',
+                            px: 0.5,
+                            width: '100%',
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
+                            lineHeight: 1.4
+                          }}
+                        >
+                          {s.updatedAt ? formatDate(s.updatedAt) : '—'}
                         </Typography>
                       </Box>
                     );

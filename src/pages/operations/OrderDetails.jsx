@@ -25,7 +25,8 @@ import { getCustomerFeedbackByOrderId, getCustomerPortalOrderTimeline, editCusto
 import { approveDocument } from 'api/document';
 import { getDocumentVersionListForOrder, downloadOrderFile } from 'api/orders';
 import { getCustomerPortalSession } from 'utils/authTokens';
-import { Package, Settings, FileText, Printer, BookOpen, CheckCircle, Truck, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft, Star } from 'lucide-react';
+import { formatTimelineStageStatus, getTimelineStageChipLabel, isTimelineStageActive, renderTimelineStageIcon } from 'utils/orderTimeline';
+import { Package, Settings, FileText, CheckCircle, DownloadCloud, Copy, ChevronDown, ChevronUp, Layers, MessageCircle, ArrowLeft, Star } from 'lucide-react';
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -1580,17 +1581,13 @@ export default function OrderDetails() {
 
                 <Box sx={{ display: 'flex', alignItems: 'stretch', width: '100%', position: 'relative', gap: { xs: 1, md: 1.5 }, overflowX: { xs: 'auto', md: 'visible' }, pb: { xs: 1, md: 0 } }}>
                   {timeline.stages?.map((s, idx) => {
-                    const active = s.isCompleted;
-
-                    const icons = {
-                      'Order-Created': <Package color="#fff" size={20} />,
-                      'Order-Processing': <Settings color="#fff" size={20} />,
-                      'Document-Edit-Stage': <FileText color="#fff" size={20} />,
-                      'Printing-Done': <Printer color="#fff" size={20} />,
-                      'Binding-Done': <BookOpen color="#fff" size={20} />,
-                      'Order-Ready-Check': <CheckCircle color="#fff" size={20} />,
-                      'Ready-To-Dispatch': <Truck color="#fff" size={20} />
+                    const stageName = s.stageName || s.name || 'Stage';
+                    const stageOptions = {
+                      currentStage: timeline.currentStage,
+                      isLastStage: idx === timeline.stages.length - 1
                     };
+                    const active = isTimelineStageActive(s, stageOptions);
+                    const chipLabel = getTimelineStageChipLabel(s, stageOptions);
 
                     return (
                       <Box
@@ -1637,7 +1634,7 @@ export default function OrderDetails() {
                             boxShadow: active ? '0 6px 18px rgba(25,118,210,0.28)' : 'none'
                           }}
                         >
-                          {icons[s.stageName]}
+                          {renderTimelineStageIcon(stageName)}
                         </Box>
 
                         {/* Line */}
@@ -1675,7 +1672,7 @@ export default function OrderDetails() {
                               minHeight: 38
                             }}
                           >
-                            {s.stageName}
+                            {stageName}
                           </Typography>
 
                           <Typography
@@ -1691,12 +1688,12 @@ export default function OrderDetails() {
                               overflowWrap: 'break-word'
                             }}
                           >
-                            {s.updatedBy ? `${s.updatedBy}: ` : ''}{s.remarks || 'No remarks available'}
+                            {formatTimelineStageStatus(s)}
                           </Typography>
 
                           <Chip
-                            label={s.isCompleted ? 'Completed' : 'Pending'}
-                            color={s.isCompleted ? 'primary' : 'default'}
+                            label={chipLabel}
+                            color={chipLabel === 'Pending' ? 'default' : 'primary'}
                             size="small"
                             sx={{ borderRadius: '8px', fontWeight: 600, fontSize: '11px', alignSelf: 'center', mt: 'auto' }}
                           />

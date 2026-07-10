@@ -1323,6 +1323,7 @@ export default function PlaceOrder({
         onClose={handleClosePageEditor}
         onPageTypeChange={handlePageTypeChange}
         title="Thesis Document Pages"
+        documentFile={thesisDocument}
       />
 
       <PageEditorDialog
@@ -1334,6 +1335,7 @@ export default function PlaceOrder({
         onClose={handleCloseSynopsisPageEditor}
         onPageTypeChange={handleSynopsisPageTypeChange}
         title="Synopsis Document Pages"
+        documentFile={synopsisDocument}
       />
 
       {!hideFooter && <FooterSection />}
@@ -2310,6 +2312,90 @@ function UploadCard({ title, fieldName, file, onFileChange, errorMessage = '', i
   );
 }
 
+function useFilePreviewUrl(file) {
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl('');
+      return undefined;
+    }
+
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [file]);
+
+  return previewUrl;
+}
+
+function isPdfFile(file) {
+  if (!file) return false;
+  if (file.type === 'application/pdf') return true;
+  return String(file.name || '').toLowerCase().endsWith('.pdf');
+}
+
+function DocumentFilePreview({ file, title, embedded = false }) {
+  const previewUrl = useFilePreviewUrl(file);
+  const iframeSrc = previewUrl && isPdfFile(file) ? `${previewUrl}#view=FitH` : previewUrl;
+
+  if (!file) return null;
+
+  return (
+    <Box
+      sx={{
+        mt: embedded ? 0 : 2,
+        height: embedded ? '100%' : 'auto',
+        width: '100%',
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      {title ? (
+        <Typography sx={{ mb: 1, fontSize: '0.82rem', fontWeight: 600, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+          {title}
+        </Typography>
+      ) : null}
+
+      {isPdfFile(file) && iframeSrc ? (
+        <Box
+          sx={{
+            flex: embedded ? 1 : 'unset',
+            width: '100%',
+            minWidth: 0,
+            height: embedded ? { xs: 360, md: '100%' } : { xs: 320, md: 420 },
+            minHeight: embedded ? 460 : undefined,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: '#f8fafc',
+            overflow: 'hidden'
+          }}
+        >
+          <Box
+            component="iframe"
+            src={iframeSrc}
+            title={`${file.name} preview`}
+            sx={{
+              display: 'block',
+              width: '100%',
+              height: '100%',
+              border: 0
+            }}
+          />
+        </Box>
+      ) : (
+        <Typography sx={{ fontSize: '0.84rem', color: 'text.secondary' }}>
+          Preview is available for PDF files only.
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
 function DocumentDetailsStep({
   thesisDocument,
   pageStats,
@@ -2555,63 +2641,103 @@ function DocumentDetailsStep({
   );
 }
 
-function PageEditorDialog({ open, loading, error, pageRows, pageTypes, onClose, onPageTypeChange, title = 'Thesis Document Pages' }) {
+function PageEditorDialog({ open, loading, error, pageRows, pageTypes, onClose, onPageTypeChange, title = 'Thesis Document Pages', documentFile = null }) {
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ pb: 1.25, fontWeight: 600 }}>{title}</DialogTitle>
-      <DialogContent dividers>
-        <Grid container sx={{ mb: 1.5, borderBottom: '1px solid', borderColor: 'divider', pb: 1.5 }}>
-          <Grid item xs={4}>
-            <Typography sx={{ fontSize: '0.88rem', fontWeight: 600 }}>Page Number</Typography>
-          </Grid>
-          <Grid item xs={8}>
-            <Typography sx={{ fontSize: '0.88rem', fontWeight: 600 }}>Page Type</Typography>
-          </Grid>
-        </Grid>
-
-        {loading ? <Typography sx={{ py: 2, fontSize: '0.9rem', color: 'text.secondary' }}>Loading page types...</Typography> : null}
-
-        {!loading && pageRows.length
-          ? pageRows.map((row) => (
-              <Grid container spacing={1.5} alignItems="center" key={row.pageNumber} sx={{ mb: 1.5 }}>
-                <Grid item xs={4}>
-                  <Typography sx={{ fontSize: '0.95rem', color: 'text.primary' }}>{row.pageNumber}</Typography>
-                </Grid>
-                <Grid item xs={8}>
-                  <TextField
-                    select
-                    fullWidth
-                    size="small"
-                    value={String(row.pageTypeId)}
-                    onChange={(event) => onPageTypeChange(row.pageNumber, event.target.value)}
-                  >
-                    {pageTypes.map((option) => (
-                      <MenuItem key={option.id} value={String(option.id)}>
-                        {option.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-              </Grid>
-            ))
-          : null}
-
-        {error ? <Typography sx={{ mt: 1, fontSize: '0.82rem', color: 'warning.dark' }}>{error}</Typography> : null}
-
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={1.5}
-          justifyContent="flex-end"
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
-          sx={{ mt: 2.5 }}
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth={false}
+      PaperProps={{
+        sx: {
+          width: { xs: '94vw', sm: 860 },
+          maxWidth: '94vw',
+          m: 2
+        }
+      }}
+    >
+      <DialogTitle sx={{ pb: 1, pt: 2, px: 2.5, fontWeight: 600, fontSize: '1.05rem' }}>{title}</DialogTitle>
+      <DialogContent dividers sx={{ p: 2.5 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 2,
+            alignItems: 'stretch',
+            minHeight: { xs: 'auto', md: 500 }
+          }}
         >
-          <Typography sx={{ maxWidth: 360, fontSize: '0.88rem', color: 'text.secondary' }}>
-            Change page types from the dropdown. Updates are applied immediately to the page totals.
-          </Typography>
-          <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 0 }}>
-            Close
-          </Button>
-        </Stack>
+          <Box
+            sx={{
+              width: { xs: '100%', md: 260 },
+              flexShrink: 0,
+              maxHeight: { md: 500 },
+              overflowY: { md: 'auto' },
+              pr: { md: 0.5 }
+            }}
+          >
+            <Grid container sx={{ mb: 1.25, borderBottom: '1px solid', borderColor: 'divider', pb: 1.25 }}>
+              <Grid item xs={4}>
+                <Typography sx={{ fontSize: '0.84rem', fontWeight: 600 }}>Page</Typography>
+              </Grid>
+              <Grid item xs={8}>
+                <Typography sx={{ fontSize: '0.84rem', fontWeight: 600 }}>Type</Typography>
+              </Grid>
+            </Grid>
+
+            {loading ? <Typography sx={{ py: 2, fontSize: '0.88rem', color: 'text.secondary' }}>Loading page types...</Typography> : null}
+
+            {!loading && pageRows.length
+              ? pageRows.map((row) => (
+                  <Grid container spacing={1} alignItems="center" key={row.pageNumber} sx={{ mb: 1.25 }}>
+                    <Grid item xs={4}>
+                      <Typography sx={{ fontSize: '0.92rem', color: 'text.primary' }}>{row.pageNumber}</Typography>
+                    </Grid>
+                    <Grid item xs={8}>
+                      <TextField
+                        select
+                        fullWidth
+                        size="small"
+                        value={String(row.pageTypeId)}
+                        onChange={(event) => onPageTypeChange(row.pageNumber, event.target.value)}
+                      >
+                        {pageTypes.map((option) => (
+                          <MenuItem key={option.id} value={String(option.id)}>
+                            {option.name}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Grid>
+                  </Grid>
+                ))
+              : null}
+
+            {error ? <Typography sx={{ mt: 1, fontSize: '0.8rem', color: 'warning.dark' }}>{error}</Typography> : null}
+
+            <Stack spacing={1.5} sx={{ mt: 2 }}>
+              <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', lineHeight: 1.45 }}>
+                Change page types from the dropdown. Updates apply immediately.
+              </Typography>
+              <Button onClick={onClose} variant="outlined" size="small" sx={{ borderRadius: 0, alignSelf: 'flex-start' }}>
+                Close
+              </Button>
+            </Stack>
+          </Box>
+
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: { xs: 380, md: 500 },
+              pl: { md: 2 },
+              borderLeft: { md: '1px solid' },
+              borderColor: { md: 'divider' },
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <DocumentFilePreview file={documentFile} title="Document Preview" embedded />
+          </Box>
+        </Box>
       </DialogContent>
     </Dialog>
   );
