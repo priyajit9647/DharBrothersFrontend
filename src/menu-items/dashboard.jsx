@@ -23,6 +23,7 @@ const dashboard = {
       type: 'item',
       url: '/dashboard/default',
       icon: icons.DashboardOutlined,
+      access: 'DASHBOARD_MGMT',
       breadcrumbs: false
     }
   ]
