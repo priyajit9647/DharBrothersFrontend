@@ -123,7 +123,7 @@ function getStatusMeta(status) {
   }
 
    if (normalized === 'PAYMENT_INIT_FAILED') {
-    return { color: 'warning', label: 'Payment Init Failed' };
+    return { color: 'warning', label: 'Payment gateway Failed. Please call support.' };
   }
 
   if (normalized.includes('CANCEL') || normalized.includes('FAILED') || normalized.includes('REJECTED')) {
