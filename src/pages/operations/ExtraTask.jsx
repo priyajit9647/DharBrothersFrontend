@@ -1,16 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import IconButton from '@mui/material/IconButton';
@@ -31,42 +25,28 @@ import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import CloseIcon from '@mui/icons-material/Close';
 
-import MainCard from 'components/MainCard';
-
-// icons
+import MasterList from 'sections/admin/masters/MasterList';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
-
-// API
 import { getJobList, completeMyJob } from 'api/myJobs';
 import { getDocumentVersionListFromOrderId, uploadDocumentVersionFormData } from 'api/document';
 
-// ==============================|| TABLE HEAD COMPONENT ||============================== //
-const headCells = [
-  { id: 'rowActions', align: 'center', label: '', width: '80px' },
-  { id: 'orderNumber', align: 'left', label: 'Order #', width: '120px' },
-  { id: 'customerFullName', align: 'left', label: 'Customer', width: '140px' },
-  { id: 'processStageName', align: 'left', label: 'Stage', width: '160px' },
-  { id: 'assignedStuffName', align: 'left', label: 'Assigned To', width: '140px' },
-  { id: 'dueTime', align: 'left', label: 'Due Date', width: '160px' },
-  { id: 'actions', align: 'center', label: 'Actions', width: '120px' }
-];
+// ==============================|| EXTRA TASKS ||============================== //
 
-function JobsTableHead() {
-  return (
-    <TableHead>
-      <TableRow>
-        {headCells.map((headCell) => (
-          <TableCell
-            key={headCell.id}
-            align={headCell.align}
-            sx={{ whiteSpace: 'nowrap', width: headCell.width || 'auto' }}
-          >
-            {headCell.label}
-          </TableCell>
-        ))}
-      </TableRow>
-    </TableHead>
-  );
+function formatDateTime(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
+function getAssignedStaffName(row) {
+  return row.assignedStaffName || row.assignedStuffName || '';
 }
 
 export default function ExtraTask() {
@@ -75,6 +55,8 @@ export default function ExtraTask() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState(null);
   const [activeRow, setActiveRow] = useState(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -126,6 +108,11 @@ export default function ExtraTask() {
   useEffect(() => {
     loadJobs();
   }, [loadJobs]);
+
+  const pagedRows = useMemo(() => {
+    const start = page * rowsPerPage;
+    return jobs.slice(start, start + rowsPerPage);
+  }, [page, rowsPerPage, jobs]);
 
   // Handlers
   const openCompleteDialog = (row) => {
@@ -301,114 +288,132 @@ export default function ExtraTask() {
   };
 
   return (
-    <Grid container rowSpacing={3} columnSpacing={2.75}>
-      <Grid item xs={12}>
-        <Grid container alignItems="center" spacing={2}>
-          <Grid item xs={12}>
-            {error && (
-              <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                {error}
-              </Typography>
-            )}
-          </Grid>
-        </Grid>
-      </Grid>
-
-      <Grid item xs={12}>
-        <MainCard content={false}>
-          <Box sx={{ p: 0 }}>
-            <TableContainer
-              sx={{
-                width: '100%',
-                overflowX: 'auto',
-                position: 'relative',
-                display: 'block',
-                maxWidth: '100%',
-                px: 2,
-                '& td, & th': { whiteSpace: 'nowrap' }
-              }}
-            >
-              <Table aria-labelledby="jobs-table" sx={{ width: '100%', tableLayout: 'fixed' }}>
-                <JobsTableHead />
-                <TableBody>
-                  {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
-                        <CircularProgress />
-                      </TableCell>
-                    </TableRow>
-                  ) : jobs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No jobs found
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    jobs.map((row) => (
-                      <TableRow hover tabIndex={-1} key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                        <TableCell align="center" sx={{ width: '80px' }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                            <IconButton size="small" onClick={(event) => handleActionsOpen(event, row)} aria-label="Job actions">
-                              <EllipsisOutlined style={{ fontSize: 18 }} />
-                            </IconButton>
-                          </Box>
-                        </TableCell>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          <Typography variant="subtitle2">{row.orderNumber || 'N/A'}</Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            title={row.customerFullName || ''}
-                            sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                          >
-                            {row.customerFullName || 'N/A'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell sx={{ whiteSpace: 'nowrap', width: '160px' }}>
-                          <Chip label={row.processStageName || 'N/A'} size="small" variant="outlined" />
-                        </TableCell>
-                        <TableCell sx={{ whiteSpace: 'nowrap', width: '140px' }}>
-                          <Typography variant="body2">{row.assignedStuffName || 'Unassigned'}</Typography>
-                        </TableCell>
-                        <TableCell sx={{ whiteSpace: 'nowrap', width: '160px' }}>
-                          <Typography variant="caption" color="text.secondary">
-                            {row.dueTime ? new Date(row.dueTime).toLocaleDateString() : 'N/A'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="center" sx={{ width: '120px' }}>
-                          <Button
-                            variant="contained"
-                            color="primary"
-                            size="small"
-                            onClick={() => openCompleteDialog(row)}
-                            disabled={loading || completingOrderId === row.orderId}
-                          >
-                            {completingOrderId === row.orderId ? 'Completing...' : 'Complete'}
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-          <Menu
-            anchorEl={anchorEl}
-            open={Boolean(anchorEl)}
-            onClose={handleActionsClose}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-          >
-            {activeRow && <MenuItem onClick={handleViewOrder}>View Order</MenuItem>}
-            {activeRow && <MenuItem onClick={handleDocumentApproval}>Document Version Approval</MenuItem>}
-          </Menu>
-
-        </MainCard>
+    <Grid container sx={{ width: '100%', flexGrow: 1 }}>
+      <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
+        {error && (
+          <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+            {error}
+          </Typography>
+        )}
+        <MasterList
+          title="Extra Tasks"
+          columns={[
+            {
+              id: 'rowActions',
+              label: '',
+              align: 'center',
+              sx: { width: '80px' },
+              render: (row) => (
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <IconButton size="small" onClick={(event) => handleActionsOpen(event, row)} aria-label="Job actions">
+                    <EllipsisOutlined style={{ fontSize: 18 }} />
+                  </IconButton>
+                </Box>
+              )
+            },
+            { id: 'orderNumber', label: 'Order ID', sx: { whiteSpace: 'nowrap' } },
+            {
+              id: 'customerFullName',
+              label: 'Customer',
+              sx: { maxWidth: 140 },
+              render: (row) => (
+                <Typography
+                  variant="body2"
+                  title={row.customerFullName || ''}
+                  sx={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                >
+                  {row.customerFullName || '—'}
+                </Typography>
+              )
+            },
+            {
+              id: 'processStageName',
+              label: 'Stage',
+              sx: { whiteSpace: 'nowrap' },
+              render: (row) => (
+                <Chip label={row.processStageName || '—'} size="small" variant="outlined" />
+              )
+            },
+            {
+              id: 'assignedStaff',
+              label: 'Assigned Staff',
+              sx: { maxWidth: 160 },
+              render: (row) => {
+                const staffName = getAssignedStaffName(row);
+                return (
+                  <Box sx={{ maxWidth: 160 }}>
+                    <Typography
+                      variant="body2"
+                      title={staffName}
+                      sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {staffName || 'Unassigned'}
+                    </Typography>
+                    {row.assignedDate && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        title={formatDateTime(row.assignedDate)}
+                        sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      >
+                        {formatDateTime(row.assignedDate)}
+                      </Typography>
+                    )}
+                  </Box>
+                );
+              }
+            },
+            {
+              id: 'dueTime',
+              label: 'Due Date',
+              sx: { whiteSpace: 'nowrap' },
+              render: (row) => (
+                <Typography variant="body2" title={formatDateTime(row.dueTime)}>
+                  {formatDateTime(row.dueTime)}
+                </Typography>
+              )
+            },
+            {
+              id: 'actions',
+              label: 'Actions',
+              align: 'center',
+              render: (row) => (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="small"
+                  onClick={() => openCompleteDialog(row)}
+                  disabled={loading || completingOrderId === row.orderId}
+                >
+                  {completingOrderId === row.orderId ? 'Completing...' : 'Complete'}
+                </Button>
+              )
+            }
+          ]}
+          rows={pagedRows}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          totalCount={jobs.length}
+          onPageChange={setPage}
+          onRowsPerPageChange={(value) => {
+            setRowsPerPage(value);
+            setPage(0);
+          }}
+          loading={loading}
+          showCreateButton={false}
+          showActiveColumn={false}
+          showActionsColumn={false}
+        />
+        <Menu
+          anchorEl={anchorEl}
+          open={Boolean(anchorEl)}
+          onClose={handleActionsClose}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          {activeRow && <MenuItem onClick={handleViewOrder}>View Order</MenuItem>}
+          {activeRow && <MenuItem onClick={handleDocumentApproval}>Document Version Approval</MenuItem>}
+        </Menu>
       </Grid>
 
       {/* Document Version Approval Dialog - From Binding Dashboard */}

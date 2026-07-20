@@ -22,12 +22,12 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
 import EllipsisOutlined from '@ant-design/icons/EllipsisOutlined';
-import { QrCode, MessageSquare, CheckCircle, Send } from 'lucide-react';
+import { QrCode, MessageSquare, CheckCircle, Send, Banknote } from 'lucide-react';
 
 import MainCard from 'components/MainCard';
 import useAccess from 'hooks/useAccess';
 
-import { getOrdersByStatus, verifyOrderReceivedOtp, sendPaymentLink } from 'api/orders';
+import { getOrdersByStatus, verifyOrderReceivedOtp, sendPaymentLink, adminCashPayment } from 'api/orders';
 import TextField from '@mui/material/TextField';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
@@ -50,6 +50,10 @@ function isReadyToDispatchStage(stage) {
   return /(ready\s*(to|for)\s*dispatch)/.test(normalized);
 }
 
+function getOrderApiId(order) {
+  return order?.trackingNumber ?? order?.orderId ?? order?.id ?? order?.orderNo ?? order?.code ?? null;
+}
+
 function StageCard({ title, rows = [] }) {
   const { hasAccess } = useAccess();
   const canDispatch = hasAccess('DELIVERY_DISPATCH_MGMT');
@@ -61,6 +65,11 @@ function StageCard({ title, rows = [] }) {
   const [otpValue, setOtpValue] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
   const [snack, setSnack] = useState({ open: false, message: '', severity: 'success' });
+  const [cashDialogOpen, setCashDialogOpen] = useState(false);
+  const [cashAmount, setCashAmount] = useState('');
+  const [cashRemarks, setCashRemarks] = useState('');
+  const [cashSubmitting, setCashSubmitting] = useState(false);
+  const [cashError, setCashError] = useState('');
 
   const handleMenuOpen = (event, row) => {
     setAnchorEl(event.currentTarget);
@@ -102,6 +111,53 @@ function StageCard({ title, rows = [] }) {
     console.log('[Delivery.StageCard.handleCloseQr] Closing QR modal');
     setQrOrder(null);
     setQrType('shipping');
+  };
+
+  const handleOpenCashDialog = (order) => {
+    setActiveRow(order);
+    setCashAmount(Number.isFinite(Number(order?.amount)) ? String(Number(order.amount)) : '');
+    setCashRemarks('');
+    setCashError('');
+    setCashDialogOpen(true);
+  };
+
+  const handleCloseCashDialog = () => {
+    if (cashSubmitting) return;
+    setCashDialogOpen(false);
+    setCashAmount('');
+    setCashRemarks('');
+    setCashError('');
+  };
+
+  const handleCashPaymentSubmit = async () => {
+    const orderId = getOrderApiId(activeRow);
+    if (!orderId) {
+      setCashError('Order ID is not available.');
+      return;
+    }
+
+    const amount = parseFloat(cashAmount);
+    if (!cashAmount || Number.isNaN(amount) || amount <= 0) {
+      setCashError('Please enter a valid amount greater than 0.');
+      return;
+    }
+
+    setCashError('');
+    setCashSubmitting(true);
+    try {
+      await adminCashPayment(orderId, { amount, remarks: cashRemarks });
+      setSnack({ open: true, message: 'Cash payment recorded successfully.', severity: 'success' });
+      setCashDialogOpen(false);
+      setCashAmount('');
+      setCashRemarks('');
+    } catch (err) {
+      console.error('Cash payment error', err);
+      const msg = err?.message || 'Failed to record cash payment.';
+      setCashError(msg);
+      setSnack({ open: true, message: msg, severity: 'error' });
+    } finally {
+      setCashSubmitting(false);
+    }
   };
 
   return (
@@ -212,7 +268,7 @@ function StageCard({ title, rows = [] }) {
                               onClick={async () => {
                                 try {
                                   console.log('[Delivery.StageCard] Resend link clicked for', r);
-                                  const id = r?.orderId ?? r?.id ?? r?.orderNo ?? r?.code;
+                                  const id = getOrderApiId(r);
                                   await sendPaymentLink(id);
                                   setSnack({ open: true, message: 'Resend link sent', severity: 'success' });
                                 } catch (err) {
@@ -224,6 +280,17 @@ function StageCard({ title, rows = [] }) {
                               sx={{ border: '1px solid', borderColor: 'divider', p: 0.5, borderRadius: 1 }}
                             >
                               <Send size={14} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Record cash payment">
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => handleOpenCashDialog(r)}
+                              aria-label="Record cash payment"
+                              sx={{ border: '1px solid', borderColor: 'success.light', p: 0.5, borderRadius: 1 }}
+                            >
+                              <Banknote size={14} />
                             </IconButton>
                           </Tooltip>
                         </Box>
@@ -322,6 +389,49 @@ function StageCard({ title, rows = [] }) {
               disabled={otpLoading || !otpValue}
             >
               {otpLoading ? <CircularProgress size={18} color="inherit" /> : 'Verify'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={cashDialogOpen} onClose={handleCloseCashDialog} maxWidth="xs" fullWidth>
+          <DialogTitle>Record Cash Payment</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" sx={{ mb: 2 }}>
+              Record cash payment for order <strong>{activeRow?.orderId ?? '—'}</strong>.
+            </Typography>
+            <TextField
+              autoFocus
+              fullWidth
+              required
+              label="Amount"
+              type="number"
+              slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+              value={cashAmount}
+              onChange={(e) => setCashAmount(e.target.value)}
+              disabled={cashSubmitting}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Remarks"
+              value={cashRemarks}
+              onChange={(e) => setCashRemarks(e.target.value)}
+              multiline
+              minRows={2}
+              disabled={cashSubmitting}
+            />
+            {cashError && (
+              <Typography variant="caption" color="error" sx={{ display: 'block', mt: 1 }}>
+                {cashError}
+              </Typography>
+            )}
+          </DialogContent>
+          <DialogActions sx={{ px: 3, pb: 2 }}>
+            <Button onClick={handleCloseCashDialog} disabled={cashSubmitting}>
+              Cancel
+            </Button>
+            <Button variant="contained" color="success" onClick={handleCashPaymentSubmit} disabled={cashSubmitting}>
+              {cashSubmitting ? <CircularProgress size={18} color="inherit" /> : 'Submit'}
             </Button>
           </DialogActions>
         </Dialog>
@@ -461,6 +571,7 @@ export default function DeliveryDispatch() {
           const items = Array.isArray(data) ? data : (data?.items ?? data?.data ?? []);
           const rows = items.map((o) => ({
             orderId: o.orderId ?? o.orderNo ?? o.id ?? o.code ?? '',
+            trackingNumber: o.trackingNumber ?? o.orderId ?? o.id ?? null,
             customerName: o.customer?.name ?? (`${o.firstName ?? ''} ${o.lastName ?? ''}`.trim() || o.customerName || '—'),
             customerContact: o.customerPhone ?? o.customer?.phone ?? o.customerContact ?? '',
             customerEmail: o.customerEmail ?? o.customer?.email ?? o.email ?? '',

@@ -37,6 +37,19 @@ import DownloadDocumentButton from 'components/DownloadDocumentButton';
 
 // ==============================|| BIND DASHBOARD ||============================== //
 
+function formatDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
+}
+
 export default function Binddashboard() {
   const { accessToken } = useAuth();
   const { hasAccess } = useAccess();
@@ -327,6 +340,32 @@ export default function Binddashboard() {
                   >
                     {row.customerName || ''}
                   </Typography>
+                )
+              },
+              {
+                id: 'assignedStaff',
+                label: 'Assigned Staff',
+                sx: { maxWidth: 160 },
+                render: (row) => (
+                  <Box sx={{ maxWidth: 160 }}>
+                    <Typography
+                      variant="body2"
+                      title={row.assignedStaffName || ''}
+                      sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {row.assignedStaffName || '—'}
+                    </Typography>
+                    {row.assignedDate && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        title={formatDateTime(row.assignedDate)}
+                        sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                      >
+                        {formatDateTime(row.assignedDate)}
+                      </Typography>
+                    )}
+                  </Box>
                 )
               },
               { id: 'noOfCopies', label: 'Copies', align: 'center', sx: { whiteSpace: 'nowrap', width: 70 } },
