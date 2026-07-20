@@ -17,63 +17,34 @@ export default function NavGroup({ item }) {
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
   const { hasAccess } = useAccess();
 
-  // Show Masters group only if user has MASTERS_MGMT or at least one child-specific <RESOURCE>_MGMT right
-  if (item.id === 'masters') {
-    if (!hasAccess('MASTERS_MGMT')) {
-      const children = item.children || [];
-      const anyChildMgmt = children.some((m) => {
-        if (m.hidden || !m.url) return false;
-        try {
-          const parts = m.url.split('/').filter(Boolean);
-          const last = parts[parts.length - 1] || '';
-          const base = last.replace(/-/g, '_').toUpperCase();
-          const right = `${base}_MGMT`;
-          return hasAccess(right);
-        } catch (e) {
-          return false;
-        }
-      });
-      if (!anyChildMgmt) return null;
-    }
-  }
-
-
   const visibleChildren = (item.children || []).filter((m) => {
     if (m.hidden) return false;
-    // for items under masters, require specific <RESOURCE>_MGMT right
-    if (item.id === 'masters' && m.url) {
-      try {
-        const parts = m.url.split('/').filter(Boolean);
-        const last = parts[parts.length - 1] || '';
-        const base = last.replace(/-/g, '_').toUpperCase();
-        const right = `${base}_MGMT`;
-        return hasAccess(right);
-      } catch (e) {
-        return false;
-      }
+    
+    // Check access for the item itself
+    if (m.access) {
+      const accessArray = Array.isArray(m.access) ? m.access : [m.access];
+      if (!accessArray.some((right) => hasAccess(right))) return false;
     }
 
-    // Hide the Reports collapse entirely if user lacks REPORTS_INSIGHTS_MGMT
-    if (m.id === 'reports') {
-      if (!hasAccess('REPORTS_INSIGHTS_MGMT')) return false;
-      return true;
-    }
-
-    // for items that are report pages (url contains '/reports/'), require REPORTS_MGMT or a specific report right
-    if (m.url && m.url.includes('/reports/')) {
-      try {
-        const parts = m.url.split('/').filter(Boolean);
-        const last = parts[parts.length - 1] || '';
-        const base = last.replace(/-/g, '_').toUpperCase();
-        const rightCandidates = [`${base}_REPORTS`, `${base}_REPORT`, `${base}_MGMT`];
-        return hasAccess('REPORTS_INSIGHTS_MGMT') || rightCandidates.some((r) => hasAccess(r));
-      } catch (e) {
-        return false;
-      }
+    // If it's a collapse, check if any of its children are visible.
+    // This prevents showing an empty collapsible menu.
+    if (m.type === 'collapse' && m.children) {
+      const anyVisibleChild = m.children.some((child) => {
+        if (child.hidden) return false;
+        if (child.access) {
+          const childAccessArray = Array.isArray(child.access) ? child.access : [child.access];
+          return childAccessArray.some((right) => hasAccess(right));
+        }
+        return true;
+      });
+      if (!anyVisibleChild) return false;
     }
 
     return true;
   });
+
+  if (visibleChildren.length === 0) return null;
+
   const navCollapse = visibleChildren.map((menuItem) => {
     switch (menuItem.type) {
       case 'collapse':

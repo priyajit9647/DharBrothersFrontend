@@ -268,7 +268,7 @@ function StageCard({ title, rows = [] }) {
                               onClick={async () => {
                                 try {
                                   console.log('[Delivery.StageCard] Resend link clicked for', r);
-                                  const id = getOrderApiId(r);
+const id = getOrderApiId(r);
                                   await sendPaymentLink(id);
                                   setSnack({ open: true, message: 'Resend link sent', severity: 'success' });
                                 } catch (err) {
@@ -297,7 +297,7 @@ function StageCard({ title, rows = [] }) {
                       )}
                     </TableCell>
                     <TableCell sx={{ maxWidth: 300, wordBreak: 'break-word' }}>
-                      <Typography sx={{ fontSize: '0.95rem' }}>{r.orderId}</Typography>
+                      <Typography sx={{ fontSize: '0.95rem' }}>{r.orderNumber}</Typography>
                     </TableCell>
                     <TableCell sx={{ maxWidth: 420 }}>
                       <Typography sx={{ fontSize: '0.95rem', fontWeight: 600 }}>{r.customerName}</Typography>
@@ -510,7 +510,7 @@ function JobsStyleCard({ title, rows = [] }) {
                       </IconButton>
                     </TableCell>
                     <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      <Typography sx={{ fontSize: '0.95rem' }}>{r.orderId}</Typography>
+                      <Typography sx={{ fontSize: '0.95rem' }}>{r.orderNumber}</Typography>
                     </TableCell>
                     <TableCell sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       <Typography sx={{ fontSize: '0.95rem', fontWeight: 600 }}>{r.customerName}</Typography>
@@ -570,8 +570,9 @@ export default function DeliveryDispatch() {
           const data = await getOrdersByStatus(stageName);
           const items = Array.isArray(data) ? data : (data?.items ?? data?.data ?? []);
           const rows = items.map((o) => ({
-            orderId: o.orderId ?? o.orderNo ?? o.id ?? o.code ?? '',
-            trackingNumber: o.trackingNumber ?? o.orderId ?? o.id ?? null,
+orderId: o.orderId ?? o.orderNo ?? o.id ?? o.code ?? '',
+trackingNumber: o.trackingNumber ?? o.orderId ?? o.id ?? null,
+orderNumber: o.orderNumber ?? o.orderNo ?? o.code ?? '',
             customerName: o.customer?.name ?? (`${o.firstName ?? ''} ${o.lastName ?? ''}`.trim() || o.customerName || '—'),
             customerContact: o.customerPhone ?? o.customer?.phone ?? o.customerContact ?? '',
             customerEmail: o.customerEmail ?? o.customer?.email ?? o.email ?? '',

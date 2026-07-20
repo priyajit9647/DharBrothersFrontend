@@ -15,12 +15,14 @@ import Typography from '@mui/material/Typography';
 // project imports
 import NavItem from './NavItem';
 import { handlerDrawerOpen, useGetMenuMaster } from 'api/menu';
+import useAccess from 'hooks/useAccess';
 
 // ==============================|| NAVIGATION - COLLAPSIBLE GROUP ITEM ||============================== //
 
 export default function NavCollapse({ item, level = 1 }) {
   const { menuMaster } = useGetMenuMaster();
   const drawerOpen = menuMaster.isDashboardDrawerOpened;
+  const { hasAccess } = useAccess();
 
   const downLG = useMediaQuery((theme) => theme.breakpoints.down('lg'));
   const { pathname } = useLocation();
@@ -105,7 +107,16 @@ export default function NavCollapse({ item, level = 1 }) {
 
       <Collapse in={open && drawerOpen} timeout="auto" unmountOnExit>
         <List disablePadding>
-          {item.children?.map((child) => (
+          {item.children?.filter((m) => {
+            if (m.hidden) return false;
+            if (m.access) {
+              if (Array.isArray(m.access)) {
+                return m.access.some((right) => hasAccess(right));
+              }
+              return hasAccess(m.access);
+            }
+            return true;
+          }).map((child) => (
             <NavItem key={child.id} item={child} level={level + 1} />
           ))}
         </List>

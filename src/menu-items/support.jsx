@@ -23,37 +23,43 @@ const support = {
       title: 'Reports & Insights',
       type: 'collapse',
       icon: icons.BarChartOutlined,
+      access: 'REPORTS_INSIGHTS_MGMT',
       children: [
         {
           id: 'delay-reports',
           title: 'Delay Reports',
           type: 'item',
-          url: '/reports/delay-reports'
+          url: '/reports/delay-reports',
+          access: 'DELAY_REPORTS_MGMT'
         },
         {
           id: 'open-jobs-report',
           title: 'Open Jobs Report',
           type: 'item',
-          url: '/reports/open-jobs'
+          url: '/reports/open-jobs',
+          access: 'OPEN_JOBS_REPORT_MGMT'
         },
         {
           id: 'ready-to-dispatch',
           title: 'Ready To Dispatch',
           type: 'item',
-          url: '/reports/ready-to-dispatch'
+          url: '/reports/ready-to-dispatch',
+          access: 'READY_TO_DISPATCH_MGMT'
         },
         {
           id: 'complete-jobs-report',
           title: 'Complete Jobs Report',
           type: 'item',
-          url: '/reports/complete-jobs'
+          url: '/reports/complete-jobs',
+          access: 'COMPLETE_JOBS_REPORT_MGMT'
         }
         ,
         {
           id: 'sales-report',
           title: 'Sales Report',
           type: 'item',
-          url: '/reports/sales'
+          url: '/reports/sales',
+          access: 'SALES_REPORT_MGMT'
         },
         {
           id: 'gst-reports',
@@ -79,25 +85,29 @@ const support = {
           id: 'branches',
           title: 'Branches',
           type: 'item',
-          url: '/admin/branches'
+          url: '/admin/branches',
+          access: 'BRANCHES_SUB_MGMT'
         },
         {
           id: 'teams',
           title: 'Teams',
           type: 'item',
-          url: '/admin/teams'
+          url: '/admin/teams',
+          access: ['BRANCHES_TEAMS_MGMT', 'TEAMS_SUB_MGMT']
         },
         {
           id: 'payment-details',
           title: 'Payment Details',
           type: 'item',
-          url: '/admin/payment-details'
+          url: '/admin/payment-details',
+          access: 'PAYMENT_DETAILS_MGMT'
         },
         {
           id: 'process-stage-assignment',
           title: 'Stage Assignments',
           type: 'item',
-          url: '/admin/masters/process-stage-assignments'
+          url: '/admin/masters/process-stage-assignments',
+          access: 'STAGE_ASSIGNMENTS_SUB_MGMT'
         }
       ]
     },
@@ -107,24 +117,28 @@ const support = {
       title: 'Notification History',
       type: 'collapse',
       icon: icons.BellOutlined,
+      access: 'NOTIFICATION_HISTORY_MGMT',
       children: [
         {
           id: 'notification-email',
           title: 'Email Notification',
           type: 'item',
-          url: '/admin/notifications/email'
+          url: '/admin/notifications/email',
+          access: 'EMAIL_NOTIFICATION_MGMT'
         },
         {
           id: 'whatsapp-notifications',
           title: 'WhatsApp Notifications',
           type: 'item',
-          url: '/admin/notifications/whatsapp-history'
+          url: '/admin/notifications/whatsapp-history',
+          access: 'WHATSAPP_NOTIFICATIONS_MGMT'
         },
         {
           id: 'in-app-notifications',
           title: 'In-App Notifications',
           type: 'item',
-          url: '/admin/notifications/in-app'
+          url: '/admin/notifications/in-app',
+          access: 'IN_APP_NOTIFICATIONS_MGMT'
         }
       ]
     },
@@ -133,72 +147,84 @@ const support = {
       title: 'Masters',
       type: 'collapse',
       icon: icons.SettingOutlined,
+      access: 'MASTERS_MGMT',
       children: [
         {
           id: 'process-stage-master',
           title: 'Process Stages',
           type: 'item',
-          url: '/admin/masters/process-stages'
+          url: '/admin/masters/process-stages',
+          access: 'PROCESS_STAGES_MGMT'
         },
         {
           id: 'printing-type-master',
           title: 'Printing Types',
           type: 'item',
-          url: '/admin/masters/printing-types'
+          url: '/admin/masters/printing-types',
+          access: 'PRINTING_TYPES_MGMT'
         },
         {
           id: 'print-color-master',
           title: 'Print Colors',
           type: 'item',
-          url: '/admin/masters/print-colors'
+          url: '/admin/masters/print-colors',
+          access: 'PRINT_COLORS_MGMT'
         },
         {
           id: 'paper-master',
           title: 'Papers',
           type: 'item',
-          url: '/admin/masters/papers'
+          url: '/admin/masters/papers',
+          access: 'PAPERS_MGMT'
         },
         {
           id: 'paper-size-master',
           title: 'Paper Sizes',
           type: 'item',
-          url: '/admin/masters/paper-sizes'
+          url: '/admin/masters/paper-sizes',
+          access: 'PAPER_SIZES_MGMT'
         },
         {
           id: 'page-type-master',
           title: 'Page Types',
           type: 'item',
-          url: '/admin/masters/page-types'
+          url: '/admin/masters/page-types',
+          access: 'PAGE_TYPES_MGMT'
         },
         {
           id: 'binding-type-master',
           title: 'Binding Types',
           type: 'item',
-          url: '/admin/masters/binding-types'
+          url: '/admin/masters/binding-types',
+          access: 'BINDING_TYPES_MGMT'
         },
         {
           id: 'binding-cover-material-master',
           title: 'Binding Cover Materials',
           type: 'item',
-          url: '/admin/masters/binding-cover-materials'
+          url: '/admin/masters/binding-cover-materials',
+          access: 'BINDING_COVER_MATERIALS_MGMT'
         },
         {
           id: 'printing-rate-master',
           title: 'Printing Rates',
           type: 'item',
-          url: '/admin/masters/printing-rates'
+          url: '/admin/masters/printing-rates',
+          access: ['PRINTING_RATES_MGMT', 'BINDING_RATES_MGMT']
         },
         {
           id: 'other-charge-master',
           title: 'Other Charges',
           type: 'item',
-          url: '/admin/masters/other-charges'
+          url: '/admin/masters/other-charges',
+          access: 'OTHER_CHARGES_MGMT'
         },
         {
           id: 'binding-rate-master',
           title: 'Binding Rates',
           type: 'item',
-          url: '/admin/masters/binding-rates'
+          url: '/admin/masters/binding-rates',
+          access: 'BINDING_RATES_MGMT'
         }
       ]
     },
@@ -207,7 +233,8 @@ const support = {
       title: 'Template',
       type: 'item',
       icon: icons.DatabaseOutlined,
-      url: '/admin/template'
+      url: '/admin/template',
+      access: 'TEMPLATE_MGMT'
     }
     ,
     {

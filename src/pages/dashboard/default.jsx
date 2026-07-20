@@ -350,7 +350,7 @@ export default function DashboardDefault() {
           isLoss={cardConfig[1]?.isLoss}
           color={cardConfig[1]?.color}
         />
-      </Grid>
+      </Grid>    
       <Grid size={{ xs: 12, sm: 6, lg: 3 }} onClick={() => navigate(cardConfig[2].link)} style={{ cursor: 'pointer' }}>
         <AnalyticEcommerce {...cardConfig[2]} count={kpiLoading ? '—' : String(cardConfig[2]?.count ?? '—')} />
       </Grid>
