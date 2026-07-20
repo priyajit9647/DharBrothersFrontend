@@ -122,6 +122,10 @@ function getStatusMeta(status) {
     return { color: 'primary', label: 'Ready for Dispatch' };
   }
 
+   if (normalized === 'PAYMENT_INIT_FAILED') {
+    return { color: 'warning', label: 'Payment Init Failed' };
+  }
+
   if (normalized.includes('CANCEL') || normalized.includes('FAILED') || normalized.includes('REJECTED')) {
     return { color: 'error', label: 'Failed' };
   }
